@@ -146,14 +146,14 @@ const GenreView = () => {
                   >
                     {hoveredId === movie.id ? (
                       <div className="h-full w-full bg-black/90 rounded-lg overflow-hidden border border-gray-800 shadow-xl animate-fade-in">
-                        <div className="relative">
+                        <div className="relative h-full">
                           <img 
                             src={movie.posterUrl}
                             alt={movie.title}
-                            className="w-full aspect-video object-cover"
+                            className="w-full h-full object-cover"
                           />
                           
-                          <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <div className="absolute bottom-0 left-0 right-0 p-3 bg-black/70">
                             <h3 className="font-bold text-white truncate mb-1">{movie.title}</h3>
                             <div className="text-xs text-gray-300 mb-3 flex items-center">
                               {movie.year} {movie.category && `• ${movie.category}`}
