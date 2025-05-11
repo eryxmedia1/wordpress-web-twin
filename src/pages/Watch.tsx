@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
 interface Review {
   id: string;
@@ -106,6 +105,7 @@ const Watch = () => {
   const [reviewEmail, setReviewEmail] = useState("");
   const [reviewRating, setReviewRating] = useState(0);
   const [reviews, setReviews] = useState<Review[]>(sampleReviews);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   
   // Get movie data based on ID
   const movieData = id && moviesData[id as keyof typeof moviesData] 
@@ -317,54 +317,62 @@ const Watch = () => {
             {/* Recommended movies */}
             <div className="mb-12">
               <h2 className="text-2xl font-semibold mb-4">Recommended For You</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {recommendedMovies.map((movie) => (
-                  <HoverCard key={movie.id} openDelay={200} closeDelay={100}>
-                    <HoverCardTrigger asChild>
-                      <div className="group block relative cursor-pointer overflow-hidden">
-                        <div className="aspect-[2/3] overflow-hidden rounded-md">
-                          <img 
-                            src={movie.posterUrl}
-                            alt={movie.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                          />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        </div>
-                        <h3 className="mt-2 text-sm font-medium truncate">{movie.title}</h3>
-                      </div>
-                    </HoverCardTrigger>
-                    
-                    <HoverCardContent className="w-[280px] p-0 bg-black border-gray-800 rounded-md overflow-hidden transform transition-all duration-300 origin-left">
-                      <div className="relative">
-                        <img 
-                          src={movie.posterUrl}
-                          alt={movie.title}
-                          className="w-full aspect-video object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
-                        
-                        <div className="absolute bottom-0 left-0 right-0 p-3">
-                          <h3 className="font-bold text-white mb-3">{movie.title}</h3>
-                          
-                          <div className="flex space-x-2">
-                            <Link to={`/watch/${movie.id}?trailer=true`}>
-                              <Button size="sm" className="bg-purple-600 hover:bg-purple-700 rounded-full px-4">
-                                <Play className="h-4 w-4 mr-1" />
-                                Trailer
-                              </Button>
-                            </Link>
-                            <Link to={`/watch/${movie.id}`}>
-                              <Button variant="outline" size="sm" className="rounded-full border-white/40 hover:bg-white/10 px-4">
-                                <Info className="h-4 w-4 mr-1" />
-                                Detail
-                              </Button>
-                            </Link>
+              <div className="relative">
+                <div className="flex overflow-x-auto scrollbar-hide pb-4 gap-4">
+                  {recommendedMovies.map((movie) => (
+                    <div 
+                      key={movie.id}
+                      className={`flex-none transition-all duration-300 ease-in-out ${
+                        hoveredId === movie.id ? "w-[350px]" : "w-[180px]"
+                      }`}
+                      onMouseEnter={() => setHoveredId(movie.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                    >
+                      {hoveredId === movie.id ? (
+                        <div className="h-full w-full bg-black/90 rounded-lg overflow-hidden border border-gray-800 shadow-xl animate-fade-in">
+                          <div className="relative">
+                            <img 
+                              src={movie.posterUrl}
+                              alt={movie.title}
+                              className="w-full aspect-video object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+                            
+                            <div className="absolute bottom-0 left-0 right-0 p-3">
+                              <h3 className="font-bold text-white truncate mb-3">{movie.title}</h3>
+                              
+                              <div className="flex space-x-2">
+                                <Link to={`/watch/${movie.id}?trailer=true`}>
+                                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 rounded-full px-4">
+                                    <Play className="h-4 w-4 mr-1" />
+                                    Trailer
+                                  </Button>
+                                </Link>
+                                <Link to={`/watch/${movie.id}`}>
+                                  <Button variant="outline" size="sm" className="rounded-full border-white/40 hover:bg-white/10 px-4">
+                                    <Info className="h-4 w-4 mr-1" />
+                                    Detail
+                                  </Button>
+                                </Link>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </HoverCardContent>
-                  </HoverCard>
-                ))}
+                      ) : (
+                        <div className="block relative cursor-pointer overflow-hidden">
+                          <div className="aspect-[2/3] overflow-hidden rounded-md">
+                            <img 
+                              src={movie.posterUrl}
+                              alt={movie.title}
+                              className="w-full h-full object-cover hover:scale-105 transition duration-300"
+                            />
+                          </div>
+                          <h3 className="mt-2 text-sm font-medium truncate">{movie.title}</h3>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             

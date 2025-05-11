@@ -1,6 +1,9 @@
 
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Play, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import ContentRow from "@/components/ContentRow";
 import GenresList from "@/components/GenresList";
@@ -106,6 +109,7 @@ const defaultGenreMovies = [
 const GenreView = () => {
   const { genreId } = useParams<{ genreId: string }>();
   const [movies, setMovies] = useState<any[]>([]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   
   useEffect(() => {
     if (genreId && genreId in genreMoviesMap) {
@@ -127,10 +131,82 @@ const GenreView = () => {
         <GenresList className="mb-10" />
         
         {movies.length > 0 ? (
-          <ContentRow 
-            title={`${genreId ? `${genreId.charAt(0).toUpperCase()}${genreId.slice(1)}` : 'Featured'} Movies`}
-            contents={movies}
-          />
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold">{genreId ? `${genreId.charAt(0).toUpperCase()}${genreId.slice(1)}` : 'Featured'} Movies</h2>
+            <div className="relative">
+              <div className="flex flex-wrap gap-6">
+                {movies.map((movie) => (
+                  <div 
+                    key={movie.id}
+                    className={`transition-all duration-300 ease-in-out ${
+                      hoveredId === movie.id ? "w-[350px]" : "w-[180px]"
+                    }`}
+                    onMouseEnter={() => setHoveredId(movie.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                  >
+                    {hoveredId === movie.id ? (
+                      <div className="h-full w-full bg-black/90 rounded-lg overflow-hidden border border-gray-800 shadow-xl animate-fade-in">
+                        <div className="relative">
+                          <img 
+                            src={movie.posterUrl}
+                            alt={movie.title}
+                            className="w-full aspect-video object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+                          
+                          <div className="absolute bottom-0 left-0 right-0 p-3">
+                            <h3 className="font-bold text-white truncate mb-1">{movie.title}</h3>
+                            <div className="text-xs text-gray-300 mb-3 flex items-center">
+                              {movie.year} {movie.category && `• ${movie.category}`}
+                              {movie.rating && 
+                                <span className="ml-auto bg-purple-600 text-white px-1.5 py-0.5 rounded-sm">
+                                  {movie.rating}
+                                </span>
+                              }
+                            </div>
+                            
+                            <div className="flex space-x-2">
+                              <Link to={`/watch/${movie.id}?trailer=true`}>
+                                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 rounded-full px-4">
+                                  <Play className="h-4 w-4 mr-1" />
+                                  Trailer
+                                </Button>
+                              </Link>
+                              <Link to={`/watch/${movie.id}`}>
+                                <Button variant="outline" size="sm" className="rounded-full border-white/40 hover:bg-white/10 px-4">
+                                  <Info className="h-4 w-4 mr-1" />
+                                  Detail
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="block relative cursor-pointer overflow-hidden">
+                        <div className="relative aspect-[2/3] overflow-hidden rounded-md mb-2">
+                          <img 
+                            src={movie.posterUrl}
+                            alt={movie.title}
+                            className="w-full h-full object-cover hover:scale-105 transition duration-300"
+                          />
+                          {movie.rating && (
+                            <div className="absolute top-2 right-2 bg-purple-600 text-white px-1.5 py-0.5 text-xs rounded-sm">
+                              {movie.rating}
+                            </div>
+                          )}
+                        </div>
+                        <h3 className="text-sm font-medium truncate">{movie.title}</h3>
+                        <div className="text-xs text-gray-400">
+                          {movie.year} {movie.category && `• ${movie.category}`}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="text-center py-12">
             <p className="text-xl text-gray-400">No movies found in this genre.</p>
