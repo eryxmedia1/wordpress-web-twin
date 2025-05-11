@@ -56,7 +56,6 @@ const ContentRow = ({ title, contents, seeAllLink }: ContentRowProps) => {
                       alt={content.title}
                       className="w-full aspect-video object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
                     
                     <div className="absolute bottom-0 left-0 right-0 p-3">
                       <h3 className="font-bold text-white truncate mb-1">{content.title}</h3>
