@@ -39,8 +39,8 @@ const ContentRow = ({ title, contents, seeAllLink }: ContentRowProps) => {
         {contents.map((content) => (
           <HoverCard key={content.id} openDelay={200} closeDelay={100}>
             <HoverCardTrigger asChild>
-              <div className="group block relative cursor-pointer">
-                <div className="relative aspect-[2/3] overflow-hidden rounded-md mb-2">
+              <div className="group block relative cursor-pointer overflow-hidden">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-md mb-2 transform transition-all duration-500">
                   <img 
                     src={content.posterUrl}
                     alt={content.title}
@@ -51,6 +51,7 @@ const ContentRow = ({ title, contents, seeAllLink }: ContentRowProps) => {
                       {content.rating}
                     </div>
                   )}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
                 <h3 className="text-sm font-medium truncate">{content.title}</h3>
                 <div className="text-xs text-gray-400">
@@ -59,7 +60,7 @@ const ContentRow = ({ title, contents, seeAllLink }: ContentRowProps) => {
               </div>
             </HoverCardTrigger>
             
-            <HoverCardContent className="w-[280px] p-0 bg-black border-gray-800 rounded-md overflow-hidden">
+            <HoverCardContent className="w-[280px] p-0 bg-black border-gray-800 rounded-md overflow-hidden transform transition-all duration-300 origin-left">
               <div className="relative">
                 <img 
                   src={content.posterUrl}

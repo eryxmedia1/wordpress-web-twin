@@ -74,7 +74,7 @@ const ContentCarousel = ({ contents }: ContentCarouselProps) => {
         {contents.map((content) => (
           <HoverCard key={content.id} openDelay={200} closeDelay={100}>
             <HoverCardTrigger asChild>
-              <div className="flex-none w-[180px] cursor-pointer">
+              <div className="flex-none w-[180px] cursor-pointer overflow-hidden">
                 <div className="relative aspect-[2/3] rounded-md overflow-hidden mb-2">
                   <img 
                     src={content.posterUrl}
@@ -86,6 +86,7 @@ const ContentCarousel = ({ contents }: ContentCarouselProps) => {
                       {content.rating}
                     </div>
                   )}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
                 <h3 className="text-sm font-medium truncate">{content.title}</h3>
                 <div className="text-xs text-gray-400">
@@ -94,7 +95,7 @@ const ContentCarousel = ({ contents }: ContentCarouselProps) => {
               </div>
             </HoverCardTrigger>
             
-            <HoverCardContent className="w-[280px] p-0 bg-black border-gray-800 rounded-md overflow-hidden">
+            <HoverCardContent className="w-[280px] p-0 bg-black border-gray-800 rounded-md overflow-hidden transform transition-all duration-300 origin-left">
               <div className="relative">
                 <img 
                   src={content.posterUrl}
