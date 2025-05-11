@@ -52,7 +52,7 @@ const Signup = () => {
         <Link to="/">
           <img 
             src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
-            alt="ZOE" 
+            alt="Zoe RatedTV" 
             className="h-16 object-contain" 
           />
         </Link>
@@ -289,7 +289,7 @@ const Signup = () => {
             <a href="#" className="hover:underline">Privacy</a>
           </div>
           
-          <p className="mt-8 text-sm">Zoetality Is Our Reality</p>
+          <p className="mt-8 text-sm">Zoe RatedTV Is Our Reality</p>
         </div>
       </footer>
     </div>

@@ -45,7 +45,7 @@ const Navbar = () => {
         <Link to="/">
           <img 
             src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
-            alt="ZOE" 
+            alt="Zoe RatedTV" 
             className="h-16 object-contain" 
           />
         </Link>
@@ -60,7 +60,7 @@ const Navbar = () => {
           <Link to="/">
             <img 
               src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
-              alt="ZOE" 
+              alt="Zoe RatedTV" 
               className="h-16 object-contain" 
             />
           </Link>
@@ -84,7 +84,7 @@ const Navbar = () => {
         <Link to="/browse">
           <img 
             src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
-            alt="ZOE" 
+            alt="Zoe RatedTV" 
             className="h-16 object-contain" 
           />
         </Link>

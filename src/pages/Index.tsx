@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -15,7 +14,7 @@ const Index = () => {
           <Link to="/">
             <img 
               src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
-              alt="ZOE" 
+              alt="Zoe RatedTV" 
               className="h-16 object-contain" 
             />
           </Link>
@@ -39,7 +38,7 @@ const Index = () => {
         <div className="max-w-3xl mx-auto text-center pt-20">
           <img 
             src="/lovable-uploads/5806b50d-0fbb-4e69-bec1-5c2d43f7d0bd.png" 
-            alt="ZOE Logo"
+            alt="Zoe RatedTV Logo"
             className="h-40 object-contain mx-auto mb-6" 
           />
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Unlimited movies, TV shows, and more.</h1>
@@ -247,7 +246,7 @@ const Index = () => {
             </div>
           </div>
           
-          <p className="mt-8">Zoetality Is Our Reality</p>
+          <p className="mt-8">Zoe RatedTV Is Our Reality</p>
         </div>
       </footer>
     </div>
@@ -257,24 +256,24 @@ const Index = () => {
 // FAQ data
 const faqs = [
   {
-    question: "What is ZOE?",
-    answer: "ZOE is a streaming service that offers a wide variety of award-winning TV shows, movies, anime, documentaries, and more on thousands of internet-connected devices."
+    question: "What is Zoe RatedTV?",
+    answer: "Zoe RatedTV is a streaming service that offers a wide variety of award-winning TV shows, movies, anime, documentaries, and more on thousands of internet-connected devices."
   },
   {
-    question: "How much does ZOE cost?",
-    answer: "Watch ZOE on your smartphone, tablet, Smart TV, laptop, or streaming device, all for one fixed monthly fee. Plans range from $0 to $14.99 a month. No extra costs, no contracts."
+    question: "How much does Zoe RatedTV cost?",
+    answer: "Watch Zoe RatedTV on your smartphone, tablet, Smart TV, laptop, or streaming device, all for one fixed monthly fee. Plans range from $0 to $14.99 a month. No extra costs, no contracts."
   },
   {
     question: "Where can I watch?",
-    answer: "Watch anywhere, anytime. Sign in with your ZOE account to watch instantly on the web at zoe.com from your personal computer or on any internet-connected device that offers the ZOE app."
+    answer: "Watch anywhere, anytime. Sign in with your Zoe RatedTV account to watch instantly on the web at zoeratedtv.com from your personal computer or on any internet-connected device that offers the Zoe RatedTV app."
   },
   {
     question: "How do I cancel?",
-    answer: "ZOE is flexible. There are no pesky contracts and no commitments. You can easily cancel your account online in two clicks. There are no cancellation fees – start or stop your account anytime."
+    answer: "Zoe RatedTV is flexible. There are no pesky contracts and no commitments. You can easily cancel your account online in two clicks. There are no cancellation fees – start or stop your account anytime."
   },
   {
-    question: "What can I watch on ZOE?",
-    answer: "ZOE has an extensive library of feature films, documentaries, TV shows, anime, award-winning ZOE originals, and more. Watch as much as you want, anytime you want."
+    question: "What can I watch on Zoe RatedTV?",
+    answer: "Zoe RatedTV has an extensive library of feature films, documentaries, TV shows, anime, award-winning Zoe RatedTV originals, and more. Watch as much as you want, anytime you want."
   }
 ];
 

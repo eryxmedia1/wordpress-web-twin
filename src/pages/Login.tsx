@@ -28,7 +28,7 @@ const Login = () => {
         <Link to="/">
           <img 
             src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
-            alt="ZOE" 
+            alt="Zoe RatedTV" 
             className="h-16 object-contain" 
           />
         </Link>
@@ -89,7 +89,7 @@ const Login = () => {
           
           <div className="mt-16">
             <p className="text-[#737373]">
-              New to ZOE? <Link to="/signup" className="text-white hover:underline">Sign up now</Link>.
+              New to Zoe RatedTV? <Link to="/signup" className="text-white hover:underline">Sign up now</Link>.
             </p>
             
             <p className="text-[#737373] text-xs mt-4">
@@ -110,7 +110,7 @@ const Login = () => {
             <a href="#" className="hover:underline">Privacy</a>
           </div>
           
-          <p className="mt-8 text-sm">Zoetality Is Our Reality</p>
+          <p className="mt-8 text-sm">Zoe RatedTV Is Our Reality</p>
         </div>
       </footer>
     </div>

@@ -9,7 +9,7 @@ import { Info, Play } from "lucide-react";
 const contentRows = [
   {
     id: 1,
-    title: "Popular on ZOE",
+    title: "Popular on Zoe RatedTV",
     items: Array(10).fill(null).map((_, i) => ({
       id: `pop-${i}`,
       title: `Popular Title ${i+1}`,
@@ -36,10 +36,10 @@ const contentRows = [
   },
   {
     id: 4,
-    title: "ZOE Originals",
+    title: "Zoe RatedTV Originals",
     items: Array(10).fill(null).map((_, i) => ({
       id: `orig-${i}`,
-      title: `ZOE Original ${i+1}`,
+      title: `Zoe RatedTV Original ${i+1}`,
       image: `https://picsum.photos/300/170?random=${i+60}`,
     }))
   },
@@ -71,7 +71,7 @@ const Browse = () => {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <img 
           src="/lovable-uploads/5806b50d-0fbb-4e69-bec1-5c2d43f7d0bd.png" 
-          alt="ZOE Logo" 
+          alt="Zoe RatedTV Logo" 
           className="h-20 animate-pulse" 
         />
       </div>
