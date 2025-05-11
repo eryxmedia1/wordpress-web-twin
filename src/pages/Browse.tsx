@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import ContentRow from "@/components/ContentRow";
 import HeroBanner from "@/components/HeroBanner";
 import ContentCarousel from "@/components/ContentCarousel";
+import GenresList from "@/components/GenresList";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -235,8 +236,12 @@ const Browse = () => {
         <HeroBanner content={featuredContent} />
         
         <div className="px-4 md:px-8 space-y-12 mt-8">
+          {/* Genres List */}
+          <GenresList className="mt-8" />
+          
           <ContentRow title="Trending Movies" contents={trendingMovies} seeAllLink="/browse/trending" />
           
+          {/* Almost Adults section */}
           <div className="relative">
             <h2 className="text-2xl font-semibold mb-4">Almost Adults</h2>
             <p className="text-gray-300 max-w-2xl mb-6">
@@ -255,6 +260,7 @@ const Browse = () => {
           
           <ContentRow title="Top of the Week" contents={topRatedMovies} seeAllLink="/browse/top" />
           
+          {/* Special Feature Banner */}
           <div className="mt-12 mb-16 relative h-[250px] w-full overflow-hidden rounded-lg">
             <div className="absolute inset-0">
               <img 
@@ -282,6 +288,7 @@ const Browse = () => {
           
           <ContentRow title="TV Series" contents={tvSeries} seeAllLink="/browse/tv" />
           
+          {/* Recommended TV Shows */}
           <div className="mt-12 py-8 border-t border-gray-800">
             <h2 className="text-xl font-semibold mb-6">Recommended TV Shows</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -301,6 +308,7 @@ const Browse = () => {
             </div>
           </div>
           
+          {/* Top Producers */}
           <div className="py-8 border-t border-gray-800">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Top Producers</h2>
@@ -327,6 +335,7 @@ const Browse = () => {
             </div>
           </div>
           
+          {/* New Arrivals */}
           <div className="py-8 border-t border-gray-800">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">New Arrivals</h2>

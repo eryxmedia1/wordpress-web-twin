@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Browse from "./pages/Browse";
+import GenreView from "./pages/GenreView";
 import Watch from "./pages/Watch";
 import Admin from "./pages/Admin";
 import EditContent from "./pages/EditContent";
@@ -19,7 +20,7 @@ import ProducerProfile from "./pages/ProducerProfile";
 const queryClient = new QueryClient();
 
 // Changed to true to allow access to authenticated routes
-const isAuthenticated = true; // Changed from false to true
+const isAuthenticated = true;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -38,6 +39,14 @@ const App = () => (
           <Route 
             path="/browse/:category" 
             element={isAuthenticated ? <Browse /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/browse/genres" 
+            element={isAuthenticated ? <GenreView /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/browse/genres/:genreId" 
+            element={isAuthenticated ? <GenreView /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/watch/:id" 
