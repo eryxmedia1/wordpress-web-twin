@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import ContentRow from "@/components/ContentRow";
 import HeroBanner from "@/components/HeroBanner";
@@ -186,8 +186,46 @@ const featuredContent = {
   category: "Action/Thriller"
 };
 
+// New arrivals data with proper IDs for links
+const newArrivals = [
+  { 
+    id: "101", 
+    title: "The Silent Path", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/ptpr0kGAckfQkJeJIt8st5dglvd1.jpg",
+    year: "2024",
+    category: "Thriller/Action"
+  },
+  { 
+    id: "102", 
+    title: "Dark Waters", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/ptpr0kGAckfQkJeJIt8st5dglvd2.jpg",
+    year: "2024",
+    category: "Drama/Mystery"
+  },
+  { 
+    id: "103", 
+    title: "The Last Flight", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/ptpr0kGAckfQkJeJIt8st5dglvd3.jpg",
+    year: "2024",
+    category: "Action/Adventure"
+  }
+];
+
+// Top producers data - corresponds to the full data in ProducerProfile
+const topProducers = [
+  { id: "1", name: "Alex Johnson", image: "https://randomuser.me/api/portraits/men/21.jpg" },
+  { id: "2", name: "Sarah Williams", image: "https://randomuser.me/api/portraits/women/21.jpg" },
+  { id: "3", name: "Michael Chen", image: "https://randomuser.me/api/portraits/men/22.jpg" },
+  { id: "4", name: "Emily Rodriguez", image: "https://randomuser.me/api/portraits/women/22.jpg" },
+  { id: "5", name: "David Kim", image: "https://randomuser.me/api/portraits/men/23.jpg" },
+  { id: "6", name: "Olivia Taylor", image: "https://randomuser.me/api/portraits/women/23.jpg" },
+  { id: "7", name: "Robert Wilson", image: "https://randomuser.me/api/portraits/men/24.jpg" },
+  { id: "8", name: "Jennifer Park", image: "https://randomuser.me/api/portraits/women/24.jpg" }
+];
+
 const Browse = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // For demo purposes
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-[#0F0F1F] text-white">
@@ -197,7 +235,7 @@ const Browse = () => {
         <HeroBanner content={featuredContent} />
         
         <div className="px-4 md:px-8 space-y-12 mt-8">
-          <ContentRow title="Trending Movies" contents={trendingMovies} />
+          <ContentRow title="Trending Movies" contents={trendingMovies} seeAllLink="/browse/trending" />
           
           <div className="relative">
             <h2 className="text-2xl font-semibold mb-4">Almost Adults</h2>
@@ -215,7 +253,7 @@ const Browse = () => {
             </div>
           </div>
           
-          <ContentRow title="Top of the Week" contents={topRatedMovies} />
+          <ContentRow title="Top of the Week" contents={topRatedMovies} seeAllLink="/browse/top" />
           
           <div className="mt-12 mb-16 relative h-[250px] w-full overflow-hidden rounded-lg">
             <div className="absolute inset-0">
@@ -231,7 +269,10 @@ const Browse = () => {
                   <h3 className="text-xs uppercase tracking-wider mb-1">A NETFLIX ORIGINAL</h3>
                   <h2 className="text-3xl font-bold mb-3">PIECES OF HER</h2>
                   <p className="text-sm mb-4">Now Available</p>
-                  <Button className="bg-white text-black hover:bg-gray-200">
+                  <Button 
+                    className="bg-white text-black hover:bg-gray-200"
+                    onClick={() => navigate("/watch/special-feature")}
+                  >
                     Watch Now
                   </Button>
                 </div>
@@ -239,13 +280,13 @@ const Browse = () => {
             </div>
           </div>
           
-          <ContentRow title="TV Series" contents={tvSeries} />
+          <ContentRow title="TV Series" contents={tvSeries} seeAllLink="/browse/tv" />
           
           <div className="mt-12 py-8 border-t border-gray-800">
             <h2 className="text-xl font-semibold mb-6">Recommended TV Shows</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="rounded-md overflow-hidden">
+                <Link to={`/watch/rec-${i}`} key={i} className="rounded-md overflow-hidden hover:opacity-90 transition-opacity">
                   <img 
                     src={`https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED${i}.jpg`}
                     alt={`Recommended show ${i}`}
@@ -255,45 +296,62 @@ const Browse = () => {
                     <h3 className="text-sm font-medium truncate">Recommended Show {i}</h3>
                     <p className="text-xs text-gray-400">2023 • Drama</p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
           
           <div className="py-8 border-t border-gray-800">
-            <h2 className="text-xl font-semibold mb-6">Top Artists</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold">Top Producers</h2>
+              <Link 
+                to="/producers" 
+                className="text-sm text-purple-400 flex items-center hover:text-purple-300"
+              >
+                View All <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
             <div className="flex overflow-x-auto gap-4 pb-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="flex-shrink-0">
+              {topProducers.map((producer) => (
+                <Link key={producer.id} to={`/producer/${producer.id}`} className="flex-shrink-0 group">
                   <div className="w-16 h-16 rounded-full overflow-hidden">
                     <img 
-                      src={`https://randomuser.me/api/portraits/men/${i+20}.jpg`}
-                      alt={`Artist ${i}`}
-                      className="w-full h-full object-cover"
+                      src={producer.image}
+                      alt={producer.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
                     />
                   </div>
-                </div>
+                  <p className="text-xs text-center mt-1 max-w-16 truncate">{producer.name}</p>
+                </Link>
               ))}
             </div>
           </div>
           
           <div className="py-8 border-t border-gray-800">
-            <h2 className="text-xl font-semibold mb-6">New Arrivals</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold">New Arrivals</h2>
+              <Link 
+                to="/browse/new" 
+                className="text-sm text-purple-400 flex items-center hover:text-purple-300"
+              >
+                View All <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex gap-3">
+              {newArrivals.map((item) => (
+                <Link to={`/watch/${item.id}`} key={item.id} className="flex gap-3 group">
                   <div className="w-24 h-16 rounded overflow-hidden">
                     <img 
-                      src={`https://image.tmdb.org/t/p/w500/ptpr0kGAckfQkJeJIt8st5dglvd${i}.jpg`}
-                      alt={`New arrival ${i}`}
-                      className="w-full h-full object-cover"
+                      src={item.posterUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                     />
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium">New Movie Title {i}</h3>
-                    <p className="text-xs text-gray-400">2024 • Thriller/Action</p>
+                    <h3 className="text-sm font-medium group-hover:text-purple-400 transition-colors">{item.title}</h3>
+                    <p className="text-xs text-gray-400">{item.year} • {item.category}</p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

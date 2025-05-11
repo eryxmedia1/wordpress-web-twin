@@ -13,6 +13,8 @@ import Watch from "./pages/Watch";
 import Admin from "./pages/Admin";
 import EditContent from "./pages/EditContent";
 import UserProfile from "./pages/UserProfile";
+import Producers from "./pages/Producers";
+import ProducerProfile from "./pages/ProducerProfile";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +50,14 @@ const App = () => (
           <Route 
             path="/profile/:id" 
             element={isAuthenticated ? <UserProfile /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/producers" 
+            element={isAuthenticated ? <Producers /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/producer/:id" 
+            element={isAuthenticated ? <ProducerProfile /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/admin" 
