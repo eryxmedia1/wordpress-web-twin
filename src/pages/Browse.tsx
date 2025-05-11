@@ -1,150 +1,304 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import ContentRow from "@/components/ContentRow";
+import HeroBanner from "@/components/HeroBanner";
+import ContentCarousel from "@/components/ContentCarousel";
+import { ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Info, Play } from "lucide-react";
 
-// Mock data for content rows
-const contentRows = [
-  {
-    id: 1,
-    title: "Popular on Zoe RatedTV",
-    items: Array(10).fill(null).map((_, i) => ({
-      id: `pop-${i}`,
-      title: `Popular Title ${i+1}`,
-      image: `https://picsum.photos/300/170?random=${i+1}`,
-    }))
+// Mock data - this would come from your backend in production
+const trendingMovies = [
+  { 
+    id: "1", 
+    title: "John Wick 4", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg",
+    rating: "8.2",
+    year: "2023",
+    category: "Action/Thriller"
   },
-  {
-    id: 2,
-    title: "Trending Now",
-    items: Array(10).fill(null).map((_, i) => ({
-      id: `trend-${i}`,
-      title: `Trending Title ${i+1}`,
-      image: `https://picsum.photos/300/170?random=${i+20}`,
-    }))
+  { 
+    id: "2", 
+    title: "Marvel The Marvels", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/Ag3D9qXjhJ2FUkrlJ0Cv1pgxqYQ.jpg",
+    rating: "7.4", 
+    year: "2023",
+    category: "Action/Sci-Fi"
   },
-  {
-    id: 3,
-    title: "New Releases",
-    items: Array(10).fill(null).map((_, i) => ({
-      id: `new-${i}`,
-      title: `New Release ${i+1}`,
-      image: `https://picsum.photos/300/170?random=${i+40}`,
-    }))
+  { 
+    id: "3", 
+    title: "The White Lotus", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/cBl6XTth52P9Rib0cCaPG0r1EGT.jpg",
+    rating: "8.7",
+    year: "2022",
+    category: "Drama/Comedy"
   },
-  {
-    id: 4,
-    title: "Zoe RatedTV Originals",
-    items: Array(10).fill(null).map((_, i) => ({
-      id: `orig-${i}`,
-      title: `Zoe RatedTV Original ${i+1}`,
-      image: `https://picsum.photos/300/170?random=${i+60}`,
-    }))
+  { 
+    id: "4", 
+    title: "The Post", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/qyRwj5VvuTRdJ76o2grP93grNxt.jpg",
+    rating: "7.5",
+    year: "2018",
+    category: "Drama/Historical"
   },
+  { 
+    id: "5", 
+    title: "In the Air", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+    rating: "8.0",
+    year: "2021",
+    category: "Drama"
+  },
+  { 
+    id: "6", 
+    title: "The Last Emperor", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/saZGHmEyGPJSbT3oyJlNyNQbatD.jpg",
+    rating: "8.8",
+    year: "1987",
+    category: "Drama/Historical"
+  }
 ];
 
-const Browse = () => {
-  const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // This would be replaced with actual auth state
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Simulate loading and auth check
-  useEffect(() => {
-    setTimeout(() => {
-      // For demo, we'll consider user is logged in
-      setIsLoggedIn(true);
-      setIsLoading(false);
-    }, 1500);
-  }, []);
-  
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      navigate("/login");
-    }
-  }, [isLoading, isLoggedIn, navigate]);
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <img 
-          src="/lovable-uploads/5806b50d-0fbb-4e69-bec1-5c2d43f7d0bd.png" 
-          alt="Zoe RatedTV Logo" 
-          className="h-20 animate-pulse" 
-        />
-      </div>
-    );
+const exclusiveMovies = [
+  { 
+    id: "10", 
+    title: "The Holdovers", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/hUu9zyZmDd8VZegKi1iK1Vk0RYS.jpg",
+    rating: "8.5",
+    year: "2023",
+    category: "Drama/Comedy"
+  },
+  { 
+    id: "11", 
+    title: "The Bikeriders", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/qpyaW4xUPeIiYA5ckg5zAZFHvsb.jpg",
+    rating: "7.9",
+    year: "2023",
+    category: "Crime/Drama"
+  },
+  { 
+    id: "12", 
+    title: "The White House Down", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/1jcLMx9U5yChTrMPzGRVF2iw4CL.jpg",
+    rating: "7.3",
+    year: "2023",
+    category: "Action/Thriller"
+  },
+  { 
+    id: "13", 
+    title: "City Hunter", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/jOGPnX9Ufb3XyT8YW19G7TLrRRU.jpg",
+    rating: "7.7",
+    year: "2023",
+    category: "Action/Comedy"
+  },
+  { 
+    id: "14", 
+    title: "The Sleeping Angel", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/8xV47NDrjdZDpYUtcKYNLvbGTrI.jpg",
+    rating: "6.9",
+    year: "2023",
+    category: "Thriller/Mystery"
   }
-  
+];
+
+const topRatedMovies = [
+  { 
+    id: "20", 
+    title: "City Hunter", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/jOGPnX9Ufb3XyT8YW19G7TLrRRU.jpg",
+    rating: "7.7",
+    year: "2023",
+    category: "Action/Comedy"
+  },
+  { 
+    id: "21", 
+    title: "Gatlopp", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/6hLaPTJhuebYcTqGwVkQtTHsY2S.jpg",
+    rating: "8.3",
+    year: "2022",
+    category: "Fantasy/Comedy"
+  },
+  { 
+    id: "22", 
+    title: "Oppenheimer", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/ptpr0kGAckfQkJeJIt8st5dglvd.jpg",
+    rating: "9.0",
+    year: "2023",
+    category: "Drama/Historical"
+  },
+  { 
+    id: "23", 
+    title: "The Post", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/qyRwj5VvuTRdJ76o2grP93grNxt.jpg",
+    rating: "7.5",
+    year: "2018",
+    category: "Drama/Historical"
+  }
+];
+
+const tvSeries = [
+  { 
+    id: "30", 
+    title: "Ripley", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/2NUuZzOIyZCdm0zAOOvtOGmIFKL.jpg",
+    rating: "8.4",
+    year: "2023",
+    category: "Drama/Thriller"
+  },
+  { 
+    id: "31", 
+    title: "Shogun", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/x15pCJmxmJ9fK7VwFzXyGbQpVYQ.jpg",
+    rating: "9.1",
+    year: "2024",
+    category: "Drama/Historical"
+  },
+  { 
+    id: "32", 
+    title: "The Last of Us", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg",
+    rating: "8.7",
+    year: "2023",
+    category: "Drama/Action"
+  },
+  { 
+    id: "33", 
+    title: "Fallout", 
+    posterUrl: "https://image.tmdb.org/t/p/w500/6oNm06TPz2vGiPc2I52oXW3JwPS.jpg",
+    rating: "8.6",
+    year: "2024",
+    category: "Sci-Fi/Adventure"
+  }
+];
+
+// Featured content for hero banner
+const featuredContent = {
+  id: "1",
+  title: "John Wick 4",
+  description: "John Wick uncovers a path to defeating the High Table. But before he can earn his freedom, Wick must face off against a new enemy with powerful alliances across the globe and forces that turn old friends into foes.",
+  posterUrl: "https://image.tmdb.org/t/p/original/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg",
+  backdropUrl: "https://image.tmdb.org/t/p/original/h8gHn0OzBoaefsYseUByqsmEDMY.jpg",
+  rating: "8.2",
+  year: "2023",
+  length: "2h 49m",
+  category: "Action/Thriller"
+};
+
+const Browse = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // For demo purposes
+
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[#0F0F1F] text-white">
       <Navbar />
       
-      {/* Hero Banner */}
-      <div className="relative w-full h-[80vh] overflow-hidden">
-        {/* This would be a video or hero image */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent z-10" />
-        <img 
-          src="https://picsum.photos/1920/1080?random=1" 
-          alt="Hero Banner"
-          className="w-full h-full object-cover object-center" 
-        />
+      <main className="pb-16">
+        <HeroBanner content={featuredContent} />
         
-        <div className="absolute bottom-[20%] left-[5%] z-20 max-w-xl">
-          <img 
-            src="/lovable-uploads/5806b50d-0fbb-4e69-bec1-5c2d43f7d0bd.png" 
-            alt="Show Logo" 
-            className="w-72 mb-6" 
-          />
-          <h1 className="text-4xl font-bold mb-4">Featured Title</h1>
-          <p className="text-lg mb-6">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, justo ac ultricies lacinia, nisl nisl aliquet nisl.
-          </p>
-          <div className="flex gap-3">
-            <Button 
-              className="bg-white text-black hover:bg-white/80 font-medium text-lg px-8 gap-2"
-              onClick={() => navigate("/watch/featured")}
-            >
-              <Play className="h-5 w-5" /> Play
-            </Button>
-            <Button 
-              className="bg-gray-500/70 text-white hover:bg-gray-500/90 font-medium text-lg px-8 gap-2"
-              onClick={() => navigate("/details/featured")}
-            >
-              <Info className="h-5 w-5" /> More Info
-            </Button>
+        <div className="px-4 md:px-8 space-y-12 mt-8">
+          <ContentRow title="Trending Movies" contents={trendingMovies} />
+          
+          <div className="relative">
+            <h2 className="text-2xl font-semibold mb-4">Almost Adults</h2>
+            <p className="text-gray-300 max-w-2xl mb-6">
+              Movies and shows that tackle growing up and figuring out who you 
+              want to be, the awkwardness of youth and the important moments that shape us.
+            </p>
+            <Link to="/browse/almost-adults">
+              <Button className="bg-purple-600 hover:bg-purple-700">
+                See more <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <div className="mt-6">
+              <ContentCarousel contents={exclusiveMovies} />
+            </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Content Rows */}
-      <div className="mt-[-150px] relative z-30 pb-20">
-        {contentRows.map((row) => (
-          <div key={row.id} className="px-[5%] mb-8">
-            <h2 className="text-xl md:text-2xl font-bold mb-4">{row.title}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
-              {row.items.slice(0, 5).map((item) => (
-                <div 
-                  key={item.id} 
-                  className="relative rounded-md overflow-hidden cursor-pointer transition-transform hover:scale-105 group"
-                  onClick={() => navigate(`/watch/${item.id}`)}
-                >
+          
+          <ContentRow title="Top of the Week" contents={topRatedMovies} />
+          
+          <div className="mt-12 mb-16 relative h-[250px] w-full overflow-hidden rounded-lg">
+            <div className="absolute inset-0">
+              <img 
+                src="https://image.tmdb.org/t/p/original/5bunYe8EL2SH8lQxhC0pXobcaRL.jpg" 
+                alt="Pieces of Her" 
+                className="w-full h-full object-cover opacity-50"
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent">
+              <div className="flex h-full items-center px-6 md:px-12">
+                <div className="max-w-md">
+                  <h3 className="text-xs uppercase tracking-wider mb-1">A NETFLIX ORIGINAL</h3>
+                  <h2 className="text-3xl font-bold mb-3">PIECES OF HER</h2>
+                  <p className="text-sm mb-4">Now Available</p>
+                  <Button className="bg-white text-black hover:bg-gray-200">
+                    Watch Now
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <ContentRow title="TV Series" contents={tvSeries} />
+          
+          <div className="mt-12 py-8 border-t border-gray-800">
+            <h2 className="text-xl font-semibold mb-6">Recommended TV Shows</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="rounded-md overflow-hidden">
                   <img 
-                    src={item.image} 
-                    alt={item.title} 
-                    className="w-full h-auto object-cover" 
+                    src={`https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED${i}.jpg`}
+                    alt={`Recommended show ${i}`}
+                    className="w-full h-40 object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <Play className="h-12 w-12" />
+                  <div className="p-2">
+                    <h3 className="text-sm font-medium truncate">Recommended Show {i}</h3>
+                    <p className="text-xs text-gray-400">2023 • Drama</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        ))}
-      </div>
+          
+          <div className="py-8 border-t border-gray-800">
+            <h2 className="text-xl font-semibold mb-6">Top Artists</h2>
+            <div className="flex overflow-x-auto gap-4 pb-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full overflow-hidden">
+                    <img 
+                      src={`https://randomuser.me/api/portraits/men/${i+20}.jpg`}
+                      alt={`Artist ${i}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="py-8 border-t border-gray-800">
+            <h2 className="text-xl font-semibold mb-6">New Arrivals</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="w-24 h-16 rounded overflow-hidden">
+                    <img 
+                      src={`https://image.tmdb.org/t/p/w500/ptpr0kGAckfQkJeJIt8st5dglvd${i}.jpg`}
+                      alt={`New arrival ${i}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium">New Movie Title {i}</h3>
+                    <p className="text-xs text-gray-400">2024 • Thriller/Action</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };
