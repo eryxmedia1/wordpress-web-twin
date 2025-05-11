@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Bell, ChevronDown, User, Film, Home } from "lucide-react";
+import { Search, Bell, ChevronDown, User, Film, Home, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
