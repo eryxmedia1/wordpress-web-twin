@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Film, Tv, Music, Book, Video, Drama, Comedy, Action, Horror, Romance, SciFi, Documentary } from "lucide-react";
+import { Film, Tv, Music, Book, Video, Drama } from "lucide-react";
 
 export interface Genre {
   id: string;
@@ -10,34 +9,29 @@ export interface Genre {
   icon: keyof typeof genreIcons;
 }
 
+// Only use available icons from lucide-react
 const genreIcons = {
   "film": Film,
   "tv": Tv,
   "music": Music,
   "book": Book,
   "video": Video,
-  "drama": Drama,
-  "comedy": Comedy,
-  "action": Action,
-  "horror": Horror,
-  "romance": Romance,
-  "sci-fi": SciFi,
-  "documentary": Documentary
+  "drama": Drama
 };
 
 const genres: Genre[] = [
-  { id: "action", name: "Action", icon: "action" },
-  { id: "comedy", name: "Comedy", icon: "comedy" },
+  { id: "action", name: "Action", icon: "film" },
+  { id: "comedy", name: "Comedy", icon: "tv" },
   { id: "drama", name: "Drama", icon: "drama" },
-  { id: "horror", name: "Horror", icon: "horror" },
-  { id: "romance", name: "Romance", icon: "romance" },
-  { id: "sci-fi", name: "Sci-Fi", icon: "sci-fi" },
-  { id: "documentary", name: "Documentary", icon: "documentary" },
+  { id: "horror", name: "Horror", icon: "film" },
+  { id: "romance", name: "Romance", icon: "book" },
+  { id: "sci-fi", name: "Sci-Fi", icon: "tv" },
+  { id: "documentary", name: "Documentary", icon: "video" },
   { id: "thriller", name: "Thriller", icon: "film" },
   { id: "animation", name: "Animation", icon: "video" },
   { id: "family", name: "Family", icon: "tv" },
   { id: "mystery", name: "Mystery", icon: "book" },
-  { id: "adventure", name: "Adventure", icon: "action" }
+  { id: "adventure", name: "Adventure", icon: "drama" }
 ];
 
 interface GenresListProps {
