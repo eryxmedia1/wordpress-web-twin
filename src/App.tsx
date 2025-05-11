@@ -16,8 +16,8 @@ import UserProfile from "./pages/UserProfile";
 
 const queryClient = new QueryClient();
 
-// Mock authentication for demo purposes
-const isAuthenticated = false; // Change to true to test authenticated routes
+// Changed to true to allow access to authenticated routes
+const isAuthenticated = true; // Changed from false to true
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
