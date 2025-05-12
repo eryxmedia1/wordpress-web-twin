@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { CheckIcon, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase, DbContent, DbCategory, DbTag } from "@/integrations/supabase/client";
+import { supabase, DbContent, DbCategory, DbTag, ContentType } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,9 +21,6 @@ import { Switch } from "@/components/ui/switch";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Define ContentType explicitly here to avoid the 'never' type error
-type ContentType = "movie" | "show" | "short";
 
 type Season = {
   number: number;
@@ -108,7 +105,7 @@ const AddTVShowForm = () => {
       const { data, error } = await supabase
         .from("categories")
         .select("*")
-        .eq("content_type", "show" as ContentType)
+        .eq("content_type", "show")
         .order("name");
         
       if (error) throw error;
@@ -212,13 +209,12 @@ const AddTVShowForm = () => {
     
     try {
       // Step 1: Create the TV show content record
-      const contentType: ContentType = "show";
       const { data: content, error: contentError } = await supabase
         .from("contents")
         .insert({
           title: data.title,
           description: data.description,
-          type: contentType, // Using the local variable of correct type
+          type: "show" as ContentType,
           genre: data.category,
           release_year: parseInt(data.releaseYear),
           rating: data.rating,
