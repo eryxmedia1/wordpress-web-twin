@@ -174,9 +174,19 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
     <Card className="bg-gray-800 border-gray-700 shadow-lg">
       <CardContent className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-6">
-            <TabsTrigger value="info" className="text-white">General Info</TabsTrigger>
-            <TabsTrigger value="media" className="text-white">Media & Metadata</TabsTrigger>
+          <TabsList className="grid grid-cols-2 mb-6 bg-gray-700">
+            <TabsTrigger 
+              value="info" 
+              className="text-gray-300 data-[state=active]:bg-gray-800 data-[state=active]:text-white"
+            >
+              General Info
+            </TabsTrigger>
+            <TabsTrigger 
+              value="media" 
+              className="text-gray-300 data-[state=active]:bg-gray-800 data-[state=active]:text-white"
+            >
+              Media & Metadata
+            </TabsTrigger>
           </TabsList>
           
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -414,7 +424,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               <Button type="button" variant="ghost" onClick={onClose} className="mr-2 text-white">
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-[#e50914] hover:bg-[#f6121d] text-white">
+              <Button type="submit" disabled={isSubmitting} className="bg-[#F97316] hover:bg-[#F97316]/90 text-white">
                 {isSubmitting ? (
                   <>
                     <CheckIcon className="mr-2 h-4 w-4 animate-spin" />

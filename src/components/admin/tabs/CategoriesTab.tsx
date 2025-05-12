@@ -10,7 +10,7 @@ const CategoriesTab = () => {
       <h2 className="text-2xl font-bold mb-4">TV Show Categories</h2>
       <p>Manage categories for your TV shows.</p>
       <Button 
-        className="mt-4 bg-[#e50914] hover:bg-[#f6121d]"
+        className="mt-4 bg-[#F97316] hover:bg-[#F97316]/90 text-white"
         onClick={() => navigate("/admin/tvshows/categories")}
       >
         Manage Categories

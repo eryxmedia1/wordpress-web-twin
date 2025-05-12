@@ -97,7 +97,7 @@ const AdminTvShows = () => {
           </div>
           
           <Button 
-            className="bg-[#e50914] hover:bg-[#f6121d] ml-4"
+            className="bg-[#F97316] hover:bg-[#F97316]/90 ml-4 text-white"
             onClick={handleAddNewTvShow}
           >
             <Plus className="mr-2" /> Add New TV Show
