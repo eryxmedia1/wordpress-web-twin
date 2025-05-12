@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Pause, Play, Volume2, VolumeX, Star, Info } from "lucide-react";
@@ -153,19 +152,29 @@ const Watch = () => {
       });
 
       // Setup IMA plugin for VAST ads
-      const imaOptions = {
-        adTagUrl: movieData.vastAdUrl?.preroll || ''
-      };
-
-      player.ima(imaOptions);
-      player.ima.initializeAdDisplayContainer();
-      player.on('ready', () => {
-        console.log('Player is ready');
-        if (imaOptions.adTagUrl) {
-          console.log('Loading VAST ad:', imaOptions.adTagUrl);
-          player.ima.requestAds();
+      const adTagUrl = movieData.vastAdUrl?.preroll || '';
+      
+      // Safely initialize IMA plugin
+      if (player.ima) {
+        player.ima({
+          adTagUrl: adTagUrl
+        });
+        
+        // Only proceed with IMA operations if the methods exist
+        if (typeof player.ima.initializeAdDisplayContainer === 'function') {
+          player.ima.initializeAdDisplayContainer();
         }
-      });
+        
+        player.on('ready', () => {
+          console.log('Player is ready');
+          if (adTagUrl && player.ima && typeof player.ima.requestAds === 'function') {
+            console.log('Loading VAST ad:', adTagUrl);
+            player.ima.requestAds();
+          }
+        });
+      } else {
+        console.warn('IMA plugin not available on player');
+      }
 
       playerRef.current = player;
 
@@ -508,4 +517,3 @@ const Watch = () => {
 };
 
 export default Watch;
-
