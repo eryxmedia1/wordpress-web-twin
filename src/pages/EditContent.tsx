@@ -567,6 +567,10 @@ const EditContent = () => {
           
           <div className="border border-gray-700 rounded-md p-6">
             <h3 className="text-xl font-medium mb-4">VAST Ad URLs</h3>
+            <p className="text-gray-400 text-sm mb-4">
+              Enter VAST ad URLs to monetize your content. These URLs will be used to display ads before, during, or after video playback.
+              You can get VAST ad tags from your ad network provider or use sample VAST tags for testing.
+            </p>
             
             <div className="space-y-4">
               <div>
@@ -581,6 +585,9 @@ const EditContent = () => {
                   className="bg-gray-800 border-gray-700"
                   placeholder="https://example.com/vast/preroll.xml"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Sample VAST URL: https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=
+                </p>
               </div>
               
               <div>
@@ -765,7 +772,11 @@ const EditContent = () => {
                                 setSeasons(newSeasons);
                               }}
                               className="bg-gray-900 border-gray-800"
+                              placeholder="https://example.com/vast/episode-ad.xml"
                             />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Sample VAST URL: https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=
+                            </p>
                           </div>
                         </CardContent>
                       </Card>

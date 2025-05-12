@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Pause, Play, Volume2, VolumeX, Star, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,11 @@ import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import ReactPlayer from "react-player";
+import 'video.js/dist/video-js.css';
+import videojs from 'video.js';
+import 'videojs-contrib-ads';
+import 'videojs-ima';
 
 interface Review {
   id: string;
@@ -30,7 +36,12 @@ const moviesData = {
     category: ["Action", "Crime", "Thriller"],
     cast: ["Keanu Reeves", "Donnie Yen", "Bill Skarsgård", "Laurence Fishburne", "Ian McShane"],
     crew: ["Chad Stahelski", "Basil Iwanyk", "Erica Lee"],
-    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4"
+    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
+    vastAdUrl: {
+      preroll: "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=",
+      midroll: "",
+      postroll: ""
+    }
   },
   "featured-1": {
     title: "John Wick 4",
@@ -43,7 +54,12 @@ const moviesData = {
     category: ["Action", "Crime", "Thriller"],
     cast: ["Keanu Reeves", "Donnie Yen", "Bill Skarsgård", "Laurence Fishburne", "Ian McShane"],
     crew: ["Chad Stahelski", "Basil Iwanyk", "Erica Lee"],
-    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4"
+    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
+    vastAdUrl: {
+      preroll: "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=",
+      midroll: "",
+      postroll: ""
+    }
   }
 };
 
@@ -106,6 +122,8 @@ const Watch = () => {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviews, setReviews] = useState<Review[]>(sampleReviews);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<any>(null);
   
   // Get movie data based on ID
   const movieData = id && moviesData[id as keyof typeof moviesData] 
@@ -121,16 +139,64 @@ const Watch = () => {
     return () => clearTimeout(timer);
   }, []);
   
+  useEffect(() => {
+    // Initialize video.js player with VAST ads when showing video
+    if (showVideo && videoRef.current) {
+      const player = videojs(videoRef.current, {
+        controls: true,
+        autoplay: true,
+        fluid: true,
+        sources: [{
+          src: movieData.videoSource,
+          type: 'video/mp4'
+        }]
+      });
+
+      // Setup IMA plugin for VAST ads
+      const imaOptions = {
+        adTagUrl: movieData.vastAdUrl?.preroll || ''
+      };
+
+      player.ima(imaOptions);
+      player.ima.initializeAdDisplayContainer();
+      player.on('ready', () => {
+        console.log('Player is ready');
+        if (imaOptions.adTagUrl) {
+          console.log('Loading VAST ad:', imaOptions.adTagUrl);
+          player.ima.requestAds();
+        }
+      });
+
+      playerRef.current = player;
+
+      return () => {
+        if (playerRef.current) {
+          playerRef.current.dispose();
+        }
+      };
+    }
+  }, [showVideo, movieData]);
+  
   const playVideo = () => {
     setShowVideo(true);
     setIsPlaying(true);
   };
   
   const togglePlay = () => {
+    if (playerRef.current) {
+      if (isPlaying) {
+        playerRef.current.pause();
+      } else {
+        playerRef.current.play();
+      }
+    }
     setIsPlaying(!isPlaying);
   };
   
   const toggleMute = () => {
+    if (playerRef.current) {
+      playerRef.current.muted(!isMuted);
+    }
     setIsMuted(!isMuted);
   };
 
@@ -176,68 +242,30 @@ const Watch = () => {
       <Navbar />
       
       {showVideo ? (
-        <div className="h-screen w-full bg-black relative overflow-hidden">
-          {/* Video Element */}
-          <div className="absolute inset-0 bg-black z-0">
-            <video 
-              className="w-full h-full object-contain"
-              autoPlay={isPlaying}
-              muted={isMuted}
-              controls={false}
-            >
-              <source src={movieData.videoSource} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          </div>
-          
-          {/* Video Controls */}
-          {showControls && (
-            <div className="absolute inset-0 z-10 flex flex-col justify-between bg-gradient-to-t from-black/80 via-transparent to-black/80 transition-opacity duration-300">
-              <div className="p-4 flex items-center">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-white"
-                  onClick={() => setShowVideo(false)}
-                >
-                  <ArrowLeft className="h-6 w-6" />
-                </Button>
-                <h1 className="ml-4 text-white text-xl">{movieData.title}</h1>
-              </div>
-              
-              <div className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-white"
-                      onClick={togglePlay}
-                    >
-                      {isPlaying ? (
-                        <Pause className="h-6 w-6" />
-                      ) : (
-                        <Play className="h-6 w-6" />
-                      )}
-                    </Button>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-white"
-                      onClick={toggleMute}
-                    >
-                      {isMuted ? (
-                        <VolumeX className="h-6 w-6" />
-                      ) : (
-                        <Volume2 className="h-6 w-6" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
+        <div className="h-screen w-full bg-black relative overflow-hidden pt-16">
+          <div className="absolute inset-0 bg-black z-0 flex items-center justify-center mt-16">
+            <div className="w-full h-full max-h-[calc(100vh-64px)]">
+              <div data-vjs-player>
+                <video
+                  ref={videoRef}
+                  className="video-js vjs-big-play-centered vjs-fluid"
+                  playsInline
+                />
               </div>
             </div>
-          )}
+          </div>
+          
+          {/* Back button */}
+          <div className="absolute top-20 left-4 z-20">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-white"
+              onClick={() => setShowVideo(false)}
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="pt-24 pb-16">
@@ -312,6 +340,12 @@ const Watch = () => {
                 <span className="text-gray-400 font-medium">Crew: </span>
                 <span>{movieData.crew.join(", ")}</span>
               </div>
+              {movieData.vastAdUrl?.preroll && (
+                <div className="mt-2">
+                  <span className="text-gray-400 font-medium">VAST Ad URL: </span>
+                  <span className="text-gray-300 text-xs break-all">{movieData.vastAdUrl.preroll}</span>
+                </div>
+              )}
             </div>
             
             {/* Recommended movies */}
@@ -474,3 +508,4 @@ const Watch = () => {
 };
 
 export default Watch;
+
