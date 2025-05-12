@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Film, Plus, Trash, Video } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DbContent, DbProfile, DbSeason, DbEpisode } from "@/integrations/supabase/client";
 
 interface Episode {
   number: number;
@@ -92,11 +92,12 @@ const EditContent = () => {
         return;
       }
 
+      // Use type assertion to work with the profiles table
       const { data: profile } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', user.id)
-        .single();
+        .single() as { data: DbProfile | null };
       
       if (!profile?.is_admin) {
         toast.error("You don't have permission to access the admin area");
@@ -114,15 +115,21 @@ const EditContent = () => {
   async function fetchContentDetails() {
     setLoading(true);
     
-    // Fetch content details
+    // Fetch content details with type assertion
     const { data: content, error } = await supabase
       .from('contents')
       .select('*')
       .eq('id', id)
-      .single();
+      .single() as { data: DbContent | null; error: any };
       
     if (error) {
       toast.error("Failed to fetch content details");
+      setLoading(false);
+      return;
+    }
+    
+    if (!content) {
+      toast.error("Content not found");
       setLoading(false);
       return;
     }
@@ -153,12 +160,12 @@ const EditContent = () => {
   }
 
   async function fetchSeasons(contentId: string) {
-    // Fetch seasons
+    // Fetch seasons with type assertion
     const { data: seasonsData, error: seasonsError } = await supabase
       .from('seasons')
       .select('id, season_number, title, description, poster_url')
       .eq('content_id', contentId)
-      .order('season_number', { ascending: true });
+      .order('season_number', { ascending: true }) as { data: DbSeason[] | null; error: any };
       
     if (seasonsError) {
       toast.error("Failed to fetch seasons");
@@ -170,11 +177,12 @@ const EditContent = () => {
     // Fetch episodes for each season
     const newSeasons = await Promise.all(
       seasonsData.map(async (season) => {
+        // Fetch episodes with type assertion
         const { data: episodes, error: episodesError } = await supabase
           .from('episodes')
           .select('*')
           .eq('season_id', season.id)
-          .order('episode_number', { ascending: true });
+          .order('episode_number', { ascending: true }) as { data: DbEpisode[] | null; error: any };
           
         if (episodesError) {
           toast.error(`Failed to fetch episodes for season ${season.season_number}`);
@@ -186,7 +194,7 @@ const EditContent = () => {
         
         return {
           number: season.season_number,
-          episodes: episodes.map(ep => ({
+          episodes: (episodes || []).map(ep => ({
             number: ep.episode_number,
             title: ep.title,
             description: ep.description || "",
@@ -216,6 +224,7 @@ const EditContent = () => {
       
       // Insert or update content
       if (isNew) {
+        // Create new content with type assertion
         const { data: contentData, error: contentError } = await supabase
           .from('contents')
           .insert([
@@ -236,14 +245,19 @@ const EditContent = () => {
             }
           ])
           .select()
-          .single();
+          .single() as { data: DbContent | null; error: any };
           
         if (contentError) {
           throw new Error(`Failed to create content: ${contentError.message}`);
         }
         
+        if (!contentData) {
+          throw new Error("Failed to create content: No data returned");
+        }
+        
         contentId = contentData.id;
       } else {
+        // Update existing content with type assertion
         const { error: contentError } = await supabase
           .from('contents')
           .update({
@@ -261,7 +275,7 @@ const EditContent = () => {
             vast_ad_midroll: contentDetails.vastAdUrl.midroll,
             vast_ad_postroll: contentDetails.vastAdUrl.postroll
           })
-          .eq('id', contentId);
+          .eq('id', contentId as string) as { error: any };
           
         if (contentError) {
           throw new Error(`Failed to update content: ${contentError.message}`);
@@ -274,7 +288,7 @@ const EditContent = () => {
         const { data: existingSeasons } = await supabase
           .from('seasons')
           .select('id, season_number')
-          .eq('content_id', contentId);
+          .eq('content_id', contentId) as { data: DbSeason[] | null };
         
         // Process each season
         for (const season of seasons) {
@@ -286,7 +300,7 @@ const EditContent = () => {
           if (existingSeason) {
             seasonId = existingSeason.id;
           } else {
-            // Create new season
+            // Create new season with type assertion
             const { data: newSeason, error: seasonError } = await supabase
               .from('seasons')
               .insert([
@@ -296,10 +310,14 @@ const EditContent = () => {
                 }
               ])
               .select()
-              .single();
+              .single() as { data: DbSeason | null; error: any };
               
             if (seasonError) {
               throw new Error(`Failed to create season ${season.number}: ${seasonError.message}`);
+            }
+            
+            if (!newSeason) {
+              throw new Error(`Failed to create season ${season.number}: No data returned`);
             }
             
             seasonId = newSeason.id;
@@ -309,7 +327,7 @@ const EditContent = () => {
           const { data: existingEpisodes } = await supabase
             .from('episodes')
             .select('id, episode_number')
-            .eq('season_id', seasonId);
+            .eq('season_id', seasonId) as { data: DbEpisode[] | null };
           
           // Process each episode
           for (const episode of season.episodes) {
@@ -328,7 +346,7 @@ const EditContent = () => {
                   thumbnail_url: episode.thumbnail,
                   vast_ad_url: episode.vastAdUrl
                 })
-                .eq('id', existingEpisode.id);
+                .eq('id', existingEpisode.id) as { error: any };
                 
               if (epError) {
                 throw new Error(`Failed to update episode ${episode.number}: ${epError.message}`);
@@ -348,7 +366,7 @@ const EditContent = () => {
                     thumbnail_url: episode.thumbnail,
                     vast_ad_url: episode.vastAdUrl
                   }
-                ]);
+                ]) as { error: any };
                 
               if (epError) {
                 throw new Error(`Failed to create episode ${episode.number}: ${epError.message}`);

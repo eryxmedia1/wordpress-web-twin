@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Film, Tv, Plus, Search, Trash } from "lucide-react";
 import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, DbContent, DbProfile } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Content {
@@ -34,11 +33,12 @@ const Admin = () => {
         return;
       }
 
+      // Use type assertion to work with the profiles table
       const { data: profile } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', user.id)
-        .single();
+        .single() as { data: DbProfile | null };
       
       if (!profile?.is_admin) {
         toast.error("You don't have permission to access the admin area");
@@ -54,6 +54,7 @@ const Admin = () => {
     setLoading(true);
     
     // Fetch movies and shows
+    // Use type assertion to work with the contents table
     const { data, error } = await supabase
       .from('contents')
       .select(`
@@ -63,7 +64,10 @@ const Admin = () => {
         duration,
         seasons:seasons(count)
       `)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }) as { 
+        data: (DbContent & { seasons: { count: number } })[] | null; 
+        error: any; 
+      };
     
     if (error) {
       toast.error("Failed to load content: " + error.message);
@@ -72,7 +76,7 @@ const Admin = () => {
     }
 
     // Transform data to include season counts
-    const transformedData = data.map(item => ({
+    const transformedData = (data || []).map(item => ({
       id: item.id,
       title: item.title,
       type: item.type,
@@ -98,10 +102,11 @@ const Admin = () => {
   
   const handleDeleteContent = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this content?")) {
+      // Use type assertion to work with the contents table
       const { error } = await supabase
         .from('contents')
         .delete()
-        .eq('id', id);
+        .eq('id', id) as { error: any };
       
       if (error) {
         toast.error("Failed to delete content: " + error.message);
