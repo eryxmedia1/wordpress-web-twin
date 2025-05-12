@@ -44,6 +44,7 @@ type FormData = {
   category: string;
   rating: string;
   releaseYear: string;
+  duration: string; // Adding duration field
   videoUrl: string;
   thumbnailUrl: string;
   backdropUrl: string;
@@ -70,6 +71,7 @@ const AddTVShowForm = () => {
       category: "",
       rating: "TV-14",
       releaseYear: new Date().getFullYear().toString(),
+      duration: "", // Initialize duration
       videoUrl: "",
       thumbnailUrl: "",
       backdropUrl: "",
@@ -214,9 +216,10 @@ const AddTVShowForm = () => {
           title: data.title,
           description: data.description,
           type: "show",
-          genre: data.category, // Using category as genre for now
+          genre: data.category, // Using category as genre 
           release_year: parseInt(data.releaseYear),
           rating: data.rating,
+          duration: data.duration, // Include duration
           poster_url: data.thumbnailUrl,
           backdrop_url: data.backdropUrl,
           video_url: data.videoUrl,
@@ -253,7 +256,9 @@ const AddTVShowForm = () => {
           .insert({
             content_id: content.id,
             season_number: season.number,
-            title: season.title
+            title: season.title,
+            description: "", // Including required properties
+            poster_url: "" // Including required properties
           })
           .select()
           .single();
@@ -261,29 +266,34 @@ const AddTVShowForm = () => {
         if (seasonError) throw seasonError;
         
         // Create episodes for this season
-        const episodeInserts = season.episodes.map(episode => ({
-          season_id: seasonData.id,
-          episode_number: episode.number,
-          title: episode.title,
-          description: episode.description,
-          duration: episode.duration,
-          video_url: episode.videoUrl,
-          thumbnail_url: episode.thumbnail
-        }));
-        
-        const { error: episodeError } = await supabase
-          .from("episodes")
-          .insert(episodeInserts);
+        if (season.episodes.length > 0) {
+          // Prepare episode data
+          const episodeInserts = season.episodes.map(episode => ({
+            season_id: seasonData.id,
+            episode_number: episode.number,
+            title: episode.title,
+            description: episode.description,
+            duration: episode.duration,
+            video_url: episode.videoUrl,
+            thumbnail_url: episode.thumbnail,
+            vast_ad_url: null // Include required property
+          }));
           
-        if (episodeError) throw episodeError;
+          // Insert all episodes
+          const { error: episodeError } = await supabase
+            .from("episodes")
+            .insert(episodeInserts);
+            
+          if (episodeError) throw episodeError;
+        }
       }
       
       toast.success("TV Show published successfully!");
       navigate("/admin/tvshows");
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error publishing TV show:", error);
-      toast.error("Failed to publish TV show");
+      toast.error(`Failed to publish TV show: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -409,6 +419,24 @@ const AddTVShowForm = () => {
                                 className="bg-gray-900 border-gray-700"
                                 type="number"
                                 placeholder="2023" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="duration"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Duration</FormLabel>
+                            <FormControl>
+                              <Input 
+                                className="bg-gray-900 border-gray-700"
+                                placeholder="30m per episode" 
                                 {...field} 
                               />
                             </FormControl>

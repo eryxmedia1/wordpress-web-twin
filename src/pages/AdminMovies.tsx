@@ -162,21 +162,33 @@ const AdminMovies = () => {
         return (
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">Movie Categories</h2>
-            <p>Categories management feature will be implemented here.</p>
+            <p>Manage categories for your movies.</p>
+            <Button 
+              className="mt-4 bg-[#e50914] hover:bg-[#f6121d]"
+              onClick={() => navigate("/admin/movies/categories")}
+            >
+              Manage Categories
+            </Button>
           </div>
         );
       case "tags":
         return (
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">Movie Tags</h2>
-            <p>Tags management feature will be implemented here.</p>
+            <p>Manage tags for all your content.</p>
+            <Button 
+              className="mt-4 bg-[#e50914] hover:bg-[#f6121d]"
+              onClick={() => navigate("/admin/tags")}
+            >
+              Manage Tags
+            </Button>
           </div>
         );
       case "playlists":
         return (
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">Movie Playlists</h2>
-            <p>Playlists management feature will be implemented here.</p>
+            <p>Manage playlists for your movies.</p>
           </div>
         );
       default:

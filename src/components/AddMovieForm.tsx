@@ -156,9 +156,9 @@ const AddMovieForm = () => {
       toast.success("Movie published successfully!");
       navigate("/admin/movies");
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error publishing movie:", error);
-      toast.error("Failed to publish movie");
+      toast.error(`Failed to publish movie: ${error.message}`);
     } finally {
       setLoading(false);
     }

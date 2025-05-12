@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +11,13 @@ import { supabase, DbContent } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AddTVShowForm from "@/components/AddTVShowForm";
 
+type TvShowWithSeasonCount = DbContent & {
+  seasonCount: number;
+};
+
 const AdminTvShows = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [tvShows, setTvShows] = useState<DbContent[]>([]);
+  const [tvShows, setTvShows] = useState<TvShowWithSeasonCount[]>([]);
   const [loading, setLoading] = useState(true);
   const { section } = useParams();
   const activeTab = section || "all";
@@ -47,29 +52,36 @@ const AdminTvShows = () => {
   async function fetchTvShows() {
     setLoading(true);
     
-    // Fetch TV shows along with their season count
-    const { data, error } = await supabase
-      .from('contents')
-      .select(`
-        *,
-        seasons:seasons(count)
-      `)
-      .eq('type', 'show')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
+    try {
+      // First, fetch all TV shows
+      const { data: shows, error } = await supabase
+        .from('contents')
+        .select('*')
+        .eq('type', 'show')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // For each show, count its seasons
+      const showsWithSeasonCounts = await Promise.all((shows || []).map(async (show) => {
+        const { count, error: countError } = await supabase
+          .from('seasons')
+          .select('*', { count: 'exact', head: true })
+          .eq('content_id', show.id);
+        
+        return {
+          ...show,
+          seasonCount: count || 0
+        };
+      }));
+      
+      setTvShows(showsWithSeasonCounts);
+    } catch (error: any) {
       toast.error("Failed to load TV shows: " + error.message);
+      console.error(error);
+    } finally {
       setLoading(false);
-      return;
     }
-    
-    const transformedData = data?.map(item => ({
-      ...item,
-      seasonCount: item.seasons?.count || 0
-    }));
-    
-    setTvShows(transformedData as DbContent[] || []);
-    setLoading(false);
   }
 
   const filteredTvShows = tvShows.filter(show => 
@@ -124,7 +136,7 @@ const AdminTvShows = () => {
                         <div>
                           <h3 className="text-xl font-medium">{show.title}</h3>
                           <div className="flex items-center mt-2 text-gray-400">
-                            <Tv className="w-4 h-4 mr-1" /> TV Show • {(show as any).seasonCount} Season{(show as any).seasonCount !== 1 ? 's' : ''}
+                            <Tv className="w-4 h-4 mr-1" /> TV Show • {show.seasonCount} Season{show.seasonCount !== 1 ? 's' : ''}
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -166,28 +178,40 @@ const AdminTvShows = () => {
         return (
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">TV Show Categories</h2>
-            <p>Categories management feature will be implemented here.</p>
+            <p>Manage categories for your TV shows.</p>
+            <Button 
+              className="mt-4 bg-[#e50914] hover:bg-[#f6121d]"
+              onClick={() => navigate("/admin/tvshows/categories")}
+            >
+              Manage Categories
+            </Button>
           </div>
         );
       case "tags":
         return (
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">TV Show Tags</h2>
-            <p>Tags management feature will be implemented here.</p>
+            <p>Manage tags for all your content.</p>
+            <Button 
+              className="mt-4 bg-[#e50914] hover:bg-[#f6121d]"
+              onClick={() => navigate("/admin/tags")}
+            >
+              Manage Tags
+            </Button>
           </div>
         );
       case "episodes":
         return (
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">TV Show Episodes</h2>
-            <p>Episodes management feature will be implemented here.</p>
+            <p>Select a TV show from the list to manage its episodes.</p>
           </div>
         );
       case "playlists":
         return (
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">TV Show Playlists</h2>
-            <p>Playlists management feature will be implemented here.</p>
+            <p>Manage playlists for your TV shows.</p>
           </div>
         );
       default:
