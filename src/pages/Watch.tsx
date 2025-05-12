@@ -1,6 +1,7 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Volume2, VolumeX, Star, Info } from "lucide-react";
+import { ArrowLeft, Pause, Play, Volume2, VolumeX, Star, Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -35,7 +36,7 @@ const moviesData = {
     category: ["Action", "Crime", "Thriller"],
     cast: ["Keanu Reeves", "Donnie Yen", "Bill Skarsgård", "Laurence Fishburne", "Ian McShane"],
     crew: ["Chad Stahelski", "Basil Iwanyk", "Erica Lee"],
-    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
+    videoSource: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.mp4/.m3u8",
     vastAdUrl: {
       preroll: "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=",
       midroll: "",
@@ -53,7 +54,7 @@ const moviesData = {
     category: ["Action", "Crime", "Thriller"],
     cast: ["Keanu Reeves", "Donnie Yen", "Bill Skarsgård", "Laurence Fishburne", "Ian McShane"],
     crew: ["Chad Stahelski", "Basil Iwanyk", "Erica Lee"],
-    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
+    videoSource: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.mp4/.m3u8",
     vastAdUrl: {
       preroll: "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=",
       midroll: "",
@@ -121,6 +122,7 @@ const Watch = () => {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviews, setReviews] = useState<Review[]>(sampleReviews);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
   
@@ -141,51 +143,69 @@ const Watch = () => {
   useEffect(() => {
     // Initialize video.js player with VAST ads when showing video
     if (showVideo && videoRef.current) {
-      const player = videojs(videoRef.current, {
-        controls: true,
-        autoplay: true,
-        fluid: true,
-        sources: [{
-          src: movieData.videoSource,
-          type: 'video/mp4'
-        }]
-      });
-
-      // Setup IMA plugin for VAST ads
-      const adTagUrl = movieData.vastAdUrl?.preroll || '';
-      
-      // Initialize the IMA plugin using type assertion
-      const playerAny = player as any;
-      if (!playerAny.ima) {
-        playerAny.ima({
-          adTagUrl: adTagUrl
-        });
-      }
-      
-      // Access IMA functions through the type assertion
-      if (playerAny.ima) {
-        if (typeof playerAny.ima.initializeAdDisplayContainer === 'function') {
-          playerAny.ima.initializeAdDisplayContainer();
-        }
-        
-        player.on('ready', () => {
-          console.log('Player is ready');
-          if (adTagUrl && playerAny.ima && typeof playerAny.ima.requestAds === 'function') {
-            console.log('Loading VAST ad:', adTagUrl);
-            playerAny.ima.requestAds();
+      try {
+        const playerOptions = {
+          controls: true,
+          autoplay: true,
+          fluid: true,
+          sources: [{
+            src: movieData.videoSource,
+            type: movieData.videoSource.includes('.m3u8') ? 'application/x-mpegURL' : 'video/mp4'
+          }],
+          html5: {
+            vhs: {
+              overrideNative: true
+            }
           }
+        };
+
+        const player = videojs(videoRef.current, playerOptions, function() {
+          console.log('Player initialized successfully');
+          
+          // Setup error handling
+          this.on('error', function() {
+            const error = this.error();
+            console.error('Video playback error:', error && error.message);
+            setVideoError(error ? error.message : 'Failed to load video');
+            toast.error("Video playback error. Please try again later.");
+          });
         });
-      } else {
-        console.warn('IMA plugin not available on player');
-      }
 
-      playerRef.current = player;
-
-      return () => {
-        if (playerRef.current) {
-          playerRef.current.dispose();
+        // Setup IMA plugin for VAST ads
+        const adTagUrl = movieData.vastAdUrl?.preroll || '';
+        
+        if (adTagUrl && typeof player.ima === 'object') {
+          player.ima({
+            adTagUrl: adTagUrl
+          });
+          
+          if (typeof player.ima.initializeAdDisplayContainer === 'function') {
+            player.ima.initializeAdDisplayContainer();
+          }
+          
+          player.on('ready', () => {
+            console.log('Player is ready');
+            if (adTagUrl && player.ima && typeof player.ima.requestAds === 'function') {
+              console.log('Loading VAST ad:', adTagUrl);
+              player.ima.requestAds();
+            }
+          });
+        } else {
+          console.log('IMA plugin not initialized or not available');
         }
-      };
+
+        playerRef.current = player;
+
+        return () => {
+          if (playerRef.current) {
+            playerRef.current.dispose();
+          }
+        };
+      } catch (error) {
+        console.error('Error initializing video player:', error);
+        setVideoError('Failed to initialize video player');
+        toast.error("Failed to load video player. Please try again later.");
+      }
     }
   }, [showVideo, movieData]);
   
@@ -257,13 +277,27 @@ const Watch = () => {
         <div className="h-screen w-full bg-black relative overflow-hidden pt-16">
           <div className="absolute inset-0 bg-black z-0 flex items-center justify-center mt-16">
             <div className="w-full h-full max-h-[calc(100vh-64px)]">
-              <div data-vjs-player>
-                <video
-                  ref={videoRef}
-                  className="video-js vjs-big-play-centered vjs-fluid"
-                  playsInline
-                />
-              </div>
+              {videoError ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <AlertTriangle className="h-16 w-16 text-[#F97316] mb-4" />
+                  <h3 className="text-xl font-medium mb-2">Video playback error</h3>
+                  <p className="text-gray-400 mb-4">{videoError}</p>
+                  <Button 
+                    onClick={() => {setShowVideo(false); setVideoError(null);}} 
+                    className="bg-[#F97316] hover:bg-[#F97316]/90"
+                  >
+                    Go Back
+                  </Button>
+                </div>
+              ) : (
+                <div data-vjs-player>
+                  <video
+                    ref={videoRef}
+                    className="video-js vjs-big-play-centered vjs-fluid"
+                    playsInline
+                  />
+                </div>
+              )}
             </div>
           </div>
           
@@ -273,7 +307,7 @@ const Watch = () => {
               variant="ghost" 
               size="icon" 
               className="text-white"
-              onClick={() => setShowVideo(false)}
+              onClick={() => {setShowVideo(false); setVideoError(null);}}
             >
               <ArrowLeft className="h-6 w-6" />
             </Button>
