@@ -113,14 +113,14 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           poster_url: data.posterUrl,
           backdrop_url: data.backdropUrl,
           trailer_url: data.trailerUrl,
+          video_url: data.videoUrl, // Add video URL field
           featured: data.featured,
           category_id: data.category,
           // Add missing required properties
-          duration: null,
-          video_url: null,
-          vast_ad_preroll: null,
-          vast_ad_midroll: null,
-          vast_ad_postroll: null
+          duration: data.duration, // Add duration field
+          vast_ad_preroll: data.vastAdPreroll || null,
+          vast_ad_midroll: data.vastAdMidroll || null,
+          vast_ad_postroll: data.vastAdPostroll || null
         })
         .select()
         .single();
@@ -237,6 +237,31 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
         )}
       </div>
 
+      {/* New Duration field */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Duration</label>
+        <Input
+          type="text"
+          {...register("duration")}
+          className="mt-1 block w-full"
+          placeholder="e.g. 30m per episode"
+        />
+      </div>
+
+      {/* New Video URL field */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Video URL
+        </label>
+        <Input
+          type="url"
+          {...register("videoUrl")}
+          className="mt-1 block w-full"
+          placeholder="https://example.com/video.mp4"
+        />
+        <p className="text-xs text-gray-500 mt-1">Full video URL for the TV show (if applicable)</p>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700">
           Poster URL
@@ -279,6 +304,47 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
         {errors.trailerUrl && (
           <p className="text-red-500 text-xs">{String(errors.trailerUrl.message)}</p>
         )}
+      </div>
+
+      {/* VAST Ad fields */}
+      <div className="space-y-4 border border-gray-200 rounded-md p-4">
+        <h3 className="font-medium">VAST Ad URLs (Optional)</h3>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Pre-roll Ad URL
+          </label>
+          <Input
+            type="url"
+            {...register("vastAdPreroll")}
+            className="mt-1 block w-full"
+            placeholder="https://example.com/ads/preroll.xml"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Mid-roll Ad URL
+          </label>
+          <Input
+            type="url"
+            {...register("vastAdMidroll")}
+            className="mt-1 block w-full"
+            placeholder="https://example.com/ads/midroll.xml"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Post-roll Ad URL
+          </label>
+          <Input
+            type="url"
+            {...register("vastAdPostroll")}
+            className="mt-1 block w-full"
+            placeholder="https://example.com/ads/postroll.xml"
+          />
+        </div>
       </div>
 
       <div>
