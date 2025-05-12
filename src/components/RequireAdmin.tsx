@@ -2,6 +2,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const RequireAdmin = () => {
   const { user, isAdmin, isLoading } = useAuth();

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -9,6 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 interface AddTVShowFormProps {
   onClose: () => void;
@@ -106,6 +115,12 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           trailer_url: data.trailerUrl,
           featured: data.featured,
           category_id: data.category,
+          // Add missing required properties
+          duration: null,
+          video_url: null,
+          vast_ad_preroll: null,
+          vast_ad_midroll: null,
+          vast_ad_postroll: null
         })
         .select()
         .single();
@@ -162,7 +177,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           className="mt-1 block w-full"
         />
         {errors.title && (
-          <p className="text-red-500 text-xs">{errors.title.message}</p>
+          <p className="text-red-500 text-xs">{String(errors.title.message)}</p>
         )}
       </div>
 
@@ -177,7 +192,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           className="mt-1 block w-full"
         />
         {errors.description && (
-          <p className="text-red-500 text-xs">{errors.description.message}</p>
+          <p className="text-red-500 text-xs">{String(errors.description.message)}</p>
         )}
       </div>
 
@@ -189,7 +204,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           className="mt-1 block w-full"
         />
         {errors.genre && (
-          <p className="text-red-500 text-xs">{errors.genre.message}</p>
+          <p className="text-red-500 text-xs">{String(errors.genre.message)}</p>
         )}
       </div>
 
@@ -206,7 +221,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           className="mt-1 block w-full"
         />
         {errors.releaseYear && (
-          <p className="text-red-500 text-xs">{errors.releaseYear.message}</p>
+          <p className="text-red-500 text-xs">{String(errors.releaseYear.message)}</p>
         )}
       </div>
 
@@ -218,7 +233,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           className="mt-1 block w-full"
         />
         {errors.rating && (
-          <p className="text-red-500 text-xs">{errors.rating.message}</p>
+          <p className="text-red-500 text-xs">{String(errors.rating.message)}</p>
         )}
       </div>
 
@@ -232,7 +247,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           className="mt-1 block w-full"
         />
         {errors.posterUrl && (
-          <p className="text-red-500 text-xs">{errors.posterUrl.message}</p>
+          <p className="text-red-500 text-xs">{String(errors.posterUrl.message)}</p>
         )}
       </div>
 
@@ -248,7 +263,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           className="mt-1 block w-full"
         />
         {errors.backdropUrl && (
-          <p className="text-red-500 text-xs">{errors.backdropUrl.message}</p>
+          <p className="text-red-500 text-xs">{String(errors.backdropUrl.message)}</p>
         )}
       </div>
 
@@ -262,7 +277,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           className="mt-1 block w-full"
         />
         {errors.trailerUrl && (
-          <p className="text-red-500 text-xs">{errors.trailerUrl.message}</p>
+          <p className="text-red-500 text-xs">{String(errors.trailerUrl.message)}</p>
         )}
       </div>
 
@@ -280,7 +295,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           ))}
         </select>
         {errors.category && (
-          <p className="text-red-500 text-xs">{errors.category.message}</p>
+          <p className="text-red-500 text-xs">{String(errors.category.message)}</p>
         )}
       </div>
 
@@ -290,7 +305,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           {tags.map((tag) => (
             <div key={tag.value} className="flex items-center">
               <label className="flex items-center">
-                <Checkbox
+                <input 
                   type="checkbox"
                   value={tag.value}
                   {...register("tags")}
@@ -304,7 +319,12 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
       </div>
 
       <div className="flex items-center space-x-2">
-        <Checkbox {...register("featured")} id="featured" />
+        <input 
+          type="checkbox" 
+          {...register("featured")} 
+          id="featured" 
+          className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+        />
         <label htmlFor="featured" className="text-sm font-medium text-gray-700">
           Featured
         </label>

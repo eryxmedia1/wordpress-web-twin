@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -171,7 +170,7 @@ const AdminTvShows = () => {
         return (
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">Add New TV Show</h2>
-            <AddTVShowForm />
+            <AddTVShowForm onClose={() => navigate('/admin/tvshows')} />
           </div>
         );
       case "categories":
