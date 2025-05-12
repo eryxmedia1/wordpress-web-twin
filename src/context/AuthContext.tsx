@@ -11,6 +11,7 @@ type AuthContextType = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  setUserAsAdmin: () => Promise<void>; // New function to set the user as admin
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: async () => {},
   logout: async () => {},
+  setUserAsAdmin: async () => {}, // Initialize the new function
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -54,11 +56,40 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       // Security hardening: only grant admin if explicitly set in the database
       setIsAdmin(!!profile?.is_admin);
+      console.log("Admin status set to:", !!profile?.is_admin);
     } catch (error) {
       console.error("Error checking admin status:", error);
       setIsAdmin(false);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Function to set the current user as admin
+  const setUserAsAdmin = async () => {
+    if (!user) {
+      toast.error("You must be logged in to become an admin");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_admin: true })
+        .eq('id', user.id);
+      
+      if (error) {
+        console.error("Error setting admin status:", error);
+        toast.error("Failed to update admin privileges");
+        return;
+      }
+      
+      // Update local state
+      setIsAdmin(true);
+      toast.success("Admin privileges granted!");
+    } catch (error: any) {
+      console.error("Error setting admin status:", error);
+      toast.error(error.message || "Failed to update admin privileges");
     }
   };
 
@@ -144,7 +175,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, isAdmin, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ session, user, isAdmin, isLoading, login, logout, setUserAsAdmin }}>
       {children}
     </AuthContext.Provider>
   );
