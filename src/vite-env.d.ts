@@ -6,10 +6,12 @@ import videojs from 'video.js';
 
 declare module 'video.js' {
   interface Player {
-    ima: {
+    ima?: {
       initializeAdDisplayContainer: () => void;
       requestAds: () => void;
     };
+    // Add the ima method that's used to initialize the plugin
+    ima(options: any): void;
   }
 }
 
