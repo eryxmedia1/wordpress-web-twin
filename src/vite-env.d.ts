@@ -1,10 +1,11 @@
 
 /// <reference types="vite/client" />
 
-// Add VideoJS IMA plugin type definitions
+// Add VideoJS type definitions
 import videojs from 'video.js';
 
 declare module 'video.js' {
+  // Add proper Player type export
   interface Player {
     ima: {
       initializeAdDisplayContainer: () => void;

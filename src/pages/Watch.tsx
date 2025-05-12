@@ -124,7 +124,8 @@ const Watch = () => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playerRef = useRef<videojs.Player | null>(null);
+  // Update the type to match videojs's actual exported type
+  const playerRef = useRef<ReturnType<typeof videojs> | null>(null);
   
   // Get movie data based on ID
   const movieData = id && moviesData[id as keyof typeof moviesData] 
@@ -412,11 +413,121 @@ const Watch = () => {
               </div>
             </div>
             
-            {/* Recommended movies - Keep the existing code */}
-            {/* ... keep existing code (recommended movies section) */}
+            {/* Recommended movies */}
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold mb-4">Recommended Movies</h3>
+              <div className="flex overflow-x-auto gap-4">
+                {recommendedMovies.map(movie => (
+                  <Link to={`/watch/${movie.id}`} key={movie.id}>
+                    <Card
+                      className="w-48 min-w-48 bg-[#1A1A2E] border-none cursor-pointer transition-transform transform-gpu hover:scale-105"
+                      onMouseEnter={() => setHoveredId(movie.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                    >
+                      <div className="relative">
+                        <img
+                          src={movie.posterUrl}
+                          alt={movie.title}
+                          className="w-full h-32 object-cover rounded-md"
+                        />
+                        {hoveredId === movie.id && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
+                            <Info className="h-6 w-6 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <h4 className="text-sm font-semibold">{movie.title}</h4>
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
             
-            {/* Reviews section - Keep the existing code */}
-            {/* ... keep existing code (reviews section) */}
+            {/* Reviews section */}
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold mb-4">Reviews</h3>
+              
+              {/* Review Form */}
+              <Card className="mb-6 bg-[#1A1A2E] border-none">
+                <form onSubmit={handleSubmitReview} className="p-4">
+                  <div className="mb-4">
+                    <label htmlFor="reviewText" className="block text-sm font-medium text-gray-300">Your Review:</label>
+                    <Textarea 
+                      id="reviewText"
+                      placeholder="Write your review here..."
+                      className="bg-gray-700 text-white rounded-md focus:ring-yellow-500 focus:border-yellow-500"
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-300">Rating:</label>
+                    <div>
+                      {[1, 2, 3, 4, 5].map(rating => (
+                        <Star
+                          key={rating}
+                          className={`h-6 w-6 cursor-pointer ${rating <= reviewRating ? "fill-yellow-500 text-yellow-500" : "text-gray-500"}`}
+                          onClick={() => handleStarClick(rating)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label htmlFor="reviewName" className="block text-sm font-medium text-gray-300">Name:</label>
+                    <Input 
+                      type="text"
+                      id="reviewName"
+                      placeholder="Your Name"
+                      className="bg-gray-700 text-white rounded-md focus:ring-yellow-500 focus:border-yellow-500"
+                      value={reviewName}
+                      onChange={(e) => setReviewName(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label htmlFor="reviewEmail" className="block text-sm font-medium text-gray-300">Email:</label>
+                    <Input 
+                      type="email"
+                      id="reviewEmail"
+                      placeholder="Your Email"
+                      className="bg-gray-700 text-white rounded-md focus:ring-yellow-500 focus:border-yellow-500"
+                      value={reviewEmail}
+                      onChange={(e) => setReviewEmail(e.target.value)}
+                    />
+                  </div>
+                  
+                  <Button type="submit" className="bg-[#FFD700] hover:bg-[#FFD700]/90 text-black">
+                    Submit Review
+                  </Button>
+                </form>
+              </Card>
+              
+              {/* Display Reviews */}
+              {reviews.map(review => (
+                <Card key={review.id} className="mb-4 bg-[#1A1A2E] border-none">
+                  <div className="flex items-start p-4">
+                    <img src={review.avatar} alt={review.name} className="w-10 h-10 rounded-full mr-4" />
+                    <div>
+                      <div className="flex items-center mb-1">
+                        <h5 className="font-semibold mr-2">{review.name}</h5>
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <Star 
+                            key={star}
+                            className={`h-4 w-4 ${star <= review.rating ? "fill-yellow-500 text-yellow-500" : "text-gray-500"}`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-gray-400 text-sm mb-2">{review.date}</p>
+                      <p className="text-gray-300">{review.text}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       )}
