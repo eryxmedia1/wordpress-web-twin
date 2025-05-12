@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, User, Film, Search } from "lucide-react";
+import { ChevronDown, User, Film, Tv, Search } from "lucide-react";
 
 const AdminNavbar = () => {
   return (
@@ -25,7 +25,64 @@ const AdminNavbar = () => {
         
         <nav className="hidden md:flex space-x-4">
           <Link to="/admin" className="text-white hover:text-gray-300 transition">Dashboard</Link>
-          <Link to="/admin/content/new" className="text-white hover:text-gray-300 transition">Add Content</Link>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-1 text-white hover:text-gray-300">
+                <Film className="h-4 w-4 mr-1" />
+                Movies
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48 bg-gray-800 text-white border-gray-700">
+              <DropdownMenuItem>
+                <Link to="/admin/movies" className="w-full">All Movies</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/admin/movies/add" className="w-full">Add Movie</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/admin/movies/categories" className="w-full">Categories</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/admin/movies/tags" className="w-full">Tags</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/admin/movies/playlists" className="w-full">Playlists</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-1 text-white hover:text-gray-300">
+                <Tv className="h-4 w-4 mr-1" />
+                TV Shows
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48 bg-gray-800 text-white border-gray-700">
+              <DropdownMenuItem>
+                <Link to="/admin/tvshows" className="w-full">All TV Shows</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/admin/tvshows/add" className="w-full">Add TV Show</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/admin/tvshows/categories" className="w-full">Categories</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/admin/tvshows/tags" className="w-full">Tags</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/admin/tvshows/episodes" className="w-full">Episodes</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/admin/tvshows/playlists" className="w-full">Playlists</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <Link to="/admin/users" className="text-white hover:text-gray-300 transition">Users</Link>
           <Link to="/admin/analytics" className="text-white hover:text-gray-300 transition">Analytics</Link>
         </nav>
@@ -45,7 +102,7 @@ const AdminNavbar = () => {
               <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 bg-gray-800 text-white border-gray-700">
             <DropdownMenuLabel>Admin</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>

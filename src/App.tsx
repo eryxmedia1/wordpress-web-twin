@@ -12,6 +12,8 @@ import Browse from "./pages/Browse";
 import GenreView from "./pages/GenreView";
 import Watch from "./pages/Watch";
 import Admin from "./pages/Admin";
+import AdminMovies from "./pages/AdminMovies";
+import AdminTvShows from "./pages/AdminTvShows";
 import EditContent from "./pages/EditContent";
 import UserProfile from "./pages/UserProfile";
 import Producers from "./pages/Producers";
@@ -68,18 +70,22 @@ const App = () => (
             path="/producer/:id" 
             element={isAuthenticated ? <ProducerProfile /> : <Navigate to="/login" />} 
           />
-          <Route 
-            path="/admin" 
-            element={<Admin />} 
-          />
-          <Route 
-            path="/admin/content/:id" 
-            element={<EditContent />} 
-          />
-          <Route 
-            path="/admin/content/new" 
-            element={<EditContent />} 
-          />
+          
+          {/* Admin Routes */}
+          <Route path="/admin" element={<Admin />} />
+          
+          {/* Movie Admin Routes */}
+          <Route path="/admin/movies" element={<AdminMovies />} />
+          <Route path="/admin/movies/:section" element={<AdminMovies />} />
+          
+          {/* TV Shows Admin Routes */}
+          <Route path="/admin/tvshows" element={<AdminTvShows />} />
+          <Route path="/admin/tvshows/:section" element={<AdminTvShows />} />
+          
+          {/* Content Edit Route */}
+          <Route path="/admin/content/:id" element={<EditContent />} />
+          <Route path="/admin/content/new" element={<EditContent />} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

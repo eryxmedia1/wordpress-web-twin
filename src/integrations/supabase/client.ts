@@ -30,6 +30,31 @@ interface Database extends GeneratedDatabase {
         Insert: Omit<DbEpisode, 'id' | 'created_at'>;
         Update: Partial<Omit<DbEpisode, 'id' | 'created_at'>>;
       };
+      categories: {
+        Row: DbCategory;
+        Insert: Omit<DbCategory, 'id' | 'created_at'>;
+        Update: Partial<Omit<DbCategory, 'id' | 'created_at'>>;
+      };
+      tags: {
+        Row: DbTag;
+        Insert: Omit<DbTag, 'id' | 'created_at'>;
+        Update: Partial<Omit<DbTag, 'id' | 'created_at'>>;
+      };
+      content_tags: {
+        Row: DbContentTag;
+        Insert: Omit<DbContentTag, 'id' | 'created_at'>;
+        Update: Partial<Omit<DbContentTag, 'id' | 'created_at'>>;
+      };
+      playlists: {
+        Row: DbPlaylist;
+        Insert: Omit<DbPlaylist, 'id' | 'created_at'>;
+        Update: Partial<Omit<DbPlaylist, 'id' | 'created_at'>>;
+      };
+      playlist_items: {
+        Row: DbPlaylistItem;
+        Insert: Omit<DbPlaylistItem, 'id' | 'created_at'>;
+        Update: Partial<Omit<DbPlaylistItem, 'id' | 'created_at'>>;
+      };
     } & GeneratedDatabase['public']['Tables'];
     Views: GeneratedDatabase['public']['Views'];
     Functions: GeneratedDatabase['public']['Functions'];
@@ -73,6 +98,7 @@ export type DbContent = {
   vast_ad_preroll: string | null;
   vast_ad_midroll: string | null;
   vast_ad_postroll: string | null;
+  category_id?: string | null;
 }
 
 export type DbSeason = {
@@ -95,5 +121,46 @@ export type DbEpisode = {
   thumbnail_url: string | null;
   video_url: string | null;
   vast_ad_url: string | null;
+  created_at: string;
+}
+
+export type DbCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  content_type: ContentType;
+  created_at: string;
+}
+
+export type DbTag = {
+  id: string;
+  name: string;
+  slug: string;
+  content_type: ContentType | null;
+  created_at: string;
+}
+
+export type DbContentTag = {
+  id: string;
+  content_id: string;
+  tag_id: string;
+  created_at: string;
+}
+
+export type DbPlaylist = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  content_type: ContentType;
+  created_at: string;
+}
+
+export type DbPlaylistItem = {
+  id: string;
+  playlist_id: string;
+  content_id: string;
+  sort_order: number;
   created_at: string;
 }

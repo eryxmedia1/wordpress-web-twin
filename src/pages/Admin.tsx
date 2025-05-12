@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,12 +118,50 @@ const Admin = () => {
     }
   };
 
+  const goToMoviesSection = () => {
+    navigate('/admin/movies');
+  };
+
+  const goToTvShowsSection = () => {
+    navigate('/admin/tvshows');
+  };
+
   return (
     <div className="min-h-screen bg-black text-white">
       <AdminNavbar />
       
       <div className="container mx-auto px-4 pt-24 pb-10">
         <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition cursor-pointer" onClick={goToMoviesSection}>
+            <CardContent className="p-6 flex flex-col items-center justify-center">
+              <Film className="h-16 w-16 text-[#e50914] mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Movies</h2>
+              <p className="text-gray-400 text-center">
+                Manage movies, categories, tags, and playlists
+              </p>
+              <Button className="mt-4 bg-[#e50914] hover:bg-[#f6121d]">
+                Go to Movies
+              </Button>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition cursor-pointer" onClick={goToTvShowsSection}>
+            <CardContent className="p-6 flex flex-col items-center justify-center">
+              <Tv className="h-16 w-16 text-[#e50914] mb-4" />
+              <h2 className="text-2xl font-bold mb-2">TV Shows</h2>
+              <p className="text-gray-400 text-center">
+                Manage TV shows, episodes, categories, tags, and playlists
+              </p>
+              <Button className="mt-4 bg-[#e50914] hover:bg-[#f6121d]">
+                Go to TV Shows
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <h2 className="text-2xl font-bold mb-4">Recent Content</h2>
         
         <div className="flex justify-between items-center mb-8">
           <div className="relative w-full max-w-md">
