@@ -154,25 +154,25 @@ const Watch = () => {
       // Setup IMA plugin for VAST ads
       const adTagUrl = movieData.vastAdUrl?.preroll || '';
       
-      // Use proper type assertion and access IMA safely
-      if (typeof player.ima === 'undefined') {
-        // Initialize the IMA plugin if it's not already initialized
-        (player as any).ima({
+      // Initialize the IMA plugin using type assertion
+      const playerAny = player as any;
+      if (!playerAny.ima) {
+        playerAny.ima({
           adTagUrl: adTagUrl
         });
       }
       
-      // Now safely access the ima object after initialization
-      if (player.ima) {
-        if (typeof player.ima.initializeAdDisplayContainer === 'function') {
-          player.ima.initializeAdDisplayContainer();
+      // Access IMA functions through the type assertion
+      if (playerAny.ima) {
+        if (typeof playerAny.ima.initializeAdDisplayContainer === 'function') {
+          playerAny.ima.initializeAdDisplayContainer();
         }
         
         player.on('ready', () => {
           console.log('Player is ready');
-          if (adTagUrl && player.ima && typeof player.ima.requestAds === 'function') {
+          if (adTagUrl && playerAny.ima && typeof playerAny.ima.requestAds === 'function') {
             console.log('Loading VAST ad:', adTagUrl);
-            player.ima.requestAds();
+            playerAny.ima.requestAds();
           }
         });
       } else {

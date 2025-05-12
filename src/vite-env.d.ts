@@ -5,7 +5,6 @@
 import videojs from 'video.js';
 
 declare module 'video.js' {
-  // Extend the videojs namespace directly
   interface Player {
     ima?: {
       initializeAdDisplayContainer: () => void;
@@ -16,6 +15,9 @@ declare module 'video.js' {
 
 // Declare module for the IMA plugin itself
 declare module 'videojs-ima' {
-  const ima: any;
+  const ima: {
+    (player: videojs.Player, options?: any): void;
+    VERSION: string;
+  };
   export default ima;
 }
