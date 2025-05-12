@@ -35,7 +35,7 @@ const HeroSection = ({ email, setEmail }: HeroSectionProps) => {
             onChange={(e) => setEmail(e.target.value)}
           />
           <Link to="/signup" className="whitespace-nowrap">
-            <Button className="w-full md:w-auto bg-[#e50914] hover:bg-[#f6121d] text-white font-semibold text-lg py-6 px-6 rounded-md">
+            <Button className="w-full md:w-auto bg-[#D4AF37] hover:bg-[#F1CA45] text-white font-semibold text-lg py-6 px-6 rounded-md">
               Get Started <ChevronRight className="ml-1 h-5 w-5" />
             </Button>
           </Link>
