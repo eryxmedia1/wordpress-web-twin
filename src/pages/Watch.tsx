@@ -154,22 +154,18 @@ const Watch = () => {
       // Setup IMA plugin for VAST ads
       const adTagUrl = movieData.vastAdUrl?.preroll || '';
       
-      // Type assertion to access ima plugin
-      const playerWithIma = player as videojs.Player & { 
-        ima: (options: any) => void;
-      };
-
-      // Check if ima is available on player
-      if (typeof playerWithIma.ima === 'function') {
-        // Initialize ima with ad tag url
-        playerWithIma.ima({
+      // Use proper type assertion and access IMA safely
+      if (typeof player.ima === 'undefined') {
+        // Initialize the IMA plugin if it's not already initialized
+        (player as any).ima({
           adTagUrl: adTagUrl
         });
-        
-        // Access the ima object safely after initialization
-        const imaInstance = player.ima;
-        if (imaInstance && typeof imaInstance.initializeAdDisplayContainer === 'function') {
-          imaInstance.initializeAdDisplayContainer();
+      }
+      
+      // Now safely access the ima object after initialization
+      if (player.ima) {
+        if (typeof player.ima.initializeAdDisplayContainer === 'function') {
+          player.ima.initializeAdDisplayContainer();
         }
         
         player.on('ready', () => {
