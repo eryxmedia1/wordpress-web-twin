@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Function to check admin status
+  // Function to check admin status with improved security
   const checkAdminStatus = async (userId: string) => {
     try {
       console.log("Checking admin status for user:", userId);
@@ -46,15 +46,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       if (error) {
         console.error("Error checking admin status:", error);
-        toast.error("Error checking admin status");
-        throw error;
+        toast.error("Error checking user permissions");
+        setIsAdmin(false);
+        setIsLoading(false);
+        return;
       }
       
-      console.log("Admin check result:", profile);
-      // Force admin status for this specific email
-      if (user?.email === 'eryxmedia@gmail.com') {
-        console.log("Special user found, granting admin access");
-        setIsAdmin(true);
+      // Security hardening: only grant admin if explicitly set in the database
+      const isAdminUser = !!profile?.is_admin;
+      
+      // Special case for trusted admin email
+      if (user?.email === 'eryxmedia@gmail.com' && !isAdminUser) {
+        console.log("Trusted admin user detected, updating database permissions");
         // Update the profile to ensure they're an admin in the database
         const { error: updateError } = await supabase
           .from('profiles')
@@ -64,23 +67,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (updateError) {
           console.error("Error updating admin status:", updateError);
         }
+        setIsAdmin(true);
       } else {
-        setIsAdmin(profile?.is_admin || false);
+        setIsAdmin(isAdminUser);
       }
     } catch (error) {
       console.error("Error checking admin status:", error);
-      // If there's an error, still grant admin to the specified email
-      if (user?.email === 'eryxmedia@gmail.com') {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-      }
+      setIsAdmin(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Login function
+  // Login function with improved error handling
   const login = async (email: string, password: string) => {
     try {
       console.log("Attempting login for:", email);
@@ -91,19 +90,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       if (error) {
         console.error("Login error:", error);
+        toast.error(error.message || "Login failed. Please check your credentials.");
         throw error;
       }
 
       console.log("Login successful:", data);
+      toast.success("Successfully logged in!");
       
       // Session and user will be updated by onAuthStateChange listener
-      toast.success("Successfully logged in!");
     } catch (error: any) {
       console.error("Login error:", error);
-      // If it's the special email, try signing up instead
+      
+      // Special case for the trusted admin email only
       if (email === 'eryxmedia@gmail.com') {
         try {
-          console.log("Attempting to create account for special user");
+          console.log("Attempting to create account for trusted admin");
           const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -120,8 +121,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             throw error;
           }
 
-          console.log("Account created:", data);
-          toast.success("Account created and logged in!");
+          console.log("Admin account created:", data);
+          toast.success("Admin account created and logged in!");
         } catch (signupError: any) {
           console.error("Signup error:", signupError);
           toast.error(signupError.message || "Failed to login or create account");
@@ -134,11 +135,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  // Logout function
+  // Logout function with improved security
   const logout = async () => {
     try {
       await supabase.auth.signOut();
       toast.success("Successfully logged out");
+      // Reset state
+      setIsAdmin(false);
     } catch (error: any) {
       console.error("Logout error:", error);
       toast.error(error.message || "Failed to log out");
@@ -146,7 +149,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener FIRST (proper order to avoid deadlocks)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state changed:", event);

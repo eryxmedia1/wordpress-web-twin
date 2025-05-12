@@ -24,15 +24,11 @@ const RequireAdmin = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Special case for the specific email
-  if (user.email === 'eryxmedia@gmail.com') {
-    console.log("Special admin user detected, granting access");
-    return <Outlet />;
-  }
-
-  if (!isAdmin) {
+  // Admin check with fallback
+  if (!isAdmin && user.email !== 'eryxmedia@gmail.com') {
     // User is authenticated but not an admin
     console.log("User is not an admin, redirecting to browse");
+    toast.error("You do not have permission to access this area");
     return <Navigate to="/browse" state={{ from: location }} replace />;
   }
 

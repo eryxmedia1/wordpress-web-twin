@@ -25,14 +25,23 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Input validation
+    if (!email.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+    
+    if (!password.trim() || password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
       await login(email, password);
-      
-      // Navigate to the page they were trying to access
-      // We don't need to do this here since the AuthContext will trigger a re-render
-      // which will cause the redirect in the condition above
+      // Navigation happens automatically in the effect when user state updates
     } catch (error: any) {
       console.error("Login error:", error);
       // Error is already handled in the login function
@@ -70,6 +79,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
               />
             </div>
             
@@ -81,6 +91,8 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
+                minLength={6}
               />
             </div>
             
