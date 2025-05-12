@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import ReactPlayer from "react-player";
 import 'video.js/dist/video-js.css';
 import videojs from 'video.js';
 import 'videojs-contrib-ads';
@@ -124,8 +123,7 @@ const Watch = () => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  // Update the type to match videojs's actual exported type
-  const playerRef = useRef<ReturnType<typeof videojs> | null>(null);
+  const playerRef = useRef<any>(null);
   
   // Get movie data based on ID
   const movieData = id && moviesData[id as keyof typeof moviesData] 
@@ -142,6 +140,12 @@ const Watch = () => {
   }, []);
   
   useEffect(() => {
+    // Clean up previous player instance if it exists
+    if (playerRef.current) {
+      playerRef.current.dispose();
+      playerRef.current = null;
+    }
+    
     // Initialize video.js player with VAST ads when showing video
     if (showVideo && videoRef.current) {
       try {
@@ -160,6 +164,7 @@ const Watch = () => {
           }
         };
 
+        // Initialize the player
         const player = videojs(videoRef.current, playerOptions, function() {
           console.log('Player initialized successfully');
           
@@ -180,29 +185,36 @@ const Watch = () => {
         if (adTagUrl) {
           try {
             // Import the IMA plugin dynamically
-            import('videojs-ima').then((imaModule) => {
-              if (playerRef.current) {
-                // Apply IMA plugin to the player
-                imaModule.default(playerRef.current, {
-                  adTagUrl: adTagUrl
-                });
-                
-                // Initialize the IMA plugin
-                if (playerRef.current.ima) {
-                  playerRef.current.ima.initializeAdDisplayContainer();
-                }
-                
-                player.on('ready', () => {
-                  console.log('Player is ready');
-                  if (playerRef.current && playerRef.current.ima) {
-                    console.log('Loading VAST ad:', adTagUrl);
-                    playerRef.current.ima.requestAds();
+            import('videojs-ima')
+              .then((imaModule) => {
+                if (playerRef.current) {
+                  // Apply IMA plugin to the player
+                  imaModule.default(playerRef.current, {
+                    adTagUrl: adTagUrl
+                  });
+                  
+                  // Make sure player is ready before initializing IMA
+                  if (playerRef.current.ready) {
+                    playerRef.current.ready(() => {
+                      // Initialize the IMA plugin if it exists
+                      if (playerRef.current && playerRef.current.ima) {
+                        console.log('Initializing IMA plugin');
+                        try {
+                          playerRef.current.ima.initializeAdDisplayContainer();
+                          playerRef.current.ima.requestAds();
+                        } catch (err) {
+                          console.error('Error initializing IMA:', err);
+                        }
+                      } else {
+                        console.warn('IMA plugin not available on player');
+                      }
+                    });
                   }
-                });
-              }
-            }).catch(err => {
-              console.error('Error loading IMA plugin:', err);
-            });
+                }
+              })
+              .catch(err => {
+                console.error('Error loading IMA plugin:', err);
+              });
           } catch (error) {
             console.error('Error setting up IMA plugin:', error);
           }
