@@ -6,7 +6,7 @@ import videojs from 'video.js';
 
 declare module 'video.js' {
   interface Player {
-    ima?: {
+    ima: {
       initializeAdDisplayContainer: () => void;
       requestAds: () => void;
     };
