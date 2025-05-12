@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -209,12 +210,13 @@ const AddTVShowForm = () => {
     
     try {
       // Step 1: Create the TV show content record
+      const showType: ContentType = "show";
       const { data: content, error: contentError } = await supabase
         .from("contents")
         .insert({
           title: data.title,
           description: data.description,
-          type: "show" as ContentType,
+          type: showType,
           genre: data.category,
           release_year: parseInt(data.releaseYear),
           rating: data.rating,
