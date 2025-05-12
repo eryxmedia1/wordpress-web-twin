@@ -1,15 +1,14 @@
 
 /// <reference types="vite/client" />
 
-// Add VideoJS type definitions
+// Add VideoJS IMA plugin type definitions
 import videojs from 'video.js';
 
 declare module 'video.js' {
   interface Player {
-    ima: {
+    ima?: {
       initializeAdDisplayContainer: () => void;
       requestAds: () => void;
-      [key: string]: any; // Allow for any other IMA properties
     };
   }
 }

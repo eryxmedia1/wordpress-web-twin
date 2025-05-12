@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Volume2, VolumeX, Star, Info, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Pause, Play, Volume2, VolumeX, Star, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -35,7 +35,7 @@ const moviesData = {
     category: ["Action", "Crime", "Thriller"],
     cast: ["Keanu Reeves", "Donnie Yen", "Bill Skarsgård", "Laurence Fishburne", "Ian McShane"],
     crew: ["Chad Stahelski", "Basil Iwanyk", "Erica Lee"],
-    videoSource: "https://player.vimeo.com/progressive_redirect/playback/1078125323/rendition/1080p/file.mp4?loc=external&log_user=0&signature=0c9086ba2e6ecff9bfb5faa5bdefe3f237d1f5a2b1fb6ea1ab9970e5e70c2704",
+    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
     vastAdUrl: {
       preroll: "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=",
       midroll: "",
@@ -53,7 +53,7 @@ const moviesData = {
     category: ["Action", "Crime", "Thriller"],
     cast: ["Keanu Reeves", "Donnie Yen", "Bill Skarsgård", "Laurence Fishburne", "Ian McShane"],
     crew: ["Chad Stahelski", "Basil Iwanyk", "Erica Lee"],
-    videoSource: "https://player.vimeo.com/progressive_redirect/playback/1078125323/rendition/1080p/file.mp4?loc=external&log_user=0&signature=0c9086ba2e6ecff9bfb5faa5bdefe3f237d1f5a2b1fb6ea1ab9970e5e70c2704",
+    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
     vastAdUrl: {
       preroll: "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=",
       midroll: "",
@@ -62,7 +62,7 @@ const moviesData = {
   }
 };
 
-// Update the recommended movies to use the same video source
+// Sample recommended movies
 const recommendedMovies = [
   {
     id: "20",
@@ -96,7 +96,6 @@ const recommendedMovies = [
   }
 ];
 
-// Sample recommended movies
 const sampleReviews: Review[] = [
   {
     id: "1",
@@ -122,10 +121,8 @@ const Watch = () => {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviews, setReviews] = useState<Review[]>(sampleReviews);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [videoError, setVideoError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  // Update the type to match videojs's actual exported type
-  const playerRef = useRef<ReturnType<typeof videojs> | null>(null);
+  const playerRef = useRef<any>(null);
   
   // Get movie data based on ID
   const movieData = id && moviesData[id as keyof typeof moviesData] 
@@ -144,83 +141,51 @@ const Watch = () => {
   useEffect(() => {
     // Initialize video.js player with VAST ads when showing video
     if (showVideo && videoRef.current) {
-      try {
-        const playerOptions = {
-          controls: true,
-          autoplay: true,
-          fluid: true,
-          sources: [{
-            src: movieData.videoSource,
-            type: 'video/mp4'
-          }],
-          html5: {
-            vhs: {
-              overrideNative: true
-            }
-          }
-        };
+      const player = videojs(videoRef.current, {
+        controls: true,
+        autoplay: true,
+        fluid: true,
+        sources: [{
+          src: movieData.videoSource,
+          type: 'video/mp4'
+        }]
+      });
 
-        const player = videojs(videoRef.current, playerOptions, function() {
-          console.log('Player initialized successfully');
-          
-          // Setup error handling
-          this.on('error', function() {
-            const error = this.error();
-            console.error('Video playback error:', error && error.message);
-            setVideoError(error ? error.message : 'Failed to load video');
-            toast.error("Video playback error. Please try again later.");
-          });
+      // Setup IMA plugin for VAST ads
+      const adTagUrl = movieData.vastAdUrl?.preroll || '';
+      
+      // Initialize the IMA plugin using type assertion
+      const playerAny = player as any;
+      if (!playerAny.ima) {
+        playerAny.ima({
+          adTagUrl: adTagUrl
         });
-
-        playerRef.current = player;
-
-        // Setup IMA plugin for VAST ads
-        const adTagUrl = movieData.vastAdUrl?.preroll || '';
-        
-        if (adTagUrl) {
-          try {
-            // Import the IMA plugin dynamically
-            import('videojs-ima').then((imaModule) => {
-              if (playerRef.current) {
-                // Apply IMA plugin to the player
-                imaModule.default(playerRef.current, {
-                  adTagUrl: adTagUrl
-                });
-                
-                // Initialize the IMA plugin
-                if (playerRef.current.ima) {
-                  playerRef.current.ima.initializeAdDisplayContainer();
-                }
-                
-                player.on('ready', () => {
-                  console.log('Player is ready');
-                  if (playerRef.current && playerRef.current.ima) {
-                    console.log('Loading VAST ad:', adTagUrl);
-                    playerRef.current.ima.requestAds();
-                  }
-                });
-              }
-            }).catch(err => {
-              console.error('Error loading IMA plugin:', err);
-            });
-          } catch (error) {
-            console.error('Error setting up IMA plugin:', error);
-          }
-        } else {
-          console.log('No ad tag URL provided');
-        }
-
-        return () => {
-          if (playerRef.current) {
-            playerRef.current.dispose();
-            playerRef.current = null;
-          }
-        };
-      } catch (error) {
-        console.error('Error initializing video player:', error);
-        setVideoError('Failed to initialize video player');
-        toast.error("Failed to load video player. Please try again later.");
       }
+      
+      // Access IMA functions through the type assertion
+      if (playerAny.ima) {
+        if (typeof playerAny.ima.initializeAdDisplayContainer === 'function') {
+          playerAny.ima.initializeAdDisplayContainer();
+        }
+        
+        player.on('ready', () => {
+          console.log('Player is ready');
+          if (adTagUrl && playerAny.ima && typeof playerAny.ima.requestAds === 'function') {
+            console.log('Loading VAST ad:', adTagUrl);
+            playerAny.ima.requestAds();
+          }
+        });
+      } else {
+        console.warn('IMA plugin not available on player');
+      }
+
+      playerRef.current = player;
+
+      return () => {
+        if (playerRef.current) {
+          playerRef.current.dispose();
+        }
+      };
     }
   }, [showVideo, movieData]);
   
@@ -292,27 +257,13 @@ const Watch = () => {
         <div className="h-screen w-full bg-black relative overflow-hidden pt-16">
           <div className="absolute inset-0 bg-black z-0 flex items-center justify-center mt-16">
             <div className="w-full h-full max-h-[calc(100vh-64px)]">
-              {videoError ? (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <AlertTriangle className="h-16 w-16 text-[#F97316] mb-4" />
-                  <h3 className="text-xl font-medium mb-2">Video playback error</h3>
-                  <p className="text-gray-400 mb-4">{videoError}</p>
-                  <Button 
-                    onClick={() => {setShowVideo(false); setVideoError(null);}} 
-                    className="bg-[#FFD700] hover:bg-[#FFD700]/90 text-black"
-                  >
-                    Go Back
-                  </Button>
-                </div>
-              ) : (
-                <div data-vjs-player>
-                  <video
-                    ref={videoRef}
-                    className="video-js vjs-big-play-centered vjs-fluid"
-                    playsInline
-                  />
-                </div>
-              )}
+              <div data-vjs-player>
+                <video
+                  ref={videoRef}
+                  className="video-js vjs-big-play-centered vjs-fluid"
+                  playsInline
+                />
+              </div>
             </div>
           </div>
           
@@ -322,7 +273,7 @@ const Watch = () => {
               variant="ghost" 
               size="icon" 
               className="text-white"
-              onClick={() => {setShowVideo(false); setVideoError(null);}}
+              onClick={() => setShowVideo(false)}
             >
               <ArrowLeft className="h-6 w-6" />
             </Button>
@@ -342,7 +293,7 @@ const Watch = () => {
             <div className="absolute inset-0 flex items-center justify-center">
               <Button 
                 onClick={playVideo} 
-                className="bg-[#FFD700]/80 hover:bg-[#FFD700] text-black h-16 w-16 rounded-full flex items-center justify-center"
+                className="bg-purple-600/80 hover:bg-purple-600 h-16 w-16 rounded-full flex items-center justify-center"
               >
                 <Play className="h-8 w-8" />
               </Button>
@@ -407,127 +358,160 @@ const Watch = () => {
                   <span className="text-gray-300 text-xs break-all">{movieData.vastAdUrl.preroll}</span>
                 </div>
               )}
-              <div className="mt-2">
-                <span className="text-gray-400 font-medium">Video Source: </span>
-                <span className="text-gray-300 text-xs break-all">{movieData.videoSource}</span>
-              </div>
             </div>
             
             {/* Recommended movies */}
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold mb-4">Recommended Movies</h3>
-              <div className="flex overflow-x-auto gap-4">
-                {recommendedMovies.map(movie => (
-                  <Link to={`/watch/${movie.id}`} key={movie.id}>
-                    <Card
-                      className="w-48 min-w-48 bg-[#1A1A2E] border-none cursor-pointer transition-transform transform-gpu hover:scale-105"
+            <div className="mb-12">
+              <h2 className="text-2xl font-semibold mb-4">Recommended For You</h2>
+              <div className="relative">
+                <div className="flex overflow-x-auto scrollbar-hide pb-4 gap-4">
+                  {recommendedMovies.map((movie) => (
+                    <div 
+                      key={movie.id}
+                      className={`flex-none transition-all duration-300 ease-in-out ${
+                        hoveredId === movie.id ? "w-[350px]" : "w-[180px]"
+                      }`}
                       onMouseEnter={() => setHoveredId(movie.id)}
                       onMouseLeave={() => setHoveredId(null)}
                     >
-                      <div className="relative">
-                        <img
-                          src={movie.posterUrl}
-                          alt={movie.title}
-                          className="w-full h-32 object-cover rounded-md"
-                        />
-                        {hoveredId === movie.id && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
-                            <Info className="h-6 w-6 text-white" />
+                      {hoveredId === movie.id ? (
+                        <div className="h-full w-full bg-black/90 rounded-lg overflow-hidden border border-gray-800 shadow-xl animate-fade-in">
+                          <div className="relative">
+                            <img 
+                              src={movie.posterUrl}
+                              alt={movie.title}
+                              className="w-full aspect-video object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+                            
+                            <div className="absolute bottom-0 left-0 right-0 p-3">
+                              <h3 className="font-bold text-white truncate mb-3">{movie.title}</h3>
+                              
+                              <div className="flex space-x-2">
+                                <Link to={`/watch/${movie.id}?trailer=true`}>
+                                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 rounded-full px-4">
+                                    <Play className="h-4 w-4 mr-1" />
+                                    Trailer
+                                  </Button>
+                                </Link>
+                                <Link to={`/watch/${movie.id}`}>
+                                  <Button variant="outline" size="sm" className="rounded-full border-white/40 hover:bg-white/10 px-4">
+                                    <Info className="h-4 w-4 mr-1" />
+                                    Detail
+                                  </Button>
+                                </Link>
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <div className="p-2">
-                        <h4 className="text-sm font-semibold">{movie.title}</h4>
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
+                        </div>
+                      ) : (
+                        <div className="block relative cursor-pointer overflow-hidden">
+                          <div className="aspect-[2/3] overflow-hidden rounded-md">
+                            <img 
+                              src={movie.posterUrl}
+                              alt={movie.title}
+                              className="w-full h-full object-cover hover:scale-105 transition duration-300"
+                            />
+                          </div>
+                          <h3 className="mt-2 text-sm font-medium truncate">{movie.title}</h3>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             
             {/* Reviews section */}
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold mb-4">Reviews</h3>
+            <div className="mb-12">
+              <h2 className="text-2xl font-semibold mb-4">Add a review</h2>
+              <p className="text-sm text-gray-400 mb-4">Your email address will not be published. Required fields are marked *</p>
               
-              {/* Review Form */}
-              <Card className="mb-6 bg-[#1A1A2E] border-none">
-                <form onSubmit={handleSubmitReview} className="p-4">
-                  <div className="mb-4">
-                    <label htmlFor="reviewText" className="block text-sm font-medium text-gray-300">Your Review:</label>
-                    <Textarea 
-                      id="reviewText"
-                      placeholder="Write your review here..."
-                      className="bg-gray-700 text-white rounded-md focus:ring-yellow-500 focus:border-yellow-500"
-                      value={reviewText}
-                      onChange={(e) => setReviewText(e.target.value)}
+              <form onSubmit={handleSubmitReview} className="space-y-4">
+                <div>
+                  <div className="text-sm mb-2">Your rating</div>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <button
+                        key={star}
+                        type="button"
+                        className="focus:outline-none"
+                        onClick={() => handleStarClick(star)}
+                      >
+                        <Star 
+                          className={`h-5 w-5 ${star <= reviewRating ? "fill-yellow-500 text-yellow-500" : "text-gray-500"}`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="text-sm mb-2">Your review *</div>
+                  <Textarea 
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    className="h-32 bg-[#1a1a2e] border-gray-700 text-white"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm mb-2">Name *</div>
+                    <Input 
+                      value={reviewName}
+                      onChange={(e) => setReviewName(e.target.value)}
+                      className="bg-[#1a1a2e] border-gray-700 text-white"
                     />
                   </div>
-                  
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-300">Rating:</label>
-                    <div>
-                      {[1, 2, 3, 4, 5].map(rating => (
-                        <Star
-                          key={rating}
-                          className={`h-6 w-6 cursor-pointer ${rating <= reviewRating ? "fill-yellow-500 text-yellow-500" : "text-gray-500"}`}
-                          onClick={() => handleStarClick(rating)}
+                  <div>
+                    <div className="text-sm mb-2">Email *</div>
+                    <Input 
+                      value={reviewEmail}
+                      onChange={(e) => setReviewEmail(e.target.value)}
+                      type="email"
+                      className="bg-[#1a1a2e] border-gray-700 text-white"
+                    />
+                  </div>
+                </div>
+                
+                <Button type="submit" className="bg-purple-600 hover:bg-purple-700">Submit</Button>
+              </form>
+            </div>
+            
+            {/* Display reviews */}
+            {reviews.length > 0 && (
+              <div className="mb-12">
+                {reviews.map(review => (
+                  <Card key={review.id} className="bg-[#1a1a2e] border-gray-700 mb-4 p-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-12 w-12 rounded-full overflow-hidden">
+                        <img 
+                          src={review.avatar} 
+                          alt={review.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="font-medium">{review.name}</div>
+                        <div className="text-xs text-gray-400">{review.date}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex mb-3">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <Star 
+                          key={star}
+                          className={`h-4 w-4 ${star <= review.rating ? "fill-yellow-500 text-yellow-500" : "text-gray-500"}`}
                         />
                       ))}
                     </div>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <label htmlFor="reviewName" className="block text-sm font-medium text-gray-300">Name:</label>
-                    <Input 
-                      type="text"
-                      id="reviewName"
-                      placeholder="Your Name"
-                      className="bg-gray-700 text-white rounded-md focus:ring-yellow-500 focus:border-yellow-500"
-                      value={reviewName}
-                      onChange={(e) => setReviewName(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="mb-4">
-                    <label htmlFor="reviewEmail" className="block text-sm font-medium text-gray-300">Email:</label>
-                    <Input 
-                      type="email"
-                      id="reviewEmail"
-                      placeholder="Your Email"
-                      className="bg-gray-700 text-white rounded-md focus:ring-yellow-500 focus:border-yellow-500"
-                      value={reviewEmail}
-                      onChange={(e) => setReviewEmail(e.target.value)}
-                    />
-                  </div>
-                  
-                  <Button type="submit" className="bg-[#FFD700] hover:bg-[#FFD700]/90 text-black">
-                    Submit Review
-                  </Button>
-                </form>
-              </Card>
-              
-              {/* Display Reviews */}
-              {reviews.map(review => (
-                <Card key={review.id} className="mb-4 bg-[#1A1A2E] border-none">
-                  <div className="flex items-start p-4">
-                    <img src={review.avatar} alt={review.name} className="w-10 h-10 rounded-full mr-4" />
-                    <div>
-                      <div className="flex items-center mb-1">
-                        <h5 className="font-semibold mr-2">{review.name}</h5>
-                        {[1, 2, 3, 4, 5].map(star => (
-                          <Star 
-                            key={star}
-                            className={`h-4 w-4 ${star <= review.rating ? "fill-yellow-500 text-yellow-500" : "text-gray-500"}`}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-gray-400 text-sm mb-2">{review.date}</p>
-                      <p className="text-gray-300">{review.text}</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                    
+                    <p className="text-gray-300">{review.text}</p>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
