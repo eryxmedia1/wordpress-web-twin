@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { CheckIcon, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase, DbContent, DbCategory, DbTag } from "@/integrations/supabase/client";
+import { supabase, DbContent, DbCategory, DbTag, ContentType } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,7 +105,7 @@ const AddTVShowForm = () => {
       const { data, error } = await supabase
         .from("categories")
         .select("*")
-        .eq("content_type", "show")
+        .eq("content_type", "show" as ContentType)
         .order("name");
         
       if (error) throw error;
@@ -215,7 +214,7 @@ const AddTVShowForm = () => {
         .insert({
           title: data.title,
           description: data.description,
-          type: "show",
+          type: "show" as ContentType,
           genre: data.category, // Using category as genre 
           release_year: parseInt(data.releaseYear),
           rating: data.rating,

@@ -137,6 +137,7 @@ export type DbTag = {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
   content_type: ContentType | null;
   created_at: string;
 }

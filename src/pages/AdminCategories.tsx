@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Search, Plus } from "lucide-react";
 import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate, useParams } from "react-router-dom";
-import { supabase, DbCategory } from "@/integrations/supabase/client";
+import { supabase, DbCategory, ContentType } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Select,
@@ -26,7 +26,7 @@ const AdminCategories = () => {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategorySlug, setNewCategorySlug] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
-  const [contentType, setContentType] = useState<string>("movie");
+  const [contentType, setContentType] = useState<ContentType>("movie");
   const navigate = useNavigate();
   const { type } = useParams();
 
