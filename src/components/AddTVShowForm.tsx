@@ -43,7 +43,7 @@ type FormData = {
   category: string;
   rating: string;
   releaseYear: string;
-  duration: string; // Adding duration field
+  duration: string;
   videoUrl: string;
   thumbnailUrl: string;
   backdropUrl: string;
@@ -70,7 +70,7 @@ const AddTVShowForm = () => {
       category: "",
       rating: "TV-14",
       releaseYear: new Date().getFullYear().toString(),
-      duration: "", // Initialize duration
+      duration: "",
       videoUrl: "",
       thumbnailUrl: "",
       backdropUrl: "",
@@ -215,15 +215,15 @@ const AddTVShowForm = () => {
           title: data.title,
           description: data.description,
           type: "show" as ContentType,
-          genre: data.category, // Using category as genre 
+          genre: data.category,
           release_year: parseInt(data.releaseYear),
           rating: data.rating,
-          duration: data.duration, // Include duration
+          duration: data.duration,
           poster_url: data.thumbnailUrl,
           backdrop_url: data.backdropUrl,
           video_url: data.videoUrl,
           featured: data.featured,
-          trailer_url: null, // Not included in form yet
+          trailer_url: null,
           vast_ad_preroll: null,
           vast_ad_midroll: null,
           vast_ad_postroll: null
@@ -256,8 +256,8 @@ const AddTVShowForm = () => {
             content_id: content.id,
             season_number: season.number,
             title: season.title,
-            description: "", // Including required properties
-            poster_url: "" // Including required properties
+            description: "",
+            poster_url: ""
           })
           .select()
           .single();
@@ -275,7 +275,7 @@ const AddTVShowForm = () => {
             duration: episode.duration,
             video_url: episode.videoUrl,
             thumbnail_url: episode.thumbnail,
-            vast_ad_url: null // Include required property
+            vast_ad_url: null
           }));
           
           // Insert all episodes
