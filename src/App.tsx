@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import OtpVerification from "./pages/OtpVerification";
 import Browse from "./pages/Browse";
 import GenreView from "./pages/GenreView";
 import Watch from "./pages/Watch";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/verify-otp" element={<OtpVerification />} />
             
             {/* Protected Routes */}
             <Route element={<RequireAuth />}>

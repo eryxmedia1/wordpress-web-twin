@@ -5,14 +5,16 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [useOtp, setUseOtp] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   
   // Get the path the user was trying to access before being redirected to login
   const from = location.state?.from?.pathname || "/browse";
@@ -32,19 +34,76 @@ const Login = () => {
       return;
     }
     
-    if (!password.trim() || password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
+    if (useOtp) {
+      // OTP login flow
+      await handleOtpLogin();
+    } else {
+      // Password login flow
+      if (!password.trim() || password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return;
+      }
+      
+      await handlePasswordLogin();
     }
-    
+  };
+
+  const handlePasswordLogin = async () => {
     setIsLoading(true);
     
     try {
-      await login(email, password);
-      // Navigation happens automatically in the effect when user state updates
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        console.error("Login error:", error);
+        toast.error(error.message || "Login failed. Please check your credentials.");
+        return;
+      }
+
+      console.log("Login successful:", data);
+      toast.success("Successfully logged in!");
+      
+      // Navigation happens automatically in useEffect when user state updates
     } catch (error: any) {
       console.error("Login error:", error);
-      // Error is already handled in the login function
+      toast.error(error.message || "Failed to log in. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOtpLogin = async () => {
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false, // Only allow existing users
+        }
+      });
+      
+      if (error) {
+        console.error("OTP login error:", error);
+        toast.error(error.message || "Failed to send verification code");
+        setIsLoading(false);
+        return;
+      }
+      
+      toast.success("Verification code sent to your email");
+      // Redirect to OTP verification page
+      navigate("/verify-otp", { 
+        state: { 
+          email,
+          from: location.state?.from
+        } 
+      });
+    } catch (error: any) {
+      console.error("OTP login error:", error);
+      toast.error("Failed to send verification code");
     } finally {
       setIsLoading(false);
     }
@@ -83,18 +142,20 @@ const Login = () => {
               />
             </div>
             
-            <div>
-              <input
-                type="password"
-                placeholder="Password"
-                className="w-full p-4 rounded-md bg-[#333] text-white border border-[#555] focus:outline-none focus:border-[#e50914]"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                minLength={6}
-              />
-            </div>
+            {!useOtp && (
+              <div>
+                <input
+                  type="password"
+                  placeholder="Password"
+                  className="w-full p-4 rounded-md bg-[#333] text-white border border-[#555] focus:outline-none focus:border-[#e50914]"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required={!useOtp}
+                  autoComplete="current-password"
+                  minLength={6}
+                />
+              </div>
+            )}
             
             <Button 
               type="submit" 
@@ -104,9 +165,9 @@ const Login = () => {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing In...
+                  {useOtp ? "Sending Code..." : "Signing In..."}
                 </>
-              ) : "Sign In"}
+              ) : (useOtp ? "Email me a login code" : "Sign In")}
             </Button>
             
             <div className="flex items-center justify-between text-[#b3b3b3]">
@@ -120,6 +181,16 @@ const Login = () => {
               </div>
               
               <a href="#" className="text-sm hover:underline">Need help?</a>
+            </div>
+            
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setUseOtp(!useOtp)}
+                className="text-[#b3b3b3] text-sm hover:underline"
+              >
+                {useOtp ? "Use password to sign in" : "Use a verification code instead"}
+              </button>
             </div>
           </form>
           

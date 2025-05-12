@@ -53,24 +53,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
       
       // Security hardening: only grant admin if explicitly set in the database
-      const isAdminUser = !!profile?.is_admin;
-      
-      // Special case for trusted admin email
-      if (user?.email === 'eryxmedia@gmail.com' && !isAdminUser) {
-        console.log("Trusted admin user detected, updating database permissions");
-        // Update the profile to ensure they're an admin in the database
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ is_admin: true })
-          .eq('id', userId);
-        
-        if (updateError) {
-          console.error("Error updating admin status:", updateError);
-        }
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(isAdminUser);
-      }
+      setIsAdmin(!!profile?.is_admin);
     } catch (error) {
       console.error("Error checking admin status:", error);
       setIsAdmin(false);
@@ -100,38 +83,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Session and user will be updated by onAuthStateChange listener
     } catch (error: any) {
       console.error("Login error:", error);
-      
-      // Special case for the trusted admin email only
-      if (email === 'eryxmedia@gmail.com') {
-        try {
-          console.log("Attempting to create account for trusted admin");
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                full_name: 'Admin User',
-              }
-            }
-          });
-
-          if (error) {
-            console.error("Signup error:", error);
-            toast.error(error.message || "Failed to create account");
-            throw error;
-          }
-
-          console.log("Admin account created:", data);
-          toast.success("Admin account created and logged in!");
-        } catch (signupError: any) {
-          console.error("Signup error:", signupError);
-          toast.error(signupError.message || "Failed to login or create account");
-          throw signupError;
-        }
-      } else {
-        toast.error(error.message || "Failed to log in. Please check your credentials.");
-        throw error;
-      }
+      toast.error(error.message || "Failed to log in. Please check your credentials.");
+      throw error;
     }
   };
 
