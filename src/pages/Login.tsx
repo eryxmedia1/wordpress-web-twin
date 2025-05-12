@@ -1,25 +1,54 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { Loader2 } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  
+  // Get the path the user was trying to access before being redirected to login
+  const from = location.state?.from?.pathname || "/browse";
+  
+  // If already logged in, redirect to the intended page
+  if (user) {
+    navigate(from, { replace: true });
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // This would be replaced with actual authentication logic
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Actual authentication with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
       toast.success("Successfully logged in!");
-      navigate("/browse");
-    }, 1500);
+      
+      // Navigate to the page they were trying to access
+      navigate(from, { replace: true });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error(error.message || "Failed to log in. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,7 +99,12 @@ const Login = () => {
               className="w-full bg-[#e50914] hover:bg-[#f6121d] text-white font-medium text-lg p-6"
               disabled={isLoading}
             >
-              {isLoading ? "Signing In..." : "Sign In"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing In...
+                </>
+              ) : "Sign In"}
             </Button>
             
             <div className="flex items-center justify-between text-[#b3b3b3]">

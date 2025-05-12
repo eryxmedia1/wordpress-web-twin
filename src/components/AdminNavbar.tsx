@@ -1,5 +1,5 @@
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -9,9 +9,26 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, User, Film, Tv, Search } from "lucide-react";
+import { ChevronDown, User, Film, Tv, Search, LogOut } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminNavbar = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Successfully logged out");
+      navigate("/login");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out");
+    }
+  };
+  
   return (
     <header className="bg-black/95 px-4 py-2 flex items-center justify-between fixed w-full z-50 border-b border-gray-800">
       <div className="flex items-center gap-8">
@@ -103,7 +120,7 @@ const AdminNavbar = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 bg-gray-800 text-white border-gray-700">
-            <DropdownMenuLabel>Admin</DropdownMenuLabel>
+            <DropdownMenuLabel>{user?.email || 'Admin'}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <Link to="/admin/settings" className="w-full">Settings</Link>
@@ -111,8 +128,8 @@ const AdminNavbar = () => {
             <DropdownMenuItem>
               <Link to="/" className="w-full">View Site</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link to="/logout" className="w-full">Sign Out</Link>
+            <DropdownMenuItem onClick={handleLogout} className="text-red-500 hover:text-red-400">
+              <LogOut className="h-4 w-4 mr-2" /> Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

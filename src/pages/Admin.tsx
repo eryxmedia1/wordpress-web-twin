@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,7 @@ import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate } from "react-router-dom";
 import { supabase, DbContent, DbProfile } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface Content {
   id: string;
@@ -23,70 +23,51 @@ const Admin = () => {
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
-    async function checkAdminStatus() {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("You must be logged in to access the admin area");
-        navigate("/login");
-        return;
-      }
-
-      // Use type assertion to work with the profiles table
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single() as { data: DbProfile | null };
-      
-      if (!profile?.is_admin) {
-        toast.error("You don't have permission to access the admin area");
-        navigate("/");
-      }
-    }
-
-    checkAdminStatus();
     fetchContents();
-  }, [navigate]);
+  }, []);
 
   async function fetchContents() {
     setLoading(true);
     
-    // Fetch movies and shows
-    // Use type assertion to work with the contents table
-    const { data, error } = await supabase
-      .from('contents')
-      .select(`
-        id, 
-        title, 
-        type,
-        duration,
-        seasons:seasons(count)
-      `)
-      .order('created_at', { ascending: false }) as { 
-        data: (DbContent & { seasons: { count: number } })[] | null; 
-        error: any; 
-      };
-    
-    if (error) {
-      toast.error("Failed to load content: " + error.message);
-      setLoading(false);
-      return;
-    }
+    try {
+      // Fetch movies and shows
+      const { data, error } = await supabase
+        .from('contents')
+        .select(`
+          id, 
+          title, 
+          type,
+          duration,
+          seasons:seasons(count)
+        `)
+        .order('created_at', { ascending: false }) as { 
+          data: (DbContent & { seasons: { count: number } })[] | null; 
+          error: any; 
+        };
+      
+      if (error) {
+        throw error;
+      }
 
-    // Transform data to include season counts
-    const transformedData = (data || []).map(item => ({
-      id: item.id,
-      title: item.title,
-      type: item.type,
-      duration: item.duration,
-      seasons: item.seasons?.count || 0
-    }));
-    
-    setContents(transformedData);
-    setLoading(false);
+      // Transform data to include season counts
+      const transformedData = (data || []).map(item => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        duration: item.duration,
+        seasons: item.seasons?.count || 0
+      }));
+      
+      setContents(transformedData);
+    } catch (error: any) {
+      toast.error("Failed to load content: " + error.message);
+      console.error("Error loading content:", error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const filteredContents = contents.filter(content => 
@@ -177,7 +158,7 @@ const Admin = () => {
           
           <Button 
             className="bg-[#e50914] hover:bg-[#f6121d] ml-4"
-            onClick={handleAddNewContent}
+            onClick={() => navigate('/admin/content/new')}
           >
             <Plus className="mr-2" /> Add New Content
           </Button>
