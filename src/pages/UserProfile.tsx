@@ -1,18 +1,54 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bookmark, Clock, Film, Plus, User, UserPlus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Bookmark, Clock, Film, Plus, Settings, User, UserPlus } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const UserProfile = () => {
+  const navigate = useNavigate();
   const [profiles, setProfiles] = useState([
     { id: 1, name: "Main Profile", avatar: "https://api.dicebear.com/7.x/initials/svg?seed=MP", isKids: false },
     { id: 2, name: "Kids", avatar: "https://api.dicebear.com/7.x/initials/svg?seed=KD", isKids: true },
   ]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Check if user is admin
+  useEffect(() => {
+    async function checkAdminStatus() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          toast.error("You must be logged in to view your profile");
+          navigate("/login");
+          return;
+        }
+        
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        setIsAdmin(profile?.is_admin || false);
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    checkAdminStatus();
+  }, [navigate]);
 
   // Mock data for continue watching
   const continueWatching = [
@@ -35,6 +71,14 @@ const UserProfile = () => {
     { id: 2, title: "Dark", image: "https://via.placeholder.com/400x225?text=Dark", match: "95% Match" },
     { id: 3, title: "Mindhunter", image: "https://via.placeholder.com/400x225?text=Mindhunter", match: "91% Match" },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -83,6 +127,11 @@ const UserProfile = () => {
             <TabsTrigger value="recommended" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white">
               <Film className="mr-2" /> Recommended
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="admin" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white">
+                <Settings className="mr-2" /> Admin
+              </TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="continue">
@@ -152,6 +201,59 @@ const UserProfile = () => {
               ))}
             </div>
           </TabsContent>
+          
+          {isAdmin && (
+            <TabsContent value="admin">
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold">Admin Controls</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="bg-gray-900 border-gray-800">
+                    <CardContent className="p-6">
+                      <h4 className="text-lg font-medium mb-4">Content Management</h4>
+                      <p className="text-gray-400 mb-4">Manage movies, shows, seasons, and episodes</p>
+                      <Link to="/admin">
+                        <Button className="w-full bg-[#e50914] hover:bg-[#f6121d]">
+                          Go to Admin Dashboard
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gray-900 border-gray-800">
+                    <CardContent className="p-6">
+                      <h4 className="text-lg font-medium mb-4">Add New Content</h4>
+                      <p className="text-gray-400 mb-4">Create new movies or TV shows</p>
+                      <Link to="/admin/content/new">
+                        <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                          Add New Content
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gray-900 border-gray-800">
+                    <CardContent className="p-6">
+                      <h4 className="text-lg font-medium mb-4">User Management</h4>
+                      <p className="text-gray-400 mb-4">View and manage user accounts</p>
+                      <Button className="w-full bg-gray-700 hover:bg-gray-600">
+                        Manage Users
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gray-900 border-gray-800">
+                    <CardContent className="p-6">
+                      <h4 className="text-lg font-medium mb-4">Analytics</h4>
+                      <p className="text-gray-400 mb-4">View platform usage and statistics</p>
+                      <Button className="w-full bg-gray-700 hover:bg-gray-600">
+                        View Analytics
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
