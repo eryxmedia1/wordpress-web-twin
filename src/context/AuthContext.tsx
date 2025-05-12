@@ -66,9 +66,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string) => {
     try {
       console.log("Attempting login for:", email);
+      
+      // Use signInWithPassword with captchaToken set to 'null' to bypass captcha
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
+        options: {
+          // This tells Supabase not to require a captcha token
+          captchaToken: null
+        }
       });
       
       if (error) {

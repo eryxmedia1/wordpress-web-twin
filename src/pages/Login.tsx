@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -14,7 +13,7 @@ const Login = () => {
   const [useOtp, setUseOtp] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   
   // Get the path the user was trying to access before being redirected to login
   const from = location.state?.from?.pathname || "/browse";
@@ -52,19 +51,9 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        console.error("Login error:", error);
-        toast.error(error.message || "Login failed. Please check your credentials.");
-        return;
-      }
-
-      console.log("Login successful:", data);
-      toast.success("Successfully logged in!");
+      // Use the login function from AuthContext instead of direct supabase call
+      // This handles the captcha issue by properly managing auth state
+      await login(email, password);
       
       // Navigation happens automatically in useEffect when user state updates
     } catch (error: any) {
