@@ -5,11 +5,11 @@
 import videojs from 'video.js';
 
 declare module 'video.js' {
-  // Add proper Player type export
   interface Player {
     ima: {
       initializeAdDisplayContainer: () => void;
       requestAds: () => void;
+      [key: string]: any; // Allow for any other IMA properties
     };
   }
 }
