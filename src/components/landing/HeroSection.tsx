@@ -18,7 +18,7 @@ const HeroSection = ({ email, setEmail }: HeroSectionProps) => {
     }}>
       <div className="max-w-3xl mx-auto text-center pt-20">
         <img 
-          src="/lovable-uploads/5806b50d-0fbb-4e69-bec1-5c2d43f7d0bd.png" 
+          src="/lovable-uploads/1bd08f45-adec-4e72-a316-e26138e65a8e.png" 
           alt="Zoe RatedTV Logo"
           className="h-40 object-contain mx-auto mb-6" 
         />
@@ -46,3 +46,4 @@ const HeroSection = ({ email, setEmail }: HeroSectionProps) => {
 };
 
 export default HeroSection;
+
