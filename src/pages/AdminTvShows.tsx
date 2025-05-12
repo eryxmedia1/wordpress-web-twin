@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,7 @@ import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase, DbContent } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import AddTVShowForm from "@/components/AddTVShowForm";
 
 const AdminTvShows = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -155,11 +155,11 @@ const AdminTvShows = () => {
             )}
           </div>
         );
-      case "episodes":
+      case "add":
         return (
           <div className="mt-6">
-            <h2 className="text-2xl font-bold mb-4">TV Show Episodes</h2>
-            <p>Episodes management feature will be implemented here.</p>
+            <h2 className="text-2xl font-bold mb-4">Add New TV Show</h2>
+            <AddTVShowForm />
           </div>
         );
       case "categories":
@@ -176,24 +176,18 @@ const AdminTvShows = () => {
             <p>Tags management feature will be implemented here.</p>
           </div>
         );
+      case "episodes":
+        return (
+          <div className="mt-6">
+            <h2 className="text-2xl font-bold mb-4">TV Show Episodes</h2>
+            <p>Episodes management feature will be implemented here.</p>
+          </div>
+        );
       case "playlists":
         return (
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">TV Show Playlists</h2>
             <p>Playlists management feature will be implemented here.</p>
-          </div>
-        );
-      case "add":
-        return (
-          <div className="mt-6">
-            <h2 className="text-2xl font-bold mb-4">Add New TV Show</h2>
-            <p>The TV show creation form will be implemented here.</p>
-            <Button 
-              className="mt-4 bg-[#e50914] hover:bg-[#f6121d]"
-              onClick={() => navigate('/admin/content/new?type=show')}
-            >
-              Create New TV Show
-            </Button>
           </div>
         );
       default:

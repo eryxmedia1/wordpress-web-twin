@@ -9,6 +9,7 @@ import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase, DbContent } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import AddMovieForm from "@/components/AddMovieForm";
 
 const AdminMovies = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,6 +48,7 @@ const AdminMovies = () => {
   async function fetchMovies() {
     setLoading(true);
     
+    // Fetch movies
     const { data, error } = await supabase
       .from('contents')
       .select('*')
@@ -55,10 +57,11 @@ const AdminMovies = () => {
     
     if (error) {
       toast.error("Failed to load movies: " + error.message);
-    } else {
-      setMovies(data || []);
+      setLoading(false);
+      return;
     }
     
+    setMovies(data || []);
     setLoading(false);
   }
 
@@ -114,7 +117,10 @@ const AdminMovies = () => {
                         <div>
                           <h3 className="text-xl font-medium">{movie.title}</h3>
                           <div className="flex items-center mt-2 text-gray-400">
-                            <Film className="w-4 h-4 mr-1" /> {movie.duration} • {movie.rating}
+                            <Film className="w-4 h-4 mr-1" /> Movie
+                            {movie.duration && (
+                              <span className="ml-2">• {movie.duration}</span>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -145,6 +151,13 @@ const AdminMovies = () => {
             )}
           </div>
         );
+      case "add":
+        return (
+          <div className="mt-6">
+            <h2 className="text-2xl font-bold mb-4">Add New Movie</h2>
+            <AddMovieForm />
+          </div>
+        );
       case "categories":
         return (
           <div className="mt-6">
@@ -164,19 +177,6 @@ const AdminMovies = () => {
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4">Movie Playlists</h2>
             <p>Playlists management feature will be implemented here.</p>
-          </div>
-        );
-      case "add":
-        return (
-          <div className="mt-6">
-            <h2 className="text-2xl font-bold mb-4">Add New Movie</h2>
-            <p>The movie creation form will be implemented here.</p>
-            <Button 
-              className="mt-4 bg-[#e50914] hover:bg-[#f6121d]"
-              onClick={() => navigate('/admin/content/new?type=movie')}
-            >
-              Create New Movie
-            </Button>
           </div>
         );
       default:
