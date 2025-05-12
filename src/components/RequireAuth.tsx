@@ -7,6 +7,8 @@ const RequireAuth = () => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
+  console.log("RequireAuth check:", { user: !!user, isLoading });
+
   if (isLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-black text-white">
@@ -18,6 +20,7 @@ const RequireAuth = () => {
 
   if (!user) {
     // Redirect to login but remember where they were trying to go
+    console.log("User not logged in, redirecting to login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

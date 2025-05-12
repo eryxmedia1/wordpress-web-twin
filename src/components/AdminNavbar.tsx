@@ -11,21 +11,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, User, Film, Tv, Search, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 const AdminNavbar = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      toast.success("Successfully logged out");
+      await logout();
       navigate("/login");
     } catch (error) {
       console.error("Error logging out:", error);
-      toast.error("Failed to log out");
     }
   };
   

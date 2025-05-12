@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
 
@@ -13,7 +12,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   
   // Get the path the user was trying to access before being redirected to login
   const from = location.state?.from?.pathname || "/browse";
@@ -29,23 +28,14 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      // Actual authentication with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success("Successfully logged in!");
+      await login(email, password);
       
       // Navigate to the page they were trying to access
-      navigate(from, { replace: true });
+      // We don't need to do this here since the AuthContext will trigger a re-render
+      // which will cause the redirect in the condition above
     } catch (error: any) {
       console.error("Login error:", error);
-      toast.error(error.message || "Failed to log in. Please check your credentials.");
+      // Error is already handled in the login function
     } finally {
       setIsLoading(false);
     }
