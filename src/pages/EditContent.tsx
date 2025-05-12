@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,18 +6,52 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Film, Plus, Trash, Upload, Video } from "lucide-react";
+import { Film, Plus, Trash, Video } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Episode {
+  number: number;
+  title: string;
+  description: string;
+  duration: string;
+  videoUrl: string;
+  thumbnail: string;
+  vastAdUrl: string;
+}
+
+interface Season {
+  number: number;
+  episodes: Episode[];
+}
+
+interface ContentDetails {
+  title: string;
+  description: string;
+  releaseYear: string;
+  genre: string;
+  rating: string;
+  duration: string;
+  videoUrl: string;
+  thumbnailUrl: string;
+  bannerUrl: string;
+  vastAdUrl: {
+    preroll: string;
+    midroll: string;
+    postroll: string;
+  }
+}
 
 const EditContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isNew = id === "new";
   const [contentType, setContentType] = useState("movie");
+  const [loading, setLoading] = useState(false);
   
   // For TV shows
-  const [seasons, setSeasons] = useState([{ 
+  const [seasons, setSeasons] = useState<Season[]>([{ 
     number: 1, 
     episodes: [{ 
       number: 1, 
@@ -32,7 +65,7 @@ const EditContent = () => {
   }]);
   
   // For a single movie or general content details
-  const [contentDetails, setContentDetails] = useState({
+  const [contentDetails, setContentDetails] = useState<ContentDetails>({
     title: "",
     description: "",
     releaseYear: "",
@@ -48,11 +81,313 @@ const EditContent = () => {
       postroll: ""
     }
   });
+
+  useEffect(() => {
+    async function checkAdminStatus() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("You must be logged in to access the admin area");
+        navigate("/login");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      
+      if (!profile?.is_admin) {
+        toast.error("You don't have permission to access the admin area");
+        navigate("/");
+      }
+    }
+
+    checkAdminStatus();
+    
+    if (!isNew) {
+      fetchContentDetails();
+    }
+  }, [id, isNew, navigate]);
+
+  async function fetchContentDetails() {
+    setLoading(true);
+    
+    // Fetch content details
+    const { data: content, error } = await supabase
+      .from('contents')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) {
+      toast.error("Failed to fetch content details");
+      setLoading(false);
+      return;
+    }
+    
+    setContentType(content.type);
+    setContentDetails({
+      title: content.title || "",
+      description: content.description || "",
+      releaseYear: content.release_year?.toString() || "",
+      genre: content.genre || "",
+      rating: content.rating || "",
+      duration: content.duration || "",
+      videoUrl: content.video_url || "",
+      thumbnailUrl: content.poster_url || "",
+      bannerUrl: content.backdrop_url || "",
+      vastAdUrl: {
+        preroll: content.vast_ad_preroll || "",
+        midroll: content.vast_ad_midroll || "",
+        postroll: content.vast_ad_postroll || ""
+      }
+    });
+    
+    if (content.type === 'show') {
+      await fetchSeasons(content.id);
+    }
+    
+    setLoading(false);
+  }
+
+  async function fetchSeasons(contentId: string) {
+    // Fetch seasons
+    const { data: seasonsData, error: seasonsError } = await supabase
+      .from('seasons')
+      .select('id, season_number, title, description, poster_url')
+      .eq('content_id', contentId)
+      .order('season_number', { ascending: true });
+      
+    if (seasonsError) {
+      toast.error("Failed to fetch seasons");
+      return;
+    }
+    
+    if (!seasonsData?.length) return;
+    
+    // Fetch episodes for each season
+    const newSeasons = await Promise.all(
+      seasonsData.map(async (season) => {
+        const { data: episodes, error: episodesError } = await supabase
+          .from('episodes')
+          .select('*')
+          .eq('season_id', season.id)
+          .order('episode_number', { ascending: true });
+          
+        if (episodesError) {
+          toast.error(`Failed to fetch episodes for season ${season.season_number}`);
+          return {
+            number: season.season_number,
+            episodes: []
+          };
+        }
+        
+        return {
+          number: season.season_number,
+          episodes: episodes.map(ep => ({
+            number: ep.episode_number,
+            title: ep.title,
+            description: ep.description || "",
+            duration: ep.duration || "",
+            videoUrl: ep.video_url || "",
+            thumbnail: ep.thumbnail_url || "",
+            vastAdUrl: ep.vast_ad_url || ""
+          }))
+        };
+      })
+    );
+    
+    setSeasons(newSeasons);
+  }
   
-  const handleSave = () => {
-    // This would send data to the backend in a real implementation
-    toast.success(`Content ${isNew ? "created" : "updated"} successfully!`);
-    navigate("/admin");
+  const handleSave = async () => {
+    setLoading(true);
+    
+    try {
+      if (!contentDetails.title) {
+        toast.error("Title is required");
+        setLoading(false);
+        return;
+      }
+      
+      let contentId = id;
+      
+      // Insert or update content
+      if (isNew) {
+        const { data: contentData, error: contentError } = await supabase
+          .from('contents')
+          .insert([
+            {
+              title: contentDetails.title,
+              description: contentDetails.description,
+              type: contentType,
+              genre: contentDetails.genre,
+              release_year: contentDetails.releaseYear ? parseInt(contentDetails.releaseYear) : null,
+              rating: contentDetails.rating,
+              duration: contentDetails.duration,
+              poster_url: contentDetails.thumbnailUrl,
+              backdrop_url: contentDetails.bannerUrl,
+              video_url: contentDetails.videoUrl,
+              vast_ad_preroll: contentDetails.vastAdUrl.preroll,
+              vast_ad_midroll: contentDetails.vastAdUrl.midroll,
+              vast_ad_postroll: contentDetails.vastAdUrl.postroll
+            }
+          ])
+          .select()
+          .single();
+          
+        if (contentError) {
+          throw new Error(`Failed to create content: ${contentError.message}`);
+        }
+        
+        contentId = contentData.id;
+      } else {
+        const { error: contentError } = await supabase
+          .from('contents')
+          .update({
+            title: contentDetails.title,
+            description: contentDetails.description,
+            type: contentType,
+            genre: contentDetails.genre,
+            release_year: contentDetails.releaseYear ? parseInt(contentDetails.releaseYear) : null,
+            rating: contentDetails.rating,
+            duration: contentDetails.duration,
+            poster_url: contentDetails.thumbnailUrl,
+            backdrop_url: contentDetails.bannerUrl,
+            video_url: contentDetails.videoUrl,
+            vast_ad_preroll: contentDetails.vastAdUrl.preroll,
+            vast_ad_midroll: contentDetails.vastAdUrl.midroll,
+            vast_ad_postroll: contentDetails.vastAdUrl.postroll
+          })
+          .eq('id', contentId);
+          
+        if (contentError) {
+          throw new Error(`Failed to update content: ${contentError.message}`);
+        }
+      }
+      
+      // If it's a show, save seasons and episodes
+      if (contentType === 'show' && contentId) {
+        // Get existing seasons to compare
+        const { data: existingSeasons } = await supabase
+          .from('seasons')
+          .select('id, season_number')
+          .eq('content_id', contentId);
+        
+        // Process each season
+        for (const season of seasons) {
+          let seasonId;
+          
+          // Find existing season or create new one
+          const existingSeason = existingSeasons?.find(s => s.season_number === season.number);
+          
+          if (existingSeason) {
+            seasonId = existingSeason.id;
+          } else {
+            // Create new season
+            const { data: newSeason, error: seasonError } = await supabase
+              .from('seasons')
+              .insert([
+                {
+                  content_id: contentId,
+                  season_number: season.number
+                }
+              ])
+              .select()
+              .single();
+              
+            if (seasonError) {
+              throw new Error(`Failed to create season ${season.number}: ${seasonError.message}`);
+            }
+            
+            seasonId = newSeason.id;
+          }
+          
+          // Get existing episodes to compare
+          const { data: existingEpisodes } = await supabase
+            .from('episodes')
+            .select('id, episode_number')
+            .eq('season_id', seasonId);
+          
+          // Process each episode
+          for (const episode of season.episodes) {
+            // Find existing episode or create new one
+            const existingEpisode = existingEpisodes?.find(e => e.episode_number === episode.number);
+            
+            if (existingEpisode) {
+              // Update existing episode
+              const { error: epError } = await supabase
+                .from('episodes')
+                .update({
+                  title: episode.title,
+                  description: episode.description,
+                  duration: episode.duration,
+                  video_url: episode.videoUrl,
+                  thumbnail_url: episode.thumbnail,
+                  vast_ad_url: episode.vastAdUrl
+                })
+                .eq('id', existingEpisode.id);
+                
+              if (epError) {
+                throw new Error(`Failed to update episode ${episode.number}: ${epError.message}`);
+              }
+            } else {
+              // Create new episode
+              const { error: epError } = await supabase
+                .from('episodes')
+                .insert([
+                  {
+                    season_id: seasonId,
+                    episode_number: episode.number,
+                    title: episode.title,
+                    description: episode.description,
+                    duration: episode.duration,
+                    video_url: episode.videoUrl,
+                    thumbnail_url: episode.thumbnail,
+                    vast_ad_url: episode.vastAdUrl
+                  }
+                ]);
+                
+              if (epError) {
+                throw new Error(`Failed to create episode ${episode.number}: ${epError.message}`);
+              }
+            }
+          }
+          
+          // Remove episodes that were deleted in UI
+          const episodeNumbersToKeep = season.episodes.map(e => e.number);
+          for (const existingEp of existingEpisodes || []) {
+            if (!episodeNumbersToKeep.includes(existingEp.episode_number)) {
+              await supabase
+                .from('episodes')
+                .delete()
+                .eq('id', existingEp.id);
+            }
+          }
+        }
+        
+        // Remove seasons that were deleted in UI
+        const seasonNumbersToKeep = seasons.map(s => s.number);
+        for (const existingSeason of existingSeasons || []) {
+          if (!seasonNumbersToKeep.includes(existingSeason.season_number)) {
+            await supabase
+              .from('seasons')
+              .delete()
+              .eq('id', existingSeason.id);
+          }
+        }
+      }
+      
+      toast.success(`Content ${isNew ? "created" : "updated"} successfully!`);
+      navigate("/admin");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -63,11 +398,19 @@ const EditContent = () => {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">{isNew ? "Add New Content" : "Edit Content"}</h1>
           <div className="flex gap-4">
-            <Button variant="outline" onClick={() => navigate("/admin")}>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/admin")}
+              disabled={loading}
+            >
               Cancel
             </Button>
-            <Button className="bg-[#e50914] hover:bg-[#f6121d]" onClick={handleSave}>
-              Save Changes
+            <Button 
+              className="bg-[#e50914] hover:bg-[#f6121d]" 
+              onClick={handleSave}
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </div>

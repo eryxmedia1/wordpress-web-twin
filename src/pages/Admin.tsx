@@ -1,27 +1,116 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Film, Tv, Plus, Search, Upload } from "lucide-react";
+import { Film, Tv, Plus, Search, Trash } from "lucide-react";
 import AdminNavbar from "@/components/AdminNavbar";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface Content {
+  id: string;
+  title: string;
+  type: 'movie' | 'show';
+  duration?: string;
+  seasons?: number;
+}
 
 const Admin = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [contents, setContents] = useState<Content[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // Mock data for demonstration
-  const mockVideos = [
-    { id: 1, title: "Stranger Things", type: "show", seasons: 4 },
-    { id: 2, title: "The Queen's Gambit", type: "show", seasons: 1 },
-    { id: 3, title: "Extraction", type: "movie", duration: "1h 58m" },
-    { id: 4, title: "The Irishman", type: "movie", duration: "3h 29m" },
-  ];
+  useEffect(() => {
+    async function checkAdminStatus() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("You must be logged in to access the admin area");
+        navigate("/login");
+        return;
+      }
 
-  const filteredVideos = mockVideos.filter(video => 
-    video.title.toLowerCase().includes(searchTerm.toLowerCase())
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      
+      if (!profile?.is_admin) {
+        toast.error("You don't have permission to access the admin area");
+        navigate("/");
+      }
+    }
+
+    checkAdminStatus();
+    fetchContents();
+  }, [navigate]);
+
+  async function fetchContents() {
+    setLoading(true);
+    
+    // Fetch movies and shows
+    const { data, error } = await supabase
+      .from('contents')
+      .select(`
+        id, 
+        title, 
+        type,
+        duration,
+        seasons:seasons(count)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      toast.error("Failed to load content: " + error.message);
+      setLoading(false);
+      return;
+    }
+
+    // Transform data to include season counts
+    const transformedData = data.map(item => ({
+      id: item.id,
+      title: item.title,
+      type: item.type,
+      duration: item.duration,
+      seasons: item.seasons?.count || 0
+    }));
+    
+    setContents(transformedData);
+    setLoading(false);
+  }
+
+  const filteredContents = contents.filter(content => 
+    content.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const handleAddNewContent = () => {
+    navigate('/admin/content/new');
+  };
+  
+  const handleEditContent = (id: string) => {
+    navigate(`/admin/content/${id}`);
+  };
+  
+  const handleDeleteContent = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this content?")) {
+      const { error } = await supabase
+        .from('contents')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        toast.error("Failed to delete content: " + error.message);
+      } else {
+        toast.success("Content deleted successfully");
+        fetchContents();
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -42,7 +131,10 @@ const Admin = () => {
             />
           </div>
           
-          <Button className="bg-[#e50914] hover:bg-[#f6121d] ml-4">
+          <Button 
+            className="bg-[#e50914] hover:bg-[#f6121d] ml-4"
+            onClick={handleAddNewContent}
+          >
             <Plus className="mr-2" /> Add New Content
           </Button>
         </div>
@@ -54,70 +146,137 @@ const Admin = () => {
             <TabsTrigger value="shows" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white">TV Shows</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="all" className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredVideos.map(video => (
-              <Card key={video.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-medium">{video.title}</h3>
-                      <div className="flex items-center mt-2 text-gray-400">
-                        {video.type === "movie" ? (
-                          <><Film className="w-4 h-4 mr-1" /> Movie · {video.duration}</>
-                        ) : (
-                          <><Tv className="w-4 h-4 mr-1" /> TV Show · {video.seasons} Season{video.seasons > 1 ? 's' : ''}</>
-                        )}
+          <TabsContent value="all" className="mt-6">
+            {loading ? (
+              <p className="text-center">Loading content...</p>
+            ) : filteredContents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredContents.map(content => (
+                  <Card key={content.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-medium">{content.title}</h3>
+                          <div className="flex items-center mt-2 text-gray-400">
+                            {content.type === "movie" ? (
+                              <><Film className="w-4 h-4 mr-1" /> Movie · {content.duration}</>
+                            ) : (
+                              <><Tv className="w-4 h-4 mr-1" /> TV Show · {content.seasons} Season{content.seasons !== 1 ? 's' : ''}</>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="text-white"
+                            onClick={() => handleEditContent(content.id)}
+                          >
+                            Edit
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="text-red-500 hover:text-red-400"
+                            onClick={() => handleDeleteContent(content.id)}
+                          >
+                            <Trash className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <Button size="sm" variant="ghost" className="text-white">Edit</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center">No content found. Add some new content to get started!</p>
+            )}
           </TabsContent>
           
           <TabsContent value="movies" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredVideos
-                .filter(video => video.type === "movie")
-                .map(video => (
-                  <Card key={video.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-xl font-medium">{video.title}</h3>
-                          <div className="flex items-center mt-2 text-gray-400">
-                            <Film className="w-4 h-4 mr-1" /> Movie · {video.duration}
+            {loading ? (
+              <p className="text-center">Loading content...</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredContents
+                  .filter(content => content.type === "movie")
+                  .map(content => (
+                    <Card key={content.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-xl font-medium">{content.title}</h3>
+                            <div className="flex items-center mt-2 text-gray-400">
+                              <Film className="w-4 h-4 mr-1" /> Movie · {content.duration}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-white"
+                              onClick={() => handleEditContent(content.id)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-red-500 hover:text-red-400"
+                              onClick={() => handleDeleteContent(content.id)}
+                            >
+                              <Trash className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
-                        <Button size="sm" variant="ghost" className="text-white">Edit</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="shows" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredVideos
-                .filter(video => video.type === "show")
-                .map(video => (
-                  <Card key={video.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-xl font-medium">{video.title}</h3>
-                          <div className="flex items-center mt-2 text-gray-400">
-                            <Tv className="w-4 h-4 mr-1" /> TV Show · {video.seasons} Season{video.seasons > 1 ? 's' : ''}
+            {loading ? (
+              <p className="text-center">Loading content...</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredContents
+                  .filter(content => content.type === "show")
+                  .map(content => (
+                    <Card key={content.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-xl font-medium">{content.title}</h3>
+                            <div className="flex items-center mt-2 text-gray-400">
+                              <Tv className="w-4 h-4 mr-1" /> TV Show · {content.seasons} Season{content.seasons !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-white"
+                              onClick={() => handleEditContent(content.id)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-red-500 hover:text-red-400"
+                              onClick={() => handleDeleteContent(content.id)}
+                            >
+                              <Trash className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
-                        <Button size="sm" variant="ghost" className="text-white">Edit</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
