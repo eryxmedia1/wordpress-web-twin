@@ -225,26 +225,27 @@ const EditContent = () => {
       
       // Insert or update content
       if (isNew) {
-        // Create new content - Fixed: removed array brackets around the object
+        // Create new content - adding missing properties: trailer_url and featured
         const { data: contentData, error: contentError } = await supabase
           .from('contents')
-          .insert(
-            {
-              title: contentDetails.title,
-              description: contentDetails.description,
-              type: contentType, // Fixed: using the ContentType type
-              genre: contentDetails.genre,
-              release_year: contentDetails.releaseYear ? parseInt(contentDetails.releaseYear) : null,
-              rating: contentDetails.rating,
-              duration: contentDetails.duration,
-              poster_url: contentDetails.thumbnailUrl,
-              backdrop_url: contentDetails.bannerUrl,
-              video_url: contentDetails.videoUrl,
-              vast_ad_preroll: contentDetails.vastAdUrl.preroll,
-              vast_ad_midroll: contentDetails.vastAdUrl.midroll,
-              vast_ad_postroll: contentDetails.vastAdUrl.postroll
-            }
-          )
+          .insert({
+            title: contentDetails.title,
+            description: contentDetails.description,
+            type: contentType,
+            genre: contentDetails.genre,
+            release_year: contentDetails.releaseYear ? parseInt(contentDetails.releaseYear) : null,
+            rating: contentDetails.rating,
+            duration: contentDetails.duration,
+            poster_url: contentDetails.thumbnailUrl,
+            backdrop_url: contentDetails.bannerUrl,
+            video_url: contentDetails.videoUrl,
+            vast_ad_preroll: contentDetails.vastAdUrl.preroll,
+            vast_ad_midroll: contentDetails.vastAdUrl.midroll,
+            vast_ad_postroll: contentDetails.vastAdUrl.postroll,
+            // Add the missing properties required by DbContent type
+            trailer_url: null,
+            featured: false
+          })
           .select()
           .single() as { data: DbContent | null; error: any };
           
@@ -264,7 +265,7 @@ const EditContent = () => {
           .update({
             title: contentDetails.title,
             description: contentDetails.description,
-            type: contentType, // Fixed: using the ContentType type
+            type: contentType,
             genre: contentDetails.genre,
             release_year: contentDetails.releaseYear ? parseInt(contentDetails.releaseYear) : null,
             rating: contentDetails.rating,
@@ -275,6 +276,7 @@ const EditContent = () => {
             vast_ad_preroll: contentDetails.vastAdUrl.preroll,
             vast_ad_midroll: contentDetails.vastAdUrl.midroll,
             vast_ad_postroll: contentDetails.vastAdUrl.postroll
+            // No need to add trailer_url and featured here as we're updating existing values
           })
           .eq('id', contentId as string) as { error: any };
           
