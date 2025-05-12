@@ -6,6 +6,9 @@ import type { Database as GeneratedDatabase } from './types';
 const SUPABASE_URL = "https://hbddjtvslojxkkcrpcoo.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRqdHZzbG9qeGtrY3JwY29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjUxNjcsImV4cCI6MjA2MjYwMTE2N30.TC4eACBOJsfggnuB3OyOK7x4O9yp7bjzOP5Tr9_jHds";
 
+// Content type definition for the app
+export type ContentType = 'movie' | 'show';
+
 // Extend the generated Database type with our custom tables
 interface Database extends GeneratedDatabase {
   public: {
@@ -77,8 +80,6 @@ export type DbProfile = {
   created_at: string;
   is_admin?: boolean;
 }
-
-export type ContentType = 'movie' | 'show';
 
 export type DbContent = {
   id: string;

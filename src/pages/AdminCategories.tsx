@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,14 +67,14 @@ const AdminCategories = () => {
     }
   }
 
-  async function fetchCategories() {
+  async function fetchCategories(contentType?: ContentType) {
     setLoading(true);
     
     // Fetch categories based on content type
     const { data, error } = await supabase
       .from('categories')
       .select('*')
-      .eq('content_type', contentType)
+      .eq('content_type', contentType || contentType)
       .order('name');
     
     if (error) {
@@ -104,13 +103,14 @@ const AdminCategories = () => {
     
     setLoading(true);
     
+    // Add proper typing to match DbCategory insert requirements
     const { error } = await supabase
       .from('categories')
       .insert({
         name: newCategoryName,
         slug: slugToUse,
         description: newCategoryDescription || null,
-        content_type: contentType
+        content_type: contentType as ContentType // Ensure it's cast as ContentType
       });
     
     if (error) {
@@ -120,7 +120,8 @@ const AdminCategories = () => {
       setNewCategoryName("");
       setNewCategorySlug("");
       setNewCategoryDescription("");
-      fetchCategories();
+      // No need to reset contentType as it defaults to a valid value
+      fetchCategories(contentType);
     }
     
     setLoading(false);

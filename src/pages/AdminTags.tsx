@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Search, Plus } from "lucide-react";
 import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate } from "react-router-dom";
-import { supabase, DbTag } from "@/integrations/supabase/client";
+import { supabase, DbTag, ContentType } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const AdminTags = () => {
@@ -19,6 +18,7 @@ const AdminTags = () => {
   const [newTagName, setNewTagName] = useState("");
   const [newTagSlug, setNewTagSlug] = useState("");
   const [newTagDescription, setNewTagDescription] = useState("");
+  const [newTagContentType, setNewTagContentType] = useState<ContentType | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -86,7 +86,8 @@ const AdminTags = () => {
       .insert({
         name: newTagName,
         slug: slugToUse,
-        description: newTagDescription || null
+        description: newTagDescription || null,
+        content_type: newTagContentType  // This can be null as it's optional in the schema
       });
     
     if (error) {
@@ -96,6 +97,7 @@ const AdminTags = () => {
       setNewTagName("");
       setNewTagSlug("");
       setNewTagDescription("");
+      setNewTagContentType(null);
       fetchTags();
     }
     
@@ -225,6 +227,20 @@ const AdminTags = () => {
                     <p className="text-gray-400 text-sm mt-1">The description is not prominent by default; however, some themes may show it.</p>
                   </div>
                   
+                  <div>
+                    <label className="block mb-2">Content Type (Optional)</label>
+                    <select
+                      className="w-full bg-gray-900 border-gray-700 text-white rounded p-2"
+                      value={newTagContentType || ""}
+                      onChange={(e) => setNewTagContentType(e.target.value ? e.target.value as ContentType : null)}
+                    >
+                      <option value="">Select content type</option>
+                      <option value="movie">Movie</option>
+                      <option value="show">TV Show</option>
+                    </select>
+                    <p className="text-gray-400 text-sm mt-1">Optionally associate this tag with a specific content type.</p>
+                  </div>
+                  
                   <Button 
                     type="submit"
                     className="bg-[#e50914] hover:bg-[#f6121d] w-full"
@@ -284,6 +300,7 @@ const AdminTags = () => {
                       </th>
                       <th className="p-4 text-left">Name</th>
                       <th className="p-4 text-left">Description</th>
+                      <th className="p-4 text-left">Content Type</th>
                       <th className="p-4 text-left">Slug</th>
                       <th className="p-4 text-left">Count</th>
                     </tr>
@@ -292,11 +309,11 @@ const AdminTags = () => {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={5} className="p-4 text-center">Loading tags...</td>
+                        <td colSpan={6} className="p-4 text-center">Loading tags...</td>
                       </tr>
                     ) : filteredTags.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-4 text-center">No tags found</td>
+                        <td colSpan={6} className="p-4 text-center">No tags found</td>
                       </tr>
                     ) : (
                       filteredTags.map((tag) => (
@@ -309,6 +326,7 @@ const AdminTags = () => {
                           </td>
                           <td className="p-4">{tag.name}</td>
                           <td className="p-4">{tag.description || "—"}</td>
+                          <td className="p-4">{tag.content_type || "—"}</td>
                           <td className="p-4">{tag.slug}</td>
                           <td className="p-4">0</td>
                         </tr>
