@@ -53,11 +53,13 @@ export type DbProfile = {
   is_admin?: boolean;
 }
 
+export type ContentType = 'movie' | 'show';
+
 export type DbContent = {
   id: string;
   title: string;
   description: string | null;
-  type: 'movie' | 'show';
+  type: ContentType;
   genre: string | null;
   release_year: number | null;
   rating: string | null;

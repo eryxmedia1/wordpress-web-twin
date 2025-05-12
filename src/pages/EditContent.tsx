@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Film, Plus, Trash, Video } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
-import { supabase, DbContent, DbProfile, DbSeason, DbEpisode } from "@/integrations/supabase/client";
+import { supabase, DbContent, DbProfile, DbSeason, DbEpisode, ContentType } from "@/integrations/supabase/client";
 
 interface Episode {
   number: number;
@@ -47,7 +48,7 @@ const EditContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isNew = id === "new";
-  const [contentType, setContentType] = useState("movie");
+  const [contentType, setContentType] = useState<ContentType>("movie");
   const [loading, setLoading] = useState(false);
   
   // For TV shows
@@ -224,14 +225,14 @@ const EditContent = () => {
       
       // Insert or update content
       if (isNew) {
-        // Create new content with type assertion
+        // Create new content - Fixed: removed array brackets around the object
         const { data: contentData, error: contentError } = await supabase
           .from('contents')
-          .insert([
+          .insert(
             {
               title: contentDetails.title,
               description: contentDetails.description,
-              type: contentType,
+              type: contentType, // Fixed: using the ContentType type
               genre: contentDetails.genre,
               release_year: contentDetails.releaseYear ? parseInt(contentDetails.releaseYear) : null,
               rating: contentDetails.rating,
@@ -243,7 +244,7 @@ const EditContent = () => {
               vast_ad_midroll: contentDetails.vastAdUrl.midroll,
               vast_ad_postroll: contentDetails.vastAdUrl.postroll
             }
-          ])
+          )
           .select()
           .single() as { data: DbContent | null; error: any };
           
@@ -263,7 +264,7 @@ const EditContent = () => {
           .update({
             title: contentDetails.title,
             description: contentDetails.description,
-            type: contentType,
+            type: contentType, // Fixed: using the ContentType type
             genre: contentDetails.genre,
             release_year: contentDetails.releaseYear ? parseInt(contentDetails.releaseYear) : null,
             rating: contentDetails.rating,
@@ -300,15 +301,18 @@ const EditContent = () => {
           if (existingSeason) {
             seasonId = existingSeason.id;
           } else {
-            // Create new season with type assertion
+            // Create new season - Fixed: removed array brackets and added required fields
             const { data: newSeason, error: seasonError } = await supabase
               .from('seasons')
-              .insert([
+              .insert(
                 {
                   content_id: contentId,
-                  season_number: season.number
+                  season_number: season.number,
+                  title: `Season ${season.number}`, // Added required field
+                  description: null, // Added null for optional field
+                  poster_url: null // Added null for optional field
                 }
-              ])
+              )
               .select()
               .single() as { data: DbSeason | null; error: any };
               
@@ -355,7 +359,7 @@ const EditContent = () => {
               // Create new episode
               const { error: epError } = await supabase
                 .from('episodes')
-                .insert([
+                .insert(
                   {
                     season_id: seasonId,
                     episode_number: episode.number,
@@ -366,7 +370,7 @@ const EditContent = () => {
                     thumbnail_url: episode.thumbnail,
                     vast_ad_url: episode.vastAdUrl
                   }
-                ]) as { error: any };
+                ) as { error: any };
                 
               if (epError) {
                 throw new Error(`Failed to create episode ${episode.number}: ${epError.message}`);
