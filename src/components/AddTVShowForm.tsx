@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -214,7 +215,7 @@ const AddTVShowForm = () => {
         .insert({
           title: data.title,
           description: data.description,
-          type: "show" as ContentType,
+          type: "show" as ContentType, // Explicitly cast as ContentType
           genre: data.category,
           release_year: parseInt(data.releaseYear),
           rating: data.rating,
