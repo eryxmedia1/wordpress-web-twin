@@ -18,6 +18,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AddTVShowFormProps {
   onClose: () => void;
@@ -37,6 +39,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [tags, setTags] = useState<TagOption[]>([]);
+  const [activeTab, setActiveTab] = useState("info");
   const navigate = useNavigate();
 
   const {
@@ -168,250 +171,264 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Title</label>
-        <Input
-          type="text"
-          {...register("title", { required: "Title is required" })}
-          className="mt-1 block w-full"
-        />
-        {errors.title && (
-          <p className="text-red-500 text-xs">{String(errors.title.message)}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Description
-        </label>
-        <Textarea
-          {...register("description", {
-            required: "Description is required",
-          })}
-          className="mt-1 block w-full"
-        />
-        {errors.description && (
-          <p className="text-red-500 text-xs">{String(errors.description.message)}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Genre</label>
-        <Input
-          type="text"
-          {...register("genre", { required: "Genre is required" })}
-          className="mt-1 block w-full"
-        />
-        {errors.genre && (
-          <p className="text-red-500 text-xs">{String(errors.genre.message)}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Release Year
-        </label>
-        <Input
-          type="number"
-          {...register("releaseYear", {
-            required: "Release Year is required",
-            valueAsNumber: true,
-          })}
-          className="mt-1 block w-full"
-        />
-        {errors.releaseYear && (
-          <p className="text-red-500 text-xs">{String(errors.releaseYear.message)}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Rating</label>
-        <Input
-          type="text"
-          {...register("rating", { required: "Rating is required" })}
-          className="mt-1 block w-full"
-        />
-        {errors.rating && (
-          <p className="text-red-500 text-xs">{String(errors.rating.message)}</p>
-        )}
-      </div>
-
-      {/* New Duration field */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Duration</label>
-        <Input
-          type="text"
-          {...register("duration")}
-          className="mt-1 block w-full"
-          placeholder="e.g. 30m per episode"
-        />
-      </div>
-
-      {/* New Video URL field */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Video URL
-        </label>
-        <Input
-          type="url"
-          {...register("videoUrl")}
-          className="mt-1 block w-full"
-          placeholder="https://example.com/video.mp4"
-        />
-        <p className="text-xs text-gray-500 mt-1">Full video URL for the TV show (if applicable)</p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Poster URL
-        </label>
-        <Input
-          type="url"
-          {...register("posterUrl", { required: "Poster URL is required" })}
-          className="mt-1 block w-full"
-        />
-        {errors.posterUrl && (
-          <p className="text-red-500 text-xs">{String(errors.posterUrl.message)}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Backdrop URL
-        </label>
-        <Input
-          type="url"
-          {...register("backdropUrl", {
-            required: "Backdrop URL is required",
-          })}
-          className="mt-1 block w-full"
-        />
-        {errors.backdropUrl && (
-          <p className="text-red-500 text-xs">{String(errors.backdropUrl.message)}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Trailer URL
-        </label>
-        <Input
-          type="url"
-          {...register("trailerUrl", { required: "Trailer URL is required" })}
-          className="mt-1 block w-full"
-        />
-        {errors.trailerUrl && (
-          <p className="text-red-500 text-xs">{String(errors.trailerUrl.message)}</p>
-        )}
-      </div>
-
-      {/* VAST Ad fields */}
-      <div className="space-y-4 border border-gray-200 rounded-md p-4">
-        <h3 className="font-medium">VAST Ad URLs (Optional)</h3>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Pre-roll Ad URL
-          </label>
-          <Input
-            type="url"
-            {...register("vastAdPreroll")}
-            className="mt-1 block w-full"
-            placeholder="https://example.com/ads/preroll.xml"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Mid-roll Ad URL
-          </label>
-          <Input
-            type="url"
-            {...register("vastAdMidroll")}
-            className="mt-1 block w-full"
-            placeholder="https://example.com/ads/midroll.xml"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Post-roll Ad URL
-          </label>
-          <Input
-            type="url"
-            {...register("vastAdPostroll")}
-            className="mt-1 block w-full"
-            placeholder="https://example.com/ads/postroll.xml"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Category</label>
-        <select
-          {...register("category", { required: "Category is required" })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        >
-          <option value="">Select a category</option>
-          {categories.map((category) => (
-            <option key={category.value} value={category.value}>
-              {category.label}
-            </option>
-          ))}
-        </select>
-        {errors.category && (
-          <p className="text-red-500 text-xs">{String(errors.category.message)}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Tags</label>
-        <div>
-          {tags.map((tag) => (
-            <div key={tag.value} className="flex items-center">
-              <label className="flex items-center">
-                <input 
-                  type="checkbox"
-                  value={tag.value}
-                  {...register("tags")}
-                  className="mr-2"
+    <Card className="bg-gray-800 border-gray-700 shadow-lg">
+      <CardContent className="p-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-2 mb-6">
+            <TabsTrigger value="info">General Info</TabsTrigger>
+            <TabsTrigger value="media">Media & Metadata</TabsTrigger>
+          </TabsList>
+          
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <TabsContent value="info" className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Title</label>
+                <Input
+                  type="text"
+                  {...register("title", { required: "Title is required" })}
+                  className="mt-1 block w-full"
                 />
-                {tag.label}
-              </label>
+                {errors.title && (
+                  <p className="text-red-500 text-xs">{String(errors.title.message)}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Description
+                </label>
+                <Textarea
+                  {...register("description", {
+                    required: "Description is required",
+                  })}
+                  className="mt-1 block w-full"
+                />
+                {errors.description && (
+                  <p className="text-red-500 text-xs">{String(errors.description.message)}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Genre</label>
+                <Input
+                  type="text"
+                  {...register("genre", { required: "Genre is required" })}
+                  className="mt-1 block w-full"
+                />
+                {errors.genre && (
+                  <p className="text-red-500 text-xs">{String(errors.genre.message)}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Release Year
+                </label>
+                <Input
+                  type="number"
+                  {...register("releaseYear", {
+                    required: "Release Year is required",
+                    valueAsNumber: true,
+                  })}
+                  className="mt-1 block w-full"
+                />
+                {errors.releaseYear && (
+                  <p className="text-red-500 text-xs">{String(errors.releaseYear.message)}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Rating</label>
+                <Input
+                  type="text"
+                  {...register("rating", { required: "Rating is required" })}
+                  className="mt-1 block w-full"
+                />
+                {errors.rating && (
+                  <p className="text-red-500 text-xs">{String(errors.rating.message)}</p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Duration</label>
+                <Input
+                  type="text"
+                  {...register("duration")}
+                  className="mt-1 block w-full"
+                  placeholder="e.g. 30m per episode"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Category</label>
+                <select
+                  {...register("category", { required: "Category is required" })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((category) => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.category && (
+                  <p className="text-red-500 text-xs">{String(errors.category.message)}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Tags</label>
+                <div>
+                  {tags.map((tag) => (
+                    <div key={tag.value} className="flex items-center">
+                      <label className="flex items-center">
+                        <input 
+                          type="checkbox"
+                          value={tag.value}
+                          {...register("tags")}
+                          className="mr-2"
+                        />
+                        {tag.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input 
+                  type="checkbox" 
+                  {...register("featured")} 
+                  id="featured" 
+                  className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                />
+                <label htmlFor="featured" className="text-sm font-medium text-gray-700">
+                  Featured
+                </label>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="media" className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Video URL
+                </label>
+                <Input
+                  type="url"
+                  {...register("videoUrl")}
+                  className="mt-1 block w-full"
+                  placeholder="https://example.com/video.mp4"
+                />
+                <p className="text-xs text-gray-500 mt-1">Full video URL for the TV show (if applicable)</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Poster URL
+                </label>
+                <Input
+                  type="url"
+                  {...register("posterUrl", { required: "Poster URL is required" })}
+                  className="mt-1 block w-full"
+                />
+                {errors.posterUrl && (
+                  <p className="text-red-500 text-xs">{String(errors.posterUrl.message)}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Backdrop URL
+                </label>
+                <Input
+                  type="url"
+                  {...register("backdropUrl", {
+                    required: "Backdrop URL is required",
+                  })}
+                  className="mt-1 block w-full"
+                />
+                {errors.backdropUrl && (
+                  <p className="text-red-500 text-xs">{String(errors.backdropUrl.message)}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Trailer URL
+                </label>
+                <Input
+                  type="url"
+                  {...register("trailerUrl", { required: "Trailer URL is required" })}
+                  className="mt-1 block w-full"
+                />
+                {errors.trailerUrl && (
+                  <p className="text-red-500 text-xs">{String(errors.trailerUrl.message)}</p>
+                )}
+              </div>
+
+              <div className="border border-gray-200 rounded-md p-4">
+                <h3 className="font-medium">VAST Ad URLs (Optional)</h3>
+                
+                <div className="space-y-4 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Pre-roll Ad URL
+                    </label>
+                    <Input
+                      type="url"
+                      {...register("vastAdPreroll")}
+                      className="mt-1 block w-full"
+                      placeholder="https://example.com/ads/preroll.xml"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Mid-roll Ad URL
+                    </label>
+                    <Input
+                      type="url"
+                      {...register("vastAdMidroll")}
+                      className="mt-1 block w-full"
+                      placeholder="https://example.com/ads/midroll.xml"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Post-roll Ad URL
+                    </label>
+                    <Input
+                      type="url"
+                      {...register("vastAdPostroll")}
+                      className="mt-1 block w-full"
+                      placeholder="https://example.com/ads/postroll.xml"
+                    />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <div className="flex justify-end pt-4">
+              <Button type="button" variant="ghost" onClick={onClose} className="mr-2">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <CheckIcon className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create TV Show"
+                )}
+              </Button>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <input 
-          type="checkbox" 
-          {...register("featured")} 
-          id="featured" 
-          className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-        />
-        <label htmlFor="featured" className="text-sm font-medium text-gray-700">
-          Featured
-        </label>
-      </div>
-
-      <div className="flex justify-end">
-        <Button type="button" variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? (
-            <>
-              <CheckIcon className="mr-2 h-4 w-4 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            "Create TV Show"
-          )}
-        </Button>
-      </div>
-    </form>
+          </form>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 
