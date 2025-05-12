@@ -56,7 +56,7 @@ const AdminTvShows = () => {
       case "add":
         return (
           <div className="mt-6">
-            <h2 className="text-2xl font-bold mb-4">Add New TV Show</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">Add New TV Show</h2>
             <AddTVShowForm onClose={() => navigate('/admin/tvshows')} />
           </div>
         );
@@ -71,7 +71,7 @@ const AdminTvShows = () => {
       default:
         return (
           <div className="mt-6">
-            <p className="text-center">Section not found</p>
+            <p className="text-center text-white">Section not found</p>
           </div>
         );
     }

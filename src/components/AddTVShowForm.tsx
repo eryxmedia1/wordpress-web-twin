@@ -175,18 +175,18 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
       <CardContent className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-2 mb-6">
-            <TabsTrigger value="info">General Info</TabsTrigger>
-            <TabsTrigger value="media">Media & Metadata</TabsTrigger>
+            <TabsTrigger value="info" className="text-white">General Info</TabsTrigger>
+            <TabsTrigger value="media" className="text-white">Media & Metadata</TabsTrigger>
           </TabsList>
           
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <TabsContent value="info" className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
+                <label className="block text-sm font-medium text-white">Title</label>
                 <Input
                   type="text"
                   {...register("title", { required: "Title is required" })}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                 />
                 {errors.title && (
                   <p className="text-red-500 text-xs">{String(errors.title.message)}</p>
@@ -194,14 +194,14 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-white">
                   Description
                 </label>
                 <Textarea
                   {...register("description", {
                     required: "Description is required",
                   })}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                 />
                 {errors.description && (
                   <p className="text-red-500 text-xs">{String(errors.description.message)}</p>
@@ -209,11 +209,11 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Genre</label>
+                <label className="block text-sm font-medium text-white">Genre</label>
                 <Input
                   type="text"
                   {...register("genre", { required: "Genre is required" })}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                 />
                 {errors.genre && (
                   <p className="text-red-500 text-xs">{String(errors.genre.message)}</p>
@@ -221,7 +221,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-white">
                   Release Year
                 </label>
                 <Input
@@ -230,7 +230,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                     required: "Release Year is required",
                     valueAsNumber: true,
                   })}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                 />
                 {errors.releaseYear && (
                   <p className="text-red-500 text-xs">{String(errors.releaseYear.message)}</p>
@@ -238,11 +238,11 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Rating</label>
+                <label className="block text-sm font-medium text-white">Rating</label>
                 <Input
                   type="text"
                   {...register("rating", { required: "Rating is required" })}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                 />
                 {errors.rating && (
                   <p className="text-red-500 text-xs">{String(errors.rating.message)}</p>
@@ -250,20 +250,20 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Duration</label>
+                <label className="block text-sm font-medium text-white">Duration</label>
                 <Input
                   type="text"
                   {...register("duration")}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                   placeholder="e.g. 30m per episode"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Category</label>
+                <label className="block text-sm font-medium text-white">Category</label>
                 <select
                   {...register("category", { required: "Category is required" })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white"
                 >
                   <option value="">Select a category</option>
                   {categories.map((category) => (
@@ -278,16 +278,16 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Tags</label>
-                <div>
+                <label className="block text-sm font-medium text-white">Tags</label>
+                <div className="mt-2 space-y-2">
                   {tags.map((tag) => (
                     <div key={tag.value} className="flex items-center">
-                      <label className="flex items-center">
+                      <label className="flex items-center text-white">
                         <input 
                           type="checkbox"
                           value={tag.value}
                           {...register("tags")}
-                          className="mr-2"
+                          className="mr-2 rounded bg-gray-700 border-gray-600"
                         />
                         {tag.label}
                       </label>
@@ -301,9 +301,9 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                   type="checkbox" 
                   {...register("featured")} 
                   id="featured" 
-                  className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  className="rounded bg-gray-700 border-gray-600"
                 />
-                <label htmlFor="featured" className="text-sm font-medium text-gray-700">
+                <label htmlFor="featured" className="text-sm font-medium text-white">
                   Featured
                 </label>
               </div>
@@ -311,26 +311,26 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
             
             <TabsContent value="media" className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-white">
                   Video URL
                 </label>
                 <Input
                   type="url"
                   {...register("videoUrl")}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                   placeholder="https://example.com/video.mp4"
                 />
-                <p className="text-xs text-gray-500 mt-1">Full video URL for the TV show (if applicable)</p>
+                <p className="text-xs text-gray-400 mt-1">Full video URL for the TV show (if applicable)</p>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-white">
                   Poster URL
                 </label>
                 <Input
                   type="url"
                   {...register("posterUrl", { required: "Poster URL is required" })}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                 />
                 {errors.posterUrl && (
                   <p className="text-red-500 text-xs">{String(errors.posterUrl.message)}</p>
@@ -338,7 +338,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-white">
                   Backdrop URL
                 </label>
                 <Input
@@ -346,7 +346,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                   {...register("backdropUrl", {
                     required: "Backdrop URL is required",
                   })}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                 />
                 {errors.backdropUrl && (
                   <p className="text-red-500 text-xs">{String(errors.backdropUrl.message)}</p>
@@ -354,55 +354,55 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-white">
                   Trailer URL
                 </label>
                 <Input
                   type="url"
                   {...register("trailerUrl", { required: "Trailer URL is required" })}
-                  className="mt-1 block w-full"
+                  className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                 />
                 {errors.trailerUrl && (
                   <p className="text-red-500 text-xs">{String(errors.trailerUrl.message)}</p>
                 )}
               </div>
 
-              <div className="border border-gray-200 rounded-md p-4">
-                <h3 className="font-medium">VAST Ad URLs (Optional)</h3>
+              <div className="border border-gray-600 rounded-md p-4">
+                <h3 className="font-medium text-white">VAST Ad URLs (Optional)</h3>
                 
                 <div className="space-y-4 mt-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-white">
                       Pre-roll Ad URL
                     </label>
                     <Input
                       type="url"
                       {...register("vastAdPreroll")}
-                      className="mt-1 block w-full"
+                      className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                       placeholder="https://example.com/ads/preroll.xml"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-white">
                       Mid-roll Ad URL
                     </label>
                     <Input
                       type="url"
                       {...register("vastAdMidroll")}
-                      className="mt-1 block w-full"
+                      className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                       placeholder="https://example.com/ads/midroll.xml"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-white">
                       Post-roll Ad URL
                     </label>
                     <Input
                       type="url"
                       {...register("vastAdPostroll")}
-                      className="mt-1 block w-full"
+                      className="mt-1 block w-full bg-gray-700 border-gray-600 text-white"
                       placeholder="https://example.com/ads/postroll.xml"
                     />
                   </div>
@@ -411,10 +411,10 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
             </TabsContent>
             
             <div className="flex justify-end pt-4">
-              <Button type="button" variant="ghost" onClick={onClose} className="mr-2">
+              <Button type="button" variant="ghost" onClick={onClose} className="mr-2 text-white">
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="bg-[#e50914] hover:bg-[#f6121d] text-white">
                 {isSubmitting ? (
                   <>
                     <CheckIcon className="mr-2 h-4 w-4 animate-spin" />
