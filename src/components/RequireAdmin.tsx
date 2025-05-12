@@ -25,8 +25,8 @@ const RequireAdmin = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Admin check with fallback
-  if (!isAdmin && user.email !== 'eryxmedia@gmail.com') {
+  // Admin check - no special case exceptions
+  if (!isAdmin) {
     // User is authenticated but not an admin
     console.log("User is not an admin, redirecting to browse");
     toast.error("You do not have permission to access this area");
