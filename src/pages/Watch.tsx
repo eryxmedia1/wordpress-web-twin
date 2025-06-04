@@ -8,10 +8,6 @@ import Navbar from "@/components/Navbar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import ReactPlayer from "react-player";
-import 'video.js/dist/video-js.css';
-import videojs from 'video.js';
-import 'videojs-contrib-ads';
-import 'videojs-ima';
 
 interface Review {
   id: string;
@@ -121,8 +117,6 @@ const Watch = () => {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviews, setReviews] = useState<Review[]>(sampleReviews);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const playerRef = useRef<any>(null);
   
   // Get movie data based on ID
   const movieData = id && moviesData[id as keyof typeof moviesData] 
@@ -138,77 +132,16 @@ const Watch = () => {
     return () => clearTimeout(timer);
   }, []);
   
-  useEffect(() => {
-    // Initialize video.js player with VAST ads when showing video
-    if (showVideo && videoRef.current) {
-      const player = videojs(videoRef.current, {
-        controls: true,
-        autoplay: true,
-        fluid: true,
-        sources: [{
-          src: movieData.videoSource,
-          type: 'video/mp4'
-        }]
-      });
-
-      // Setup IMA plugin for VAST ads
-      const adTagUrl = movieData.vastAdUrl?.preroll || '';
-      
-      // Initialize the IMA plugin using type assertion
-      const playerAny = player as any;
-      if (!playerAny.ima) {
-        playerAny.ima({
-          adTagUrl: adTagUrl
-        });
-      }
-      
-      // Access IMA functions through the type assertion
-      if (playerAny.ima) {
-        if (typeof playerAny.ima.initializeAdDisplayContainer === 'function') {
-          playerAny.ima.initializeAdDisplayContainer();
-        }
-        
-        player.on('ready', () => {
-          console.log('Player is ready');
-          if (adTagUrl && playerAny.ima && typeof playerAny.ima.requestAds === 'function') {
-            console.log('Loading VAST ad:', adTagUrl);
-            playerAny.ima.requestAds();
-          }
-        });
-      } else {
-        console.warn('IMA plugin not available on player');
-      }
-
-      playerRef.current = player;
-
-      return () => {
-        if (playerRef.current) {
-          playerRef.current.dispose();
-        }
-      };
-    }
-  }, [showVideo, movieData]);
-  
   const playVideo = () => {
     setShowVideo(true);
     setIsPlaying(true);
   };
   
   const togglePlay = () => {
-    if (playerRef.current) {
-      if (isPlaying) {
-        playerRef.current.pause();
-      } else {
-        playerRef.current.play();
-      }
-    }
     setIsPlaying(!isPlaying);
   };
   
   const toggleMute = () => {
-    if (playerRef.current) {
-      playerRef.current.muted(!isMuted);
-    }
     setIsMuted(!isMuted);
   };
 
@@ -257,13 +190,16 @@ const Watch = () => {
         <div className="h-screen w-full bg-black relative overflow-hidden pt-16">
           <div className="absolute inset-0 bg-black z-0 flex items-center justify-center mt-16">
             <div className="w-full h-full max-h-[calc(100vh-64px)]">
-              <div data-vjs-player>
-                <video
-                  ref={videoRef}
-                  className="video-js vjs-big-play-centered vjs-fluid"
-                  playsInline
-                />
-              </div>
+              <ReactPlayer
+                url={movieData.videoSource}
+                playing={isPlaying}
+                muted={isMuted}
+                controls={showControls}
+                width="100%"
+                height="100%"
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+              />
             </div>
           </div>
           
@@ -352,12 +288,6 @@ const Watch = () => {
                 <span className="text-gray-400 font-medium">Crew: </span>
                 <span>{movieData.crew.join(", ")}</span>
               </div>
-              {movieData.vastAdUrl?.preroll && (
-                <div className="mt-2">
-                  <span className="text-gray-400 font-medium">VAST Ad URL: </span>
-                  <span className="text-gray-300 text-xs break-all">{movieData.vastAdUrl.preroll}</span>
-                </div>
-              )}
             </div>
             
             {/* Recommended movies */}
