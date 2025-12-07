@@ -189,16 +189,17 @@ const Browse = () => {
       <Navbar />
       <ExpandingSidebar />
 
-      {/* Hero Section */}
-      {featuredContent && (
-        <HeroAutoplay
-          content={featuredContent}
-          onMoreInfo={() => handleMoreInfo(featuredContent.id)}
-        />
-      )}
+      {/* Hero Section - offset for sidebar */}
+      <div className="ml-16">
+        {featuredContent && (
+          <HeroAutoplay
+            content={featuredContent}
+            onMoreInfo={() => handleMoreInfo(featuredContent.id)}
+          />
+        )}
 
-      {/* Content Sections */}
-      <main className="relative z-10 px-4 md:px-8 lg:px-12 py-8 space-y-10 -mt-20">
+        {/* Content Sections */}
+        <main className="relative z-10 px-4 md:px-8 lg:px-12 py-8 space-y-10 -mt-20">
         {/* Genre Badges */}
         <GenresList />
 
@@ -277,6 +278,7 @@ const Browse = () => {
       </main>
 
       <BrowseFooter />
+      </div>
 
       {/* Content Detail Modal */}
       <ContentDetailModal

@@ -7,6 +7,8 @@ import { supabase, DbContent, DbCategory, DbTag } from "@/integrations/supabase/
 import { X, Loader2 } from "lucide-react";
 import { VimeoUrlInput } from "@/components/VimeoUrlInput";
 import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
+import { MembershipPlansSelector } from "@/components/admin/MembershipPlansSelector";
+import { SubtitlesSelector } from "@/components/admin/SubtitlesSelector";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,11 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+
+interface Subtitle {
+  language: string;
+  vttUrl: string;
+}
 
 type FormData = {
   title: string;
@@ -76,6 +83,8 @@ const AddMovieForm = () => {
   const [castInput, setCastInput] = useState("");
   const [selectedAudioLanguages, setSelectedAudioLanguages] = useState<string[]>([]);
   const [selectedSubtitleLanguages, setSelectedSubtitleLanguages] = useState<string[]>([]);
+  const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
+  const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -199,12 +208,13 @@ const AddMovieForm = () => {
           vast_ad_preroll: null,
           vast_ad_midroll: null,
           vast_ad_postroll: null
-        })
+        } as any)
         .select()
         .single();
         
       if (contentError) throw contentError;
       
+      // Insert tags
       if (selectedTags.length > 0) {
         const tagRelations = selectedTags.map(tagId => ({
           content_id: content.id,
@@ -216,6 +226,20 @@ const AddMovieForm = () => {
           .insert(tagRelations);
           
         if (tagError) throw tagError;
+      }
+
+      // Insert membership plan associations
+      if (selectedPlans.length > 0) {
+        const planRelations = selectedPlans.map(planId => ({
+          content_id: content.id,
+          plan_id: planId
+        }));
+        
+        const { error: planError } = await supabase
+          .from("content_membership_plans")
+          .insert(planRelations);
+          
+        if (planError) console.error("Error adding plans:", planError);
       }
       
       toast.success("Movie published successfully!");
@@ -709,6 +733,18 @@ const AddMovieForm = () => {
                         ))}
                       </div>
                     </div>
+
+                    {/* Subtitles (VTT Files) */}
+                    <SubtitlesSelector
+                      subtitles={subtitles}
+                      onSubtitlesChange={setSubtitles}
+                    />
+
+                    {/* Membership Plans */}
+                    <MembershipPlansSelector
+                      selectedPlans={selectedPlans}
+                      onSelectedPlansChange={setSelectedPlans}
+                    />
                   </div>
                 </TabsContent>
                 
