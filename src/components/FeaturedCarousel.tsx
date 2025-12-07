@@ -134,7 +134,7 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
   if (!currentContent) return null;
 
   return (
-    <section className="relative w-screen h-[85vh] md:h-[90vh] overflow-hidden -ml-0" style={{ marginLeft: 0, left: 0 }}>
+    <section className="relative w-[100vw] h-[85vh] md:h-[90vh] overflow-hidden" style={{ marginLeft: 'calc(50% - 50vw)', marginRight: 'calc(50% - 50vw)', maxWidth: 'none' }}>
       {/* Video Background - Full bleed cover */}
       {videoUrl && !videoError ? (
         <>
