@@ -138,7 +138,7 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
       {/* Video Background - Full bleed cover */}
       {videoUrl && !videoError ? (
         <>
-          <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}>
             <div className="absolute inset-0 w-full h-full overflow-hidden">
               <ReactPlayer
                 ref={playerRef}
@@ -147,17 +147,15 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
                 muted={isMuted}
                 loop={hasTrailer}
                 playsinline
-                width="100%"
-                height="100%"
+                width="177.78vh"
+                height="100vh"
                 style={{ 
                   position: 'absolute', 
                   top: '50%', 
                   left: '50%', 
                   transform: 'translate(-50%, -50%)',
-                  minWidth: '100%',
-                  minHeight: '100%',
-                  width: 'auto',
-                  height: 'auto',
+                  minWidth: '100vw',
+                  minHeight: '56.25vw',
                 }}
                 config={{
                   vimeo: {
