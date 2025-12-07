@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -11,17 +11,35 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [useOtp, setUseOtp] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, login } = useAuth();
+  const { user, login, isLoading: authLoading } = useAuth();
   
   // Get the path the user was trying to access before being redirected to login
   const from = location.state?.from?.pathname || "/profiles";
   
-  // If already logged in, redirect to profile selection
-  if (user) {
-    navigate(from, { replace: true });
-    return null;
+  // Redirect logged-in users via useEffect to prevent render issues
+  useEffect(() => {
+    if (user && !authLoading) {
+      setIsRedirecting(true);
+      navigate(from, { replace: true });
+    }
+  }, [user, authLoading, navigate, from]);
+
+  // Show loading state while checking auth or redirecting
+  if (authLoading || isRedirecting) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <img 
+          src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
+          alt="Zoe RatedTV" 
+          className="h-20 object-contain mb-8 animate-pulse" 
+        />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground mt-4">Loading...</p>
+      </div>
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
