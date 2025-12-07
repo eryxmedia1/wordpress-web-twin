@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Film, Plus, Trash, Video } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
+import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { supabase, DbContent, DbProfile, DbSeason, DbEpisode, ContentType } from "@/integrations/supabase/client";
 
 interface Episode {
@@ -50,6 +51,7 @@ const EditContent = () => {
   const isNew = id === "new";
   const [contentType, setContentType] = useState<ContentType>("movie");
   const [loading, setLoading] = useState(false);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   
   // For TV shows
   const [seasons, setSeasons] = useState<Season[]>([{ 
@@ -152,6 +154,7 @@ const EditContent = () => {
         postroll: content.vast_ad_postroll || ""
       }
     });
+    setSelectedChannels(content.channels || []);
     
     if (content.type === 'show') {
       await fetchSeasons(content.id);
@@ -242,7 +245,7 @@ const EditContent = () => {
             vast_ad_preroll: contentDetails.vastAdUrl.preroll,
             vast_ad_midroll: contentDetails.vastAdUrl.midroll,
             vast_ad_postroll: contentDetails.vastAdUrl.postroll,
-            // Add the missing properties required by DbContent type
+            channels: selectedChannels,
             trailer_url: null,
             featured: false
           })
@@ -275,8 +278,8 @@ const EditContent = () => {
             video_url: contentDetails.videoUrl,
             vast_ad_preroll: contentDetails.vastAdUrl.preroll,
             vast_ad_midroll: contentDetails.vastAdUrl.midroll,
-            vast_ad_postroll: contentDetails.vastAdUrl.postroll
-            // No need to add trailer_url and featured here as we're updating existing values
+            vast_ad_postroll: contentDetails.vastAdUrl.postroll,
+            channels: selectedChannels
           })
           .eq('id', contentId as string) as { error: any };
           
@@ -618,6 +621,13 @@ const EditContent = () => {
                 />
               </div>
             </div>
+          </div>
+          
+          <div className="border border-gray-700 rounded-md p-6">
+            <ChannelsSelector 
+              selectedChannels={selectedChannels} 
+              onChannelsChange={setSelectedChannels} 
+            />
           </div>
           
           {contentType === "show" && (
