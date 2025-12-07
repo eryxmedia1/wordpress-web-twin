@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, Info, ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
+import { Play, Info, ChevronLeft, ChevronRight, Volume2, VolumeX, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import ReactPlayer from "react-player";
@@ -24,50 +24,71 @@ interface FeaturedCarouselProps {
   onMoreInfo: (id: string) => void;
 }
 
+const PREVIEW_DURATION = 60; // 60 seconds max for non-trailer videos
+
 const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [videoError, setVideoError] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [previewEnded, setPreviewEnded] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(PREVIEW_DURATION);
   const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const playerRef = useRef<ReactPlayer>(null);
 
   const currentContent = contents[currentIndex];
   const hasTrailer = !!currentContent?.trailer_url;
   const videoUrl = currentContent?.trailer_url || currentContent?.video_url;
   const hasMultiple = contents.length > 1;
+  const showPreviewTimer = !hasTrailer && videoUrl && isPlaying && isVideoReady && !previewEnded;
 
   // Reset video state when content changes
   useEffect(() => {
     setVideoError(false);
     setIsVideoReady(false);
     setIsPlaying(true);
+    setPreviewEnded(false);
+    setTimeRemaining(PREVIEW_DURATION);
     
-    // Clear any existing timer
+    // Clear any existing timers
     if (playbackTimerRef.current) {
       clearTimeout(playbackTimerRef.current);
       playbackTimerRef.current = null;
     }
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
   }, [currentIndex]);
 
-  // 60-second limit for full videos (no trailer)
+  // 60-second limit for full videos (no trailer) with countdown
   useEffect(() => {
-    if (!isVideoReady || !isPlaying) return;
+    if (!isVideoReady || !isPlaying || previewEnded) return;
     
     // Only apply 60-second limit if using full video (no trailer)
     if (!hasTrailer && videoUrl) {
-      playbackTimerRef.current = setTimeout(() => {
-        setIsPlaying(false);
-      }, 60000); // 60 seconds
+      // Start countdown timer
+      countdownRef.current = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            setIsPlaying(false);
+            setPreviewEnded(true);
+            if (countdownRef.current) clearInterval(countdownRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
 
     return () => {
-      if (playbackTimerRef.current) {
-        clearTimeout(playbackTimerRef.current);
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
       }
     };
-  }, [isVideoReady, isPlaying, hasTrailer, videoUrl]);
+  }, [isVideoReady, isPlaying, hasTrailer, videoUrl, previewEnded]);
 
   // Auto-advance every 15 seconds if multiple items
   useEffect(() => {
@@ -86,8 +107,21 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
       if (playbackTimerRef.current) {
         clearTimeout(playbackTimerRef.current);
       }
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
     };
   }, []);
+
+  const handleReplay = () => {
+    setTimeRemaining(PREVIEW_DURATION);
+    setPreviewEnded(false);
+    setIsPlaying(true);
+    // Seek to beginning if possible
+    if (playerRef.current) {
+      playerRef.current.seekTo(0);
+    }
+  };
 
   const goToPrevious = () => {
     setCurrentIndex((prev) => (prev - 1 + contents.length) % contents.length);
@@ -171,6 +205,36 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
             <ChevronRight className="h-8 w-8" />
           </Button>
         </>
+      )}
+
+      {/* Preview Timer - shows countdown for non-trailer videos */}
+      {showPreviewTimer && (
+        <div className="absolute bottom-32 right-24 z-20 flex items-center gap-2">
+          <div className="bg-background/50 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-2">
+            <div className="w-16 h-1 bg-foreground/30 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-1000 ease-linear"
+                style={{ width: `${(timeRemaining / PREVIEW_DURATION) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs text-foreground/80 font-medium min-w-[24px]">
+              {timeRemaining}s
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Replay Button - appears after preview ends */}
+      {previewEnded && !hasTrailer && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute bottom-32 right-24 z-20 h-10 w-10 bg-background/50 hover:bg-background/70 text-foreground rounded-full backdrop-blur-sm border border-foreground/30"
+          onClick={handleReplay}
+          title="Replay preview"
+        >
+          <RotateCcw className="h-5 w-5" />
+        </Button>
       )}
 
       {/* Sound Toggle Button */}
