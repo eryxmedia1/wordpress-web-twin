@@ -133,6 +133,7 @@ export type Database = {
           is_zoe_original: boolean | null
           logo_url: string | null
           maturity_rating: string | null
+          midroll_config: Json | null
           poster_url: string | null
           rating: string | null
           release_year: number | null
@@ -167,6 +168,7 @@ export type Database = {
           is_zoe_original?: boolean | null
           logo_url?: string | null
           maturity_rating?: string | null
+          midroll_config?: Json | null
           poster_url?: string | null
           rating?: string | null
           release_year?: number | null
@@ -201,6 +203,7 @@ export type Database = {
           is_zoe_original?: boolean | null
           logo_url?: string | null
           maturity_rating?: string | null
+          midroll_config?: Json | null
           poster_url?: string | null
           rating?: string | null
           release_year?: number | null
