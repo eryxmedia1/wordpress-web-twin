@@ -10,6 +10,12 @@ import ContentRow from "@/components/ContentRow";
 import Top10Row from "@/components/Top10Row";
 import BrowseFooter from "@/components/BrowseFooter";
 import ContentDetailModal from "@/components/ContentDetailModal";
+import GenresList from "@/components/GenresList";
+import PromoBanner from "@/components/PromoBanner";
+import CategoryCircles from "@/components/CategoryCircles";
+import ExclusiveVideos from "@/components/ExclusiveVideos";
+import TopNews from "@/components/TopNews";
+import BecauseYouWatchedRow from "@/components/BecauseYouWatchedRow";
 
 interface Content {
   id: string;
@@ -37,6 +43,7 @@ const Browse = () => {
   const [tvShows, setTvShows] = useState<Content[]>([]);
   const [zoeOriginals, setZoeOriginals] = useState<Content[]>([]);
   const [top10, setTop10] = useState<Content[]>([]);
+  const [trendingMovies, setTrendingMovies] = useState<Content[]>([]);
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -53,13 +60,24 @@ const Browse = () => {
       if (featured) {
         setFeaturedContent(featured as Content);
       } else {
-        // Fallback to first content if none featured
         const { data: fallback } = await supabase
           .from("contents")
           .select("*")
           .limit(1)
           .maybeSingle();
         if (fallback) setFeaturedContent(fallback as Content);
+      }
+
+      // Fetch trending movies
+      const { data: trendingData } = await supabase
+        .from("contents")
+        .select("*")
+        .eq("type", "movie")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (trendingData) {
+        setTrendingMovies(trendingData as Content[]);
       }
 
       // Fetch movies
@@ -128,6 +146,8 @@ const Browse = () => {
       rating: item.rating || undefined,
       year: item.release_year?.toString() || undefined,
       category: item.genre || undefined,
+      videoUrl: item.video_url,
+      trailerUrl: item.trailer_url,
     }));
 
   const mapToTop10 = (items: Content[]) =>
@@ -137,6 +157,24 @@ const Browse = () => {
       posterUrl: item.poster_url || "/placeholder.svg",
       rank: item.top_rank || index + 1,
     }));
+
+  // Sample data for components
+  const newsItems = [
+    { id: "1", title: "New Season Coming", excerpt: "Get ready...", imageUrl: "/placeholder.svg", date: "Dec 5, 2025", category: "News" },
+    { id: "2", title: "Interview with Director", excerpt: "Behind the scenes...", imageUrl: "/placeholder.svg", date: "Dec 4, 2025", category: "Interview" },
+  ];
+
+  const categories = [
+    { id: "reality", name: "Reality", imageUrl: "/placeholder.svg", color: "#d4af37" },
+    { id: "drama", name: "Drama", imageUrl: "/placeholder.svg", color: "#d4af37" },
+    { id: "comedy", name: "Comedy", imageUrl: "/placeholder.svg", color: "#d4af37" },
+    { id: "action", name: "Action", imageUrl: "/placeholder.svg", color: "#d4af37" },
+  ];
+
+  const exclusiveVideos = [
+    { id: "1", title: "Behind the Scenes", description: "Exclusive look...", thumbnailUrl: "/placeholder.svg", duration: "5:30" },
+    { id: "2", title: "Cast Interviews", description: "Meet the stars...", thumbnailUrl: "/placeholder.svg", duration: "8:45" },
+  ];
 
   if (isLoading) {
     return (
@@ -161,19 +199,44 @@ const Browse = () => {
 
       {/* Content Sections */}
       <main className="relative z-10 px-4 md:px-8 lg:px-12 py-8 space-y-10 -mt-20">
+        {/* Genre Badges */}
+        <GenresList />
+
+        {/* Trending Movies with expanding thumbnails */}
+        {trendingMovies.length > 0 && (
+          <ContentRow
+            title="Trending Movies"
+            contents={mapToContentRow(trendingMovies)}
+            seeAllLink="/genre/movies"
+            onMoreInfo={handleMoreInfo}
+          />
+        )}
+
         {/* Continue Watching */}
         <ContinueWatchingRow onMoreInfo={handleMoreInfo} />
 
         {/* My List */}
         <MyListRow onMoreInfo={handleMoreInfo} />
 
+        {/* Because You Watched Row */}
+        <BecauseYouWatchedRow onMoreInfo={handleMoreInfo} />
+
         {/* Only on Zoe RatedTV */}
         {zoeOriginals.length > 0 && (
           <ContentRow
             title="Only on Zoe RatedTV"
             contents={mapToContentRow(zoeOriginals)}
+            onMoreInfo={handleMoreInfo}
           />
         )}
+
+        {/* Promo Banner */}
+        <PromoBanner 
+          title="PIECES OF HER"
+          subtitle="Now Available"
+          date="Stream Now"
+          imageUrl="/placeholder.svg"
+        />
 
         {/* Top 10 */}
         {top10.length > 0 && (
@@ -183,23 +246,34 @@ const Browse = () => {
           />
         )}
 
+        {/* TV Series with expanding thumbnails */}
+        {tvShows.length > 0 && (
+          <ContentRow
+            title="TV Series"
+            contents={mapToContentRow(tvShows)}
+            seeAllLink="/genre/tv-shows"
+            onMoreInfo={handleMoreInfo}
+          />
+        )}
+
+        {/* Category Circles */}
+        <CategoryCircles title="TV Show Categories" categories={categories} />
+
         {/* Movies */}
         {movies.length > 0 && (
           <ContentRow
             title="Movies"
             contents={mapToContentRow(movies)}
             seeAllLink="/genre/movies"
+            onMoreInfo={handleMoreInfo}
           />
         )}
 
-        {/* TV Shows */}
-        {tvShows.length > 0 && (
-          <ContentRow
-            title="TV Shows"
-            contents={mapToContentRow(tvShows)}
-            seeAllLink="/genre/tv-shows"
-          />
-        )}
+        {/* Exclusive Videos */}
+        <ExclusiveVideos title="Exclusive Videos" videos={exclusiveVideos} />
+
+        {/* Top News */}
+        <TopNews title="Top News" news={newsItems} />
       </main>
 
       <BrowseFooter />

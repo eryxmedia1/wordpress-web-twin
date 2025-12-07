@@ -1,44 +1,37 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Bell, ChevronDown, User, Film, Home, Settings } from "lucide-react";
+import { Search, Bell, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuLabel, 
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { 
   NavigationMenu, 
-  NavigationMenuLink, 
   NavigationMenuList, 
   NavigationMenuItem
 } from "@/components/ui/navigation-menu";
+import { useProfile, UserProfile } from "@/context/ProfileContext";
+import { useAuth } from "@/context/AuthContext";
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentProfile, profiles, selectProfile } = useProfile();
+  const { user, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // This would be replaced with actual auth state
   const [searchQuery, setSearchQuery] = useState("");
+  const [notificationCount] = useState(12);
 
-  // Change navbar background on scroll
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 0) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 0);
     };
-
     window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -48,15 +41,21 @@ const Navbar = () => {
     }
   };
 
-  // Check if we're on the landing page
+  const handleProfileSwitch = (profile: UserProfile) => {
+    selectProfile(profile);
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate("/");
+  };
+
   const isLandingPage = location.pathname === '/';
-  
-  // Don't show full navbar on login/signup pages
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
 
   if (isAuthPage) {
     return (
-      <header className="bg-black/95 px-4 py-4 flex items-center">
+      <header className="bg-background/95 px-4 py-4 flex items-center">
         <Link to="/">
           <img 
             src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
@@ -68,33 +67,27 @@ const Navbar = () => {
     );
   }
 
-  if (!isLoggedIn && isLandingPage) {
+  if (!user && isLandingPage) {
     return (
-      <header className={`px-4 py-4 flex items-center justify-between fixed w-full z-50 transition-colors ${isScrolled ? 'bg-black' : 'bg-transparent'}`}>
-        <div className="flex items-center">
-          <Link to="/">
-            <img 
-              src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
-              alt="Zoe RatedTV" 
-              className="h-16 object-contain" 
-            />
-          </Link>
-        </div>
-        
-        <div className="flex gap-4">
-          <Link to="/login">
-            <Button variant="outline" className="bg-transparent text-white border-white hover:bg-white/10">
-              Sign In
-            </Button>
-          </Link>
-        </div>
+      <header className={`px-4 py-4 flex items-center justify-between fixed w-full z-50 transition-colors ${isScrolled ? 'bg-background' : 'bg-transparent'}`}>
+        <Link to="/">
+          <img 
+            src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
+            alt="Zoe RatedTV" 
+            className="h-16 object-contain" 
+          />
+        </Link>
+        <Link to="/login">
+          <Button variant="outline" className="bg-transparent border-foreground text-foreground hover:bg-foreground/10">
+            Sign In
+          </Button>
+        </Link>
       </header>
     );
   }
 
-  // Full navbar for logged-in users
   return (
-    <header className={`px-4 py-2 flex flex-col fixed w-full z-50 transition-colors ${isScrolled ? 'bg-black' : 'bg-black/80'}`}>
+    <header className={`px-4 py-2 flex flex-col fixed w-full z-50 transition-colors ${isScrolled ? 'bg-background' : 'bg-background/80'}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link to="/browse">
@@ -107,63 +100,126 @@ const Navbar = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          {/* Search */}
           <form onSubmit={handleSearch} className="relative hidden md:block">
             <input
               type="text"
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-black/50 border border-gray-600 rounded-full px-4 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 w-40 focus:w-56 transition-all"
+              className="bg-background/50 border border-border rounded-full px-4 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary w-40 focus:w-56 transition-all text-foreground"
             />
             <Button 
               type="submit" 
               size="icon" 
               variant="ghost" 
-              className="absolute right-0 top-0 text-gray-400"
+              className="absolute right-0 top-0 text-muted-foreground"
             >
               <Search className="h-4 w-4" />
             </Button>
           </form>
+
+          {/* Kids Link */}
+          <Link 
+            to="/browse/kids" 
+            className="hidden md:block text-sm font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Kids
+          </Link>
           
-          <Button variant="ghost" size="icon" className="text-white">
+          {/* Notifications */}
+          <Button variant="ghost" size="icon" className="relative text-foreground">
             <Bell className="h-5 w-5" />
+            {notificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                {notificationCount}
+              </span>
+            )}
           </Button>
           
+          {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 text-white">
-                <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center">
-                  <User className="h-4 w-4" />
+              <Button variant="ghost" className="flex items-center gap-2 text-foreground p-1">
+                <div 
+                  className="w-8 h-8 rounded-md flex items-center justify-center"
+                  style={{ backgroundColor: currentProfile?.avatar_color || "#d4af37" }}
+                >
+                  <User className="h-5 w-5 text-background" />
                 </div>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-gray-900 text-white border-gray-700">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-gray-700" />
-              <DropdownMenuItem className="hover:bg-gray-800 focus:bg-gray-800">
-                <Link to="/profile" className="w-full flex items-center gap-2">
+            <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-sm border-border">
+              {/* Profile List */}
+              <div className="p-2">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Switch Profile</span>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <LayoutGrid className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <List className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                {profiles.map((profile) => (
+                  <button
+                    key={profile.id}
+                    onClick={() => handleProfileSwitch(profile)}
+                    className={`w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent transition-colors ${
+                      currentProfile?.id === profile.id ? "bg-accent" : ""
+                    }`}
+                  >
+                    <div 
+                      className="w-8 h-8 rounded-md flex items-center justify-center"
+                      style={{ backgroundColor: profile.avatar_color || "#d4af37" }}
+                    >
+                      <User className="h-4 w-4 text-background" />
+                    </div>
+                    <span className="text-sm text-foreground">{profile.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/profiles" className="flex items-center gap-3 px-4 py-2">
+                  <Pencil className="h-4 w-4" />
+                  <span>Manage Profiles</span>
+                </Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/transfer-profile" className="flex items-center gap-3 px-4 py-2">
+                  <ArrowRightLeft className="h-4 w-4" />
+                  <span>Transfer Profile</span>
+                </Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/account" className="flex items-center gap-3 px-4 py-2">
                   <User className="h-4 w-4" />
-                  <span>Profile</span>
+                  <span>Account</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="hover:bg-gray-800 focus:bg-gray-800">
-                <Link to="/profile/watchlist" className="w-full flex items-center gap-2">
-                  <Film className="h-4 w-4" />
-                  <span>My List</span>
+
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/help" className="flex items-center gap-3 px-4 py-2">
+                  <HelpCircle className="h-4 w-4" />
+                  <span>Help Center</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="hover:bg-gray-800 focus:bg-gray-800">
-                <Link to="/account" className="w-full flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  <span>Account Settings</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-gray-700" />
-              <DropdownMenuItem className="hover:bg-gray-800 focus:bg-gray-800">
-                <Link to="/logout" className="w-full">
-                  Sign Out
-                </Link>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem 
+                onClick={handleSignOut}
+                className="cursor-pointer px-4 py-2"
+              >
+                Sign out of Zoe RatedTV
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -173,32 +229,32 @@ const Navbar = () => {
       <NavigationMenu className="max-w-none justify-start mt-1">
         <NavigationMenuList className="gap-1">
           <NavigationMenuItem>
-            <Link to="/browse" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-gray-800 ${location.pathname === '/browse' ? 'text-white font-medium' : 'text-gray-300'}`}>
+            <Link to="/browse" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-accent ${location.pathname === '/browse' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
               Home
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/browse/tv" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-gray-800 ${location.pathname === '/browse/tv' ? 'text-white font-medium' : 'text-gray-300'}`}>
+            <Link to="/browse/tv" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-accent ${location.pathname === '/browse/tv' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
               TV Shows
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/browse/movies" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-gray-800 ${location.pathname === '/browse/movies' ? 'text-white font-medium' : 'text-gray-300'}`}>
+            <Link to="/browse/movies" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-accent ${location.pathname === '/browse/movies' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
               Movies
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/browse/new" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-gray-800 ${location.pathname === '/browse/new' ? 'text-white font-medium' : 'text-gray-300'}`}>
+            <Link to="/browse/new" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-accent ${location.pathname === '/browse/new' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
               New & Popular
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/browse/mylist" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-gray-800 ${location.pathname === '/browse/mylist' ? 'text-white font-medium' : 'text-gray-300'}`}>
+            <Link to="/browse/mylist" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-accent ${location.pathname === '/browse/mylist' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
               My List
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/browse/genres" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-gray-800 ${location.pathname === '/browse/genres' ? 'text-white font-medium' : 'text-gray-300'}`}>
+            <Link to="/browse/genres" className={`text-sm px-3 py-1 rounded-sm transition duration-200 hover:bg-accent ${location.pathname === '/browse/genres' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
               Browse by Genres
             </Link>
           </NavigationMenuItem>
