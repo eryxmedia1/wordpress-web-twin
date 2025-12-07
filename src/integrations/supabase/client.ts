@@ -85,6 +85,13 @@ export type DbProfile = {
   is_admin?: boolean;
 }
 
+export type MidrollConfig = {
+  enabled: boolean;
+  count: number;
+  startAfterMinutes: number;
+  intervalMinutes: number;
+}
+
 export type DbContent = {
   id: string;
   title: string;
@@ -105,6 +112,7 @@ export type DbContent = {
   vast_ad_postroll: string | null;
   category_id?: string | null;
   channels?: string[] | null;
+  midroll_config?: MidrollConfig | null;
 }
 
 export type DbSeason = {

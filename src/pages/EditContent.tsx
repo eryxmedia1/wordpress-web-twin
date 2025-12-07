@@ -12,7 +12,7 @@ import { Film, Plus, Trash, Video } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
-import { supabase, DbContent, DbProfile, DbSeason, DbEpisode, ContentType } from "@/integrations/supabase/client";
+import { supabase, DbContent, DbProfile, DbSeason, DbEpisode, ContentType, MidrollConfig } from "@/integrations/supabase/client";
 
 interface Episode {
   number: number;
@@ -29,12 +29,7 @@ interface Season {
   episodes: Episode[];
 }
 
-interface MidrollConfig {
-  enabled: boolean;
-  count: number;
-  startAfterMinutes: number;
-  intervalMinutes: number;
-}
+// Using MidrollConfig from supabase client
 
 interface ContentDetails {
   title: string;
@@ -153,6 +148,16 @@ const EditContent = () => {
     }
     
     setContentType(content.type);
+    
+    // Parse midroll_config from database or use defaults
+    const dbMidrollConfig = content.midroll_config as MidrollConfig | null;
+    const midrollConfig: MidrollConfig = dbMidrollConfig || {
+      enabled: false,
+      count: 1,
+      startAfterMinutes: 10,
+      intervalMinutes: 10
+    };
+    
     setContentDetails({
       title: content.title || "",
       description: content.description || "",
@@ -168,12 +173,7 @@ const EditContent = () => {
         midroll: content.vast_ad_midroll || "",
         postroll: content.vast_ad_postroll || ""
       },
-      midrollConfig: {
-        enabled: false,
-        count: 1,
-        startAfterMinutes: 10,
-        intervalMinutes: 10
-      }
+      midrollConfig
     });
     setSelectedChannels(content.channels || []);
     
@@ -268,7 +268,8 @@ const EditContent = () => {
             vast_ad_postroll: contentDetails.vastAdUrl.postroll,
             channels: selectedChannels,
             trailer_url: null,
-            featured: false
+            featured: false,
+            midroll_config: contentDetails.midrollConfig
           })
           .select()
           .single() as { data: DbContent | null; error: any };
@@ -300,7 +301,8 @@ const EditContent = () => {
             vast_ad_preroll: contentDetails.vastAdUrl.preroll,
             vast_ad_midroll: contentDetails.vastAdUrl.midroll,
             vast_ad_postroll: contentDetails.vastAdUrl.postroll,
-            channels: selectedChannels
+            channels: selectedChannels,
+            midroll_config: contentDetails.midrollConfig
           })
           .eq('id', contentId as string) as { error: any };
           
