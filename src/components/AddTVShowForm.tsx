@@ -181,26 +181,33 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     
+    // Only require video URL - everything else is optional
+    if (!data.videoUrl && !data.title) {
+      toast.error("Please enter a video URL or title");
+      setIsSubmitting(false);
+      return;
+    }
+    
     try {
       const showType: ContentType = "show";
       const { data: content, error: contentError } = await supabase
         .from("contents")
         .insert({
-          title: data.title,
-          description: data.description,
+          title: data.title || "Untitled Show",
+          description: data.description || null,
           type: showType,
-          genre: data.genre,
-          release_year: parseInt(data.releaseYear),
-          rating: data.rating,
-          poster_url: data.posterUrl,
-          backdrop_url: data.backdropUrl,
+          genre: data.genre || null,
+          release_year: data.releaseYear ? parseInt(data.releaseYear) : new Date().getFullYear(),
+          rating: data.rating || null,
+          poster_url: data.posterUrl || null,
+          backdrop_url: data.backdropUrl || null,
           trailer_url: data.trailerUrl || null,
           video_url: data.videoUrl || null,
           logo_url: data.logoUrl || null,
-          featured: data.featured,
-          is_zoe_original: data.isZoeOriginal,
+          featured: data.featured || false,
+          is_zoe_original: data.isZoeOriginal || false,
           top_rank: data.topRank ? parseInt(data.topRank) : null,
-          maturity_rating: data.maturityRating,
+          maturity_rating: data.maturityRating || null,
           creator: data.creator || null,
           cast_members: castMembers.length > 0 ? castMembers : null,
           audio_languages: selectedAudioLanguages.length > 0 ? selectedAudioLanguages : null,
@@ -270,23 +277,19 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                 <Label className="text-white">Title</Label>
                 <Input
                   type="text"
-                  {...register("title", { required: "Title is required" })}
+                  {...register("title")}
                   className="mt-1 bg-gray-700 border-gray-600 text-white"
+                  placeholder="Auto-filled from Vimeo or enter manually"
                 />
-                {errors.title && (
-                  <p className="text-red-500 text-xs">{String(errors.title.message)}</p>
-                )}
               </div>
 
               <div>
                 <Label className="text-white">Description</Label>
                 <Textarea
-                  {...register("description", { required: "Description is required" })}
+                  {...register("description")}
                   className="mt-1 bg-gray-700 border-gray-600 text-white"
+                  placeholder="Auto-filled from Vimeo or enter manually"
                 />
-                {errors.description && (
-                  <p className="text-red-500 text-xs">{String(errors.description.message)}</p>
-                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -294,7 +297,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                   <Label className="text-white">Genre</Label>
                   <Input
                     type="text"
-                    {...register("genre", { required: "Genre is required" })}
+                    {...register("genre")}
                     className="mt-1 bg-gray-700 border-gray-600 text-white"
                   />
                 </div>
@@ -317,7 +320,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                   <Label className="text-white">Release Year</Label>
                   <Input
                     type="number"
-                    {...register("releaseYear", { required: "Release Year is required" })}
+                    {...register("releaseYear")}
                     className="mt-1 bg-gray-700 border-gray-600 text-white"
                   />
                 </div>
@@ -412,33 +415,33 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
             
             <TabsContent value="media" className="space-y-4">
               <div>
-                <Label className="text-white">Video URL (Vimeo)</Label>
+                <Label className="text-white">Video URL (Vimeo) - Paste to auto-fill all fields</Label>
                 <VimeoUrlInput
                   value={watch("videoUrl") || ""}
                   onChange={(value) => setValue("videoUrl", value)}
                   onMetadataFetched={(metadata: VimeoMetadata) => {
-                    // Auto-fill fields from Vimeo metadata
-                    if (metadata.title && !watch('title')) {
+                    // Auto-fill ALL fields from Vimeo metadata (overwrite existing)
+                    if (metadata.title) {
                       setValue('title', metadata.title);
                     }
                     if (metadata.thumbnail_large || metadata.thumbnail_url) {
                       setValue('posterUrl', metadata.thumbnail_large || metadata.thumbnail_url || '');
                       setValue('backdropUrl', metadata.thumbnail_large || metadata.thumbnail_url || '');
                     }
-                    if (metadata.duration && !watch('duration')) {
+                    if (metadata.duration) {
                       setValue('duration', metadata.duration);
                     }
-                    if (metadata.description && !watch('description')) {
+                    if (metadata.description) {
                       setValue('description', metadata.description);
                     }
-                    if (metadata.author_name && !watch('creator')) {
+                    if (metadata.author_name) {
                       setValue('creator', metadata.author_name);
                     }
                   }}
                   className="mt-1 bg-gray-700 border-gray-600 text-white"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Paste a Vimeo URL to auto-fetch thumbnail, duration, and title
+                  Paste a Vimeo URL to auto-fetch thumbnail, duration, title, and description
                 </p>
               </div>
 
@@ -456,8 +459,9 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                 <Label className="text-white">Poster URL</Label>
                 <Input
                   type="url"
-                  {...register("posterUrl", { required: "Poster URL is required" })}
+                  {...register("posterUrl")}
                   className="mt-1 bg-gray-700 border-gray-600 text-white"
+                  placeholder="Auto-filled from Vimeo"
                 />
               </div>
 
