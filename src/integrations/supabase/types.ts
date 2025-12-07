@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      content_membership_plans: {
+        Row: {
+          content_id: string
+          created_at: string
+          id: string
+          plan_id: string
+        }
+        Insert: {
+          content_id: string
+          created_at?: string
+          id?: string
+          plan_id: string
+        }
+        Update: {
+          content_id?: string
+          created_at?: string
+          id?: string
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_membership_plans_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_membership_plans_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "membership_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_tags: {
         Row: {
           content_id: string
@@ -84,11 +120,15 @@ export type Database = {
           cast_members: string[] | null
           created_at: string
           creator: string | null
+          crew_members: Json | null
           description: string | null
+          download_enabled: boolean | null
+          download_url: string | null
           duration: string | null
           featured: boolean | null
           genre: string | null
           id: string
+          is_affiliate_url: boolean | null
           is_zoe_original: boolean | null
           logo_url: string | null
           maturity_rating: string | null
@@ -96,6 +136,7 @@ export type Database = {
           rating: string | null
           release_year: number | null
           subtitle_languages: string[] | null
+          subtitles: Json | null
           title: string
           top_rank: number | null
           trailer_url: string | null
@@ -103,6 +144,7 @@ export type Database = {
           vast_ad_midroll: string | null
           vast_ad_postroll: string | null
           vast_ad_preroll: string | null
+          video_sources: Json | null
           video_url: string | null
         }
         Insert: {
@@ -111,11 +153,15 @@ export type Database = {
           cast_members?: string[] | null
           created_at?: string
           creator?: string | null
+          crew_members?: Json | null
           description?: string | null
+          download_enabled?: boolean | null
+          download_url?: string | null
           duration?: string | null
           featured?: boolean | null
           genre?: string | null
           id?: string
+          is_affiliate_url?: boolean | null
           is_zoe_original?: boolean | null
           logo_url?: string | null
           maturity_rating?: string | null
@@ -123,6 +169,7 @@ export type Database = {
           rating?: string | null
           release_year?: number | null
           subtitle_languages?: string[] | null
+          subtitles?: Json | null
           title: string
           top_rank?: number | null
           trailer_url?: string | null
@@ -130,6 +177,7 @@ export type Database = {
           vast_ad_midroll?: string | null
           vast_ad_postroll?: string | null
           vast_ad_preroll?: string | null
+          video_sources?: Json | null
           video_url?: string | null
         }
         Update: {
@@ -138,11 +186,15 @@ export type Database = {
           cast_members?: string[] | null
           created_at?: string
           creator?: string | null
+          crew_members?: Json | null
           description?: string | null
+          download_enabled?: boolean | null
+          download_url?: string | null
           duration?: string | null
           featured?: boolean | null
           genre?: string | null
           id?: string
+          is_affiliate_url?: boolean | null
           is_zoe_original?: boolean | null
           logo_url?: string | null
           maturity_rating?: string | null
@@ -150,6 +202,7 @@ export type Database = {
           rating?: string | null
           release_year?: number | null
           subtitle_languages?: string[] | null
+          subtitles?: Json | null
           title?: string
           top_rank?: number | null
           trailer_url?: string | null
@@ -157,6 +210,7 @@ export type Database = {
           vast_ad_midroll?: string | null
           vast_ad_postroll?: string | null
           vast_ad_preroll?: string | null
+          video_sources?: Json | null
           video_url?: string | null
         }
         Relationships: []
@@ -282,6 +336,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      membership_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          features: string[] | null
+          id: string
+          name: string
+          price: number | null
+          slug: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          name: string
+          price?: number | null
+          slug: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          name?: string
+          price?: number | null
+          slug?: string
+          sort_order?: number | null
+        }
+        Relationships: []
       }
       playlist_items: {
         Row: {
