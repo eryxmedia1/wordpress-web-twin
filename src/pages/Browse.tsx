@@ -3,7 +3,7 @@ import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import ExpandingSidebar from "@/components/ExpandingSidebar";
-import HeroAutoplay from "@/components/HeroAutoplay";
+import FeaturedCarousel from "@/components/FeaturedCarousel";
 import ContinueWatchingRow from "@/components/ContinueWatchingRow";
 import MyListRow from "@/components/MyListRow";
 import ContentRow from "@/components/ContentRow";
@@ -38,7 +38,7 @@ interface Content {
 
 const Browse = () => {
   const { currentProfile } = useProfile();
-  const [featuredContent, setFeaturedContent] = useState<Content | null>(null);
+  const [featuredContents, setFeaturedContents] = useState<Content[]>([]);
   const [movies, setMovies] = useState<Content[]>([]);
   const [tvShows, setTvShows] = useState<Content[]>([]);
   const [zoeOriginals, setZoeOriginals] = useState<Content[]>([]);
@@ -49,23 +49,23 @@ const Browse = () => {
 
   useEffect(() => {
     const fetchContent = async () => {
-      // Fetch featured content for hero
+      // Fetch all featured content for hero carousel
       const { data: featured } = await supabase
         .from("contents")
         .select("*")
         .eq("featured", true)
-        .limit(1)
-        .maybeSingle();
+        .order("created_at", { ascending: false });
 
-      if (featured) {
-        setFeaturedContent(featured as Content);
+      if (featured && featured.length > 0) {
+        setFeaturedContents(featured as Content[]);
       } else {
+        // Fallback to latest content if none featured
         const { data: fallback } = await supabase
           .from("contents")
           .select("*")
-          .limit(1)
-          .maybeSingle();
-        if (fallback) setFeaturedContent(fallback as Content);
+          .order("created_at", { ascending: false })
+          .limit(3);
+        if (fallback) setFeaturedContents(fallback as Content[]);
       }
 
       // Fetch trending movies
@@ -191,10 +191,10 @@ const Browse = () => {
 
       {/* Hero Section - offset for sidebar */}
       <div className="ml-16">
-        {featuredContent && (
-          <HeroAutoplay
-            content={featuredContent}
-            onMoreInfo={() => handleMoreInfo(featuredContent.id)}
+        {featuredContents.length > 0 && (
+          <FeaturedCarousel
+            contents={featuredContents}
+            onMoreInfo={handleMoreInfo}
           />
         )}
 
