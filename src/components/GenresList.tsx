@@ -9,7 +9,6 @@ export interface Genre {
   icon: keyof typeof genreIcons;
 }
 
-// Only use available icons from lucide-react
 const genreIcons = {
   "film": Film,
   "tv": Tv,
@@ -49,7 +48,7 @@ const GenresList = ({ className }: GenresListProps) => {
 
   return (
     <div className={`${className}`}>
-      <h2 className="text-xl font-semibold mb-4">Genres</h2>
+      <h2 className="text-xl font-semibold mb-4 text-foreground">Genres</h2>
       <div className="flex flex-wrap gap-2">
         {genres.map((genre) => {
           const GenreIcon = genreIcons[genre.icon];
@@ -60,11 +59,11 @@ const GenresList = ({ className }: GenresListProps) => {
               key={genre.id}
               variant={isSelected ? "default" : "outline"} 
               className={`
-                cursor-pointer px-3 py-2 text-sm flex items-center gap-1
-                transition-colors
+                cursor-pointer px-3 py-2 text-sm flex items-center gap-1.5
+                transition-all duration-200
                 ${isSelected 
-                  ? "bg-purple-600 hover:bg-purple-700 text-white" 
-                  : "bg-gray-900 text-gray-300 hover:bg-gray-800"}
+                  ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground border-secondary" 
+                  : "bg-card hover:bg-muted text-foreground border-border hover:border-secondary/50"}
               `}
               onClick={() => handleGenreClick(genre.id)}
             >

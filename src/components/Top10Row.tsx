@@ -16,7 +16,7 @@ interface Top10RowProps {
 const Top10Row = ({ title, items }: Top10RowProps) => {
   return (
     <section className="space-y-4">
-      <h2 className="text-xl md:text-2xl font-bold text-white">{title}</h2>
+      <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
       
       <ScrollArea className="w-full">
         <div className="flex gap-4 pb-4">
@@ -31,8 +31,8 @@ const Top10Row = ({ title, items }: Top10RowProps) => {
                 <span 
                   className="text-8xl md:text-9xl font-black text-transparent bg-clip-text"
                   style={{
-                    WebkitTextStroke: '2px rgba(139, 92, 246, 0.8)',
-                    textShadow: '0 0 40px rgba(139, 92, 246, 0.3)'
+                    WebkitTextStroke: '2px hsl(var(--secondary))',
+                    textShadow: '0 0 40px hsl(var(--secondary) / 0.3)'
                   }}
                 >
                   {item.rank}
@@ -40,13 +40,13 @@ const Top10Row = ({ title, items }: Top10RowProps) => {
               </div>
               
               {/* Poster */}
-              <div className="relative w-32 md:w-40 h-48 md:h-56 ml-8 rounded-xl overflow-hidden transition-transform duration-300 group-hover:scale-105">
+              <div className="relative w-32 md:w-40 h-48 md:h-56 ml-8 rounded-lg overflow-hidden transition-transform duration-300 group-hover:scale-105 bg-card">
                 <img
                   src={item.posterUrl}
                   alt={item.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </Link>
           ))}

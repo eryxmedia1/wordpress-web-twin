@@ -10,31 +10,36 @@ interface PromoBannerProps {
 
 const PromoBanner = ({ title, subtitle, date, imageUrl }: PromoBannerProps) => {
   return (
-    <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden group cursor-pointer">
+    <div className="relative w-full h-48 md:h-64 rounded-lg overflow-hidden group cursor-pointer bg-card">
       {/* Background Image */}
       <img
         src={imageUrl}
         alt={title}
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
       />
       
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/60 to-transparent" />
       
       {/* Content */}
-      <div className="absolute inset-0 flex items-center justify-between px-8 md:px-12">
+      <div className="absolute inset-0 flex items-center justify-between px-6 md:px-12">
         <div className="space-y-2">
-          <p className="text-purple-400 text-sm font-medium">{subtitle}</p>
-          <h3 className="text-2xl md:text-4xl font-bold text-white">{title}</h3>
-          <p className="text-gray-300 text-sm">{date}</p>
+          <p className="text-secondary text-sm font-medium uppercase tracking-wider">
+            A Zoe Original
+          </p>
+          <h3 className="text-2xl md:text-4xl font-bold text-foreground">{title}</h3>
+          <p className="text-muted-foreground text-sm">{date}</p>
         </div>
         
         <Button 
           variant="outline" 
-          className="border-white/30 text-white hover:bg-white/20 gap-2"
+          className="border-border text-foreground hover:bg-muted gap-2"
         >
           <Play className="w-4 h-4" />
-          Watch Trailer
+          Watch Now
         </Button>
       </div>
     </div>

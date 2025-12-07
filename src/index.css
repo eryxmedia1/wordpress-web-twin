@@ -5,68 +5,79 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+    --background: 230 25% 8%;
+    --foreground: 210 40% 98%;
+    --card: 230 25% 12%;
+    --card-foreground: 210 40% 98%;
+    --popover: 230 25% 10%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 43 74% 53%;
+    --primary-foreground: 230 25% 8%;
+    --secondary: 255 70% 60%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 230 20% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 255 70% 60%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 230 20% 20%;
+    --input: 230 20% 18%;
+    --ring: 43 74% 53%;
     --radius: 0.5rem;
 
     /* Sidebar */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-primary: 222.2 47.4% 11.2%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 0 0% 93%;
-    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-    --sidebar-border: 0 0% 85%;
-    --sidebar-ring: 0 0% 80%;
+    --sidebar-background: 230 25% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 43 74% 53%;
+    --sidebar-primary-foreground: 230 25% 8%;
+    --sidebar-accent: 230 20% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 230 20% 18%;
+    --sidebar-ring: 43 74% 53%;
+
+    /* Custom Zoe RatedTV colors */
+    --gold: 43 74% 53%;
+    --gold-light: 43 74% 63%;
+    --gold-dark: 43 74% 43%;
+    --purple: 255 70% 60%;
+    --purple-light: 255 70% 70%;
+    --purple-dark: 255 70% 50%;
+    --navy: 230 40% 12%;
+    --navy-dark: 230 40% 6%;
+    --navy-light: 230 30% 20%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 230 25% 8%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 230 25% 12%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 230 25% 10%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 43 74% 53%;
+    --primary-foreground: 230 25% 8%;
+    --secondary: 255 70% 60%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 230 20% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 255 70% 60%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62% 30%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border: 230 20% 20%;
+    --input: 230 20% 18%;
+    --ring: 43 74% 53%;
 
     /* Sidebar */
-    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-background: 230 25% 6%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 210 40% 98%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-primary: 43 74% 53%;
+    --sidebar-primary-foreground: 230 25% 8%;
+    --sidebar-accent: 230 20% 15%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 224.3 76.3% 48%;
+    --sidebar-border: 230 20% 18%;
+    --sidebar-ring: 43 74% 53%;
   }
 }
 
@@ -89,5 +100,24 @@
   .scrollbar-hide {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
+  }
+
+  /* Custom card hover animation */
+  .card-hover-expand {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .card-hover-expand:hover {
+    @apply scale-110 shadow-2xl z-10;
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.6), 0 0 20px rgba(167, 139, 76, 0.2);
+  }
+
+  /* Gradient overlays */
+  .gradient-overlay {
+    background: linear-gradient(to top, hsl(var(--background)) 0%, transparent 100%);
+  }
+
+  .gradient-left {
+    background: linear-gradient(to right, hsl(var(--background)) 0%, transparent 50%);
   }
 }
