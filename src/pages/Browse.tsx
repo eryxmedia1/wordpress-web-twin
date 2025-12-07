@@ -191,16 +191,16 @@ const Browse = () => {
       <Navbar />
       <ExpandingSidebar />
 
-      {/* Hero Section - offset for sidebar */}
-      <div className="ml-16">
-        {featuredContents.length > 0 && (
-          <FeaturedCarousel
-            contents={featuredContents}
-            onMoreInfo={handleMoreInfo}
-          />
-        )}
+      {/* Hero Section - Full width, no sidebar offset */}
+      {featuredContents.length > 0 && (
+        <FeaturedCarousel
+          contents={featuredContents}
+          onMoreInfo={handleMoreInfo}
+        />
+      )}
 
-        {/* Content Sections */}
+      {/* Content Sections - offset for sidebar */}
+      <div className="ml-16">
         <main className="relative z-10 px-4 md:px-8 lg:px-12 py-8 space-y-10 -mt-20">
           {/* Genre Badges */}
           <GenresList />

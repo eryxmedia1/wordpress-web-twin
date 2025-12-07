@@ -134,32 +134,43 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
   if (!currentContent) return null;
 
   return (
-    <section className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden">
-      {/* Video Background */}
+    <section className="relative w-screen h-[85vh] md:h-[90vh] overflow-hidden -ml-0" style={{ marginLeft: 0, left: 0 }}>
+      {/* Video Background - Full bleed cover */}
       {videoUrl && !videoError ? (
         <>
-          <div className={`absolute inset-0 transition-opacity duration-1000 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}>
-            <ReactPlayer
-              ref={playerRef}
-              url={videoUrl}
-              playing={isPlaying}
-              muted={isMuted}
-              loop={hasTrailer} // Only loop if it's a trailer
-              playsinline
-              width="100%"
-              height="100%"
-              style={{ position: 'absolute', top: 0, left: 0, objectFit: 'cover' }}
-              config={{
-                vimeo: {
-                  playerOptions: {
-                    background: true,
-                    quality: '1080p',
+          <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="absolute inset-0 w-full h-full overflow-hidden">
+              <ReactPlayer
+                ref={playerRef}
+                url={videoUrl}
+                playing={isPlaying}
+                muted={isMuted}
+                loop={hasTrailer}
+                playsinline
+                width="100%"
+                height="100%"
+                style={{ 
+                  position: 'absolute', 
+                  top: '50%', 
+                  left: '50%', 
+                  transform: 'translate(-50%, -50%)',
+                  minWidth: '100%',
+                  minHeight: '100%',
+                  width: 'auto',
+                  height: 'auto',
+                }}
+                config={{
+                  vimeo: {
+                    playerOptions: {
+                      background: true,
+                      quality: '1080p',
+                    }
                   }
-                }
-              }}
-              onReady={() => setIsVideoReady(true)}
-              onError={() => setVideoError(true)}
-            />
+                }}
+                onReady={() => setIsVideoReady(true)}
+                onError={() => setVideoError(true)}
+              />
+            </div>
           </div>
           {/* Fallback image while video loads */}
           {!isVideoReady && currentContent.backdrop_url && (
@@ -180,9 +191,9 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
         <div className="absolute inset-0 bg-gradient-to-br from-secondary/30 via-background to-background" />
       )}
 
-      {/* Gradient Overlays - Reduced opacity for clearer video visibility */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-transparent to-transparent" />
+      {/* Gradient Overlays - Subtle for text readability only */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/60 via-transparent to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-transparent to-transparent" />
 
       {/* Navigation Arrows - only show if multiple items */}
@@ -268,8 +279,8 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
         </div>
       )}
 
-      {/* Content */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 lg:p-16 space-y-4 animate-slide-up">
+      {/* Content - offset from left to account for sidebar */}
+      <div className="absolute bottom-0 left-0 right-0 pl-20 md:pl-24 lg:pl-28 pr-6 md:pr-12 pb-6 md:pb-12 lg:pb-16 pt-6 space-y-4 animate-slide-up">
         {/* "Featured on Zoe RatedTV" label */}
         <div className="flex items-center gap-2 text-secondary text-sm font-medium">
           <span className="uppercase tracking-wider drop-shadow-md">Featured on Zoe RatedTV</span>
