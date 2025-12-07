@@ -16,9 +16,9 @@ const Login = () => {
   const { user, login } = useAuth();
   
   // Get the path the user was trying to access before being redirected to login
-  const from = location.state?.from?.pathname || "/browse";
+  const from = location.state?.from?.pathname || "/profiles";
   
-  // If already logged in, redirect to the intended page
+  // If already logged in, redirect to profile selection
   if (user) {
     navigate(from, { replace: true });
     return null;
@@ -123,7 +123,7 @@ const Login = () => {
               <input
                 type="email"
                 placeholder="Email address"
-                className="w-full p-4 rounded-md bg-[#333] text-white border border-[#555] focus:outline-none focus:border-[#e50914]"
+                className="w-full p-4 rounded-md bg-muted text-foreground border border-border focus:outline-none focus:border-primary"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -136,7 +136,7 @@ const Login = () => {
                 <input
                   type="password"
                   placeholder="Password"
-                  className="w-full p-4 rounded-md bg-[#333] text-white border border-[#555] focus:outline-none focus:border-[#e50914]"
+                  className="w-full p-4 rounded-md bg-muted text-foreground border border-border focus:outline-none focus:border-primary"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required={!useOtp}
@@ -148,7 +148,7 @@ const Login = () => {
             
             <Button 
               type="submit" 
-              className="w-full bg-[#e50914] hover:bg-[#f6121d] text-white font-medium text-lg p-6"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-lg p-6"
               disabled={isLoading}
             >
               {isLoading ? (

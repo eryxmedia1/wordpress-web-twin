@@ -138,7 +138,7 @@ const Browse = () => {
       const { data, error } = await supabase
         .from('contents')
         .select('*')
-        .eq('type', 'tv_show')
+        .eq('type', 'show')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
