@@ -4,7 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { supabase, DbContent, DbCategory, DbTag } from "@/integrations/supabase/client";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
+import { VimeoUrlInput } from "@/components/VimeoUrlInput";
+import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -504,19 +506,42 @@ const AddMovieForm = () => {
                 
                 <TabsContent value="media">
                   <div className="space-y-6">
+                    {/* Vimeo URL Input with Auto-fetch */}
                     <FormField
                       control={form.control}
                       name="videoUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Video URL</FormLabel>
+                          <FormLabel>Video URL (Vimeo)</FormLabel>
                           <FormControl>
-                            <Input 
+                            <VimeoUrlInput
+                              value={field.value}
+                              onChange={field.onChange}
+                              onMetadataFetched={(metadata: VimeoMetadata) => {
+                                // Auto-fill fields from Vimeo metadata
+                                if (metadata.title && !form.getValues('title')) {
+                                  form.setValue('title', metadata.title);
+                                }
+                                if (metadata.thumbnail_large || metadata.thumbnail_url) {
+                                  form.setValue('thumbnailUrl', metadata.thumbnail_large || metadata.thumbnail_url || '');
+                                  form.setValue('backdropUrl', metadata.thumbnail_large || metadata.thumbnail_url || '');
+                                }
+                                if (metadata.duration && !form.getValues('duration')) {
+                                  form.setValue('duration', metadata.duration);
+                                }
+                                if (metadata.description && !form.getValues('description')) {
+                                  form.setValue('description', metadata.description);
+                                }
+                                if (metadata.author_name && !form.getValues('creator')) {
+                                  form.setValue('creator', metadata.author_name);
+                                }
+                              }}
                               className="bg-gray-900 border-gray-700"
-                              placeholder="https://example.com/movie.mp4" 
-                              {...field} 
                             />
                           </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Paste a Vimeo URL to auto-fetch thumbnail, duration, and title
+                          </p>
                           <FormMessage />
                         </FormItem>
                       )}

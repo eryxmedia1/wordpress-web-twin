@@ -109,7 +109,7 @@ const AdminNavbar = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 text-white">
-              <div className="w-7 h-7 rounded bg-purple-600 flex items-center justify-center">
+              <div className="w-7 h-7 rounded bg-primary flex items-center justify-center">
                 <User className="h-4 w-4" />
               </div>
               <ChevronDown className="h-4 w-4" />
@@ -124,7 +124,7 @@ const AdminNavbar = () => {
             <DropdownMenuItem>
               <Link to="/" className="w-full">View Site</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="text-red-500 hover:text-red-400">
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive hover:text-destructive/90">
               <LogOut className="h-4 w-4 mr-2" /> Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>

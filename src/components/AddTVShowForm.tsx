@@ -2,9 +2,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { CheckIcon, X } from "lucide-react";
+import { CheckIcon, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase, DbContent, DbCategory, DbTag, ContentType } from "@/integrations/supabase/client";
+import { VimeoUrlInput } from "@/components/VimeoUrlInput";
+import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -410,13 +412,34 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
             
             <TabsContent value="media" className="space-y-4">
               <div>
-                <Label className="text-white">Video URL</Label>
-                <Input
-                  type="url"
-                  {...register("videoUrl")}
+                <Label className="text-white">Video URL (Vimeo)</Label>
+                <VimeoUrlInput
+                  value={watch("videoUrl") || ""}
+                  onChange={(value) => setValue("videoUrl", value)}
+                  onMetadataFetched={(metadata: VimeoMetadata) => {
+                    // Auto-fill fields from Vimeo metadata
+                    if (metadata.title && !watch('title')) {
+                      setValue('title', metadata.title);
+                    }
+                    if (metadata.thumbnail_large || metadata.thumbnail_url) {
+                      setValue('posterUrl', metadata.thumbnail_large || metadata.thumbnail_url || '');
+                      setValue('backdropUrl', metadata.thumbnail_large || metadata.thumbnail_url || '');
+                    }
+                    if (metadata.duration && !watch('duration')) {
+                      setValue('duration', metadata.duration);
+                    }
+                    if (metadata.description && !watch('description')) {
+                      setValue('description', metadata.description);
+                    }
+                    if (metadata.author_name && !watch('creator')) {
+                      setValue('creator', metadata.author_name);
+                    }
+                  }}
                   className="mt-1 bg-gray-700 border-gray-600 text-white"
-                  placeholder="https://example.com/video.mp4"
                 />
+                <p className="text-xs text-gray-400 mt-1">
+                  Paste a Vimeo URL to auto-fetch thumbnail, duration, and title
+                </p>
               </div>
 
               <div>
