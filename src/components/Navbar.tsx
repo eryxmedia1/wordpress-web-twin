@@ -213,8 +213,8 @@ const Navbar = () => {
         {isAdmin && (
           <Link 
             to="/admin" 
-            className={`px-4 py-2 text-sm font-semibold transition-colors hover:text-primary ${
-              location.pathname.startsWith('/admin') ? 'text-primary' : 'text-primary/80'
+            className={`px-4 py-2 text-sm font-bold transition-colors bg-primary/20 rounded-md hover:bg-primary/30 ${
+              location.pathname.startsWith('/admin') ? 'text-primary bg-primary/30' : 'text-primary'
             }`}
           >
             ADMIN
