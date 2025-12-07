@@ -117,12 +117,12 @@ const Admin = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition cursor-pointer" onClick={goToMoviesSection}>
             <CardContent className="p-6 flex flex-col items-center justify-center">
-              <Film className="h-16 w-16 text-[#e50914] mb-4" />
+              <Film className="h-16 w-16 text-primary mb-4" />
               <h2 className="text-2xl font-bold mb-2">Movies</h2>
               <p className="text-gray-400 text-center">
                 Manage movies, categories, tags, and playlists
               </p>
-              <Button className="mt-4 bg-[#e50914] hover:bg-[#f6121d]">
+              <Button className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground">
                 Go to Movies
               </Button>
             </CardContent>
@@ -130,12 +130,12 @@ const Admin = () => {
           
           <Card className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition cursor-pointer" onClick={goToTvShowsSection}>
             <CardContent className="p-6 flex flex-col items-center justify-center">
-              <Tv className="h-16 w-16 text-[#e50914] mb-4" />
+              <Tv className="h-16 w-16 text-primary mb-4" />
               <h2 className="text-2xl font-bold mb-2">TV Shows</h2>
               <p className="text-gray-400 text-center">
                 Manage TV shows, episodes, categories, tags, and playlists
               </p>
-              <Button className="mt-4 bg-[#e50914] hover:bg-[#f6121d]">
+              <Button className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground">
                 Go to TV Shows
               </Button>
             </CardContent>
@@ -157,7 +157,7 @@ const Admin = () => {
           </div>
           
           <Button 
-            className="bg-[#e50914] hover:bg-[#f6121d] ml-4"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground ml-4"
             onClick={() => navigate('/admin/content/new')}
           >
             <Plus className="mr-2" /> Add New Content
