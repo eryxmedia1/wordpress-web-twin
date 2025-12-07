@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Bell, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings } from "lucide-react";
+import { Search, Bell, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -213,10 +213,11 @@ const Navbar = () => {
         {isAdmin && (
           <Link 
             to="/admin" 
-            className={`px-4 py-2 text-sm font-bold transition-colors bg-primary/20 rounded-md hover:bg-primary/30 ${
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-bold transition-colors bg-primary/20 rounded-md hover:bg-primary/30 border border-primary/50 ${
               location.pathname.startsWith('/admin') ? 'text-primary bg-primary/30' : 'text-primary'
             }`}
           >
+            <Shield className="h-4 w-4" />
             ADMIN
           </Link>
         )}
