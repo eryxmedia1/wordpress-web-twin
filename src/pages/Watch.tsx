@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Star, Info, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import ReactPlayer from "react-player";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/context/ProfileContext";
 
 interface Review {
   id: string;
@@ -53,6 +54,7 @@ const sampleReviews: Review[] = [
 const Watch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentProfile } = useProfile();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showVideo, setShowVideo] = useState(false);
@@ -64,6 +66,12 @@ const Watch = () => {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviews, setReviews] = useState<Review[]>(sampleReviews);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  
+  // Progress tracking state
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const lastSavedProgress = useRef(0);
+  const playerRef = useRef<ReactPlayer>(null);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -87,6 +95,21 @@ const Watch = () => {
 
       setContent(contentData as ContentData);
 
+      // Fetch existing watch progress if user is logged in
+      if (currentProfile?.id) {
+        const { data: watchHistory } = await supabase
+          .from("watch_history")
+          .select("progress_percent")
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", id)
+          .single();
+        
+        if (watchHistory) {
+          setProgress(watchHistory.progress_percent || 0);
+          lastSavedProgress.current = watchHistory.progress_percent || 0;
+        }
+      }
+
       // Fetch recommended content (same genre or type)
       const { data: recommended } = await supabase
         .from("contents")
@@ -102,8 +125,75 @@ const Watch = () => {
     };
 
     fetchContent();
-  }, [id, navigate]);
-  
+  }, [id, navigate, currentProfile?.id]);
+
+  // Save progress to database
+  const saveProgress = useCallback(async (progressPercent: number) => {
+    if (!currentProfile?.id || !id) return;
+    
+    // Only save if progress changed by at least 2%
+    if (Math.abs(progressPercent - lastSavedProgress.current) < 2) return;
+    
+    lastSavedProgress.current = progressPercent;
+    
+    const { data: existing } = await supabase
+      .from("watch_history")
+      .select("id")
+      .eq("profile_id", currentProfile.id)
+      .eq("content_id", id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from("watch_history")
+        .update({ 
+          progress_percent: Math.round(progressPercent),
+          last_watched_at: new Date().toISOString()
+        })
+        .eq("id", existing.id);
+    } else {
+      await supabase
+        .from("watch_history")
+        .insert({
+          profile_id: currentProfile.id,
+          content_id: id,
+          progress_percent: Math.round(progressPercent),
+          last_watched_at: new Date().toISOString()
+        });
+    }
+  }, [currentProfile?.id, id]);
+
+  // Handle video progress updates
+  const handleProgress = useCallback((state: { played: number; playedSeconds: number }) => {
+    const progressPercent = state.played * 100;
+    setProgress(progressPercent);
+    
+    // Save progress every 5 seconds worth of progress or significant jumps
+    saveProgress(progressPercent);
+  }, [saveProgress]);
+
+  const handleDuration = useCallback((dur: number) => {
+    setDuration(dur);
+  }, []);
+
+  // Save progress when user leaves the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (progress > 0) {
+        saveProgress(progress);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Save progress when component unmounts
+      if (progress > 0) {
+        saveProgress(progress);
+      }
+    };
+  }, [progress, saveProgress]);
+
   const playVideo = () => {
     setShowVideo(true);
     setIsPlaying(true);
@@ -138,6 +228,17 @@ const Watch = () => {
     setReviewRating(rating);
   };
 
+  // Format time for display
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen bg-background flex items-center justify-center">
@@ -156,6 +257,7 @@ const Watch = () => {
 
   const videoUrl = content.video_url || content.trailer_url;
   const categories = content.genre?.split(",").map(g => g.trim()) || [];
+  const currentTime = (progress / 100) * duration;
   
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -166,6 +268,7 @@ const Watch = () => {
           <div className="absolute inset-0 bg-black z-0 flex items-center justify-center mt-16">
             <div className="w-full h-full max-h-[calc(100vh-64px)]">
               <ReactPlayer
+                ref={playerRef}
                 url={videoUrl || ""}
                 playing={isPlaying}
                 controls
@@ -173,6 +276,9 @@ const Watch = () => {
                 height="100%"
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
+                onProgress={handleProgress}
+                onDuration={handleDuration}
+                progressInterval={1000}
                 config={{
                   vimeo: {
                     playerOptions: {
@@ -189,11 +295,31 @@ const Watch = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-foreground"
-              onClick={() => setShowVideo(false)}
+              className="text-foreground bg-background/50 hover:bg-background/70"
+              onClick={() => {
+                saveProgress(progress);
+                setShowVideo(false);
+              }}
             >
               <ArrowLeft className="h-6 w-6" />
             </Button>
+          </div>
+
+          {/* Progress Bar Overlay at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-4">
+            <div className="flex items-center gap-3 text-sm text-foreground">
+              <span>{formatTime(currentTime)}</span>
+              <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span>{formatTime(duration)}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 text-center">
+              {Math.round(progress)}% watched • Progress saved automatically
+            </p>
           </div>
         </div>
       ) : (
@@ -215,6 +341,24 @@ const Watch = () => {
                 <Play className="h-8 w-8 fill-current" />
               </Button>
             </div>
+
+            {/* Resume progress indicator */}
+            {progress > 0 && progress < 100 && (
+              <div className="absolute bottom-4 left-4 right-4">
+                <div className="bg-background/90 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Resume watching</span>
+                    <span className="text-xs text-muted-foreground">{Math.round(progress)}% complete</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary rounded-full"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Movie info */}
