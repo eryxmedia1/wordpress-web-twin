@@ -16,6 +16,10 @@ import CategoryCircles from "@/components/CategoryCircles";
 import ExclusiveVideos from "@/components/ExclusiveVideos";
 import TopNews from "@/components/TopNews";
 import BecauseYouWatchedRow from "@/components/BecauseYouWatchedRow";
+import NewOnZoeRow from "@/components/NewOnZoeRow";
+import WeThinkYoullLoveRow from "@/components/WeThinkYoullLoveRow";
+import NextToWatchRow from "@/components/NextToWatchRow";
+import ChannelRow from "@/components/ChannelRow";
 
 interface Content {
   id: string;
@@ -36,6 +40,17 @@ interface Content {
   maturity_rating: string | null;
 }
 
+// Channel names for network rows
+const CHANNELS = [
+  "Zoe RatedTV",
+  "MadFaceTV",
+  "AyiTV",
+  "MyPureTV",
+  "Yard MonTV",
+  "Indie Films",
+  "More Networks"
+];
+
 const Browse = () => {
   const { currentProfile } = useProfile();
   const [featuredContents, setFeaturedContents] = useState<Content[]>([]);
@@ -43,7 +58,6 @@ const Browse = () => {
   const [tvShows, setTvShows] = useState<Content[]>([]);
   const [zoeOriginals, setZoeOriginals] = useState<Content[]>([]);
   const [top10, setTop10] = useState<Content[]>([]);
-  const [trendingMovies, setTrendingMovies] = useState<Content[]>([]);
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -66,18 +80,6 @@ const Browse = () => {
           .order("created_at", { ascending: false })
           .limit(3);
         if (fallback) setFeaturedContents(fallback as Content[]);
-      }
-
-      // Fetch trending movies
-      const { data: trendingData } = await supabase
-        .from("contents")
-        .select("*")
-        .eq("type", "movie")
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (trendingData) {
-        setTrendingMovies(trendingData as Content[]);
       }
 
       // Fetch movies
@@ -200,84 +202,92 @@ const Browse = () => {
 
         {/* Content Sections */}
         <main className="relative z-10 px-4 md:px-8 lg:px-12 py-8 space-y-10 -mt-20">
-        {/* Genre Badges */}
-        <GenresList />
+          {/* Genre Badges */}
+          <GenresList />
 
-        {/* Trending Movies with expanding thumbnails */}
-        {trendingMovies.length > 0 && (
-          <ContentRow
-            title="Trending Movies"
-            contents={mapToContentRow(trendingMovies)}
-            seeAllLink="/genre/movies"
-            onMoreInfo={handleMoreInfo}
+          {/* Continue Watching for {ProfileName} */}
+          <ContinueWatchingRow onMoreInfo={handleMoreInfo} />
+
+          {/* My List */}
+          <MyListRow onMoreInfo={handleMoreInfo} />
+
+          {/* Because You Watched Row */}
+          <BecauseYouWatchedRow onMoreInfo={handleMoreInfo} />
+
+          {/* We Think You'll Love These */}
+          <WeThinkYoullLoveRow onMoreInfo={handleMoreInfo} />
+
+          {/* New on Zoe RatedTV */}
+          <NewOnZoeRow onMoreInfo={handleMoreInfo} />
+
+          {/* Next To Watch */}
+          <NextToWatchRow onMoreInfo={handleMoreInfo} />
+
+          {/* Top 10 Shows on Zoe RatedTV */}
+          {top10.length > 0 && (
+            <Top10Row
+              title="Top 10 on Zoe RatedTV Today"
+              items={mapToTop10(top10)}
+            />
+          )}
+
+          {/* Only on Zoe RatedTV */}
+          {zoeOriginals.length > 0 && (
+            <ContentRow
+              title="Only on Zoe RatedTV"
+              contents={mapToContentRow(zoeOriginals)}
+              onMoreInfo={handleMoreInfo}
+            />
+          )}
+
+          {/* Promo Banner */}
+          <PromoBanner 
+            title="PIECES OF HER"
+            subtitle="Now Available"
+            date="Stream Now"
+            imageUrl="/placeholder.svg"
           />
-        )}
 
-        {/* Continue Watching */}
-        <ContinueWatchingRow onMoreInfo={handleMoreInfo} />
+          {/* Network / Channel Rows */}
+          {CHANNELS.map((channel) => (
+            <ChannelRow
+              key={channel}
+              channelName={channel}
+              onMoreInfo={handleMoreInfo}
+            />
+          ))}
 
-        {/* My List */}
-        <MyListRow onMoreInfo={handleMoreInfo} />
+          {/* TV Series */}
+          {tvShows.length > 0 && (
+            <ContentRow
+              title="TV Series"
+              contents={mapToContentRow(tvShows)}
+              seeAllLink="/genre/tv-shows"
+              onMoreInfo={handleMoreInfo}
+            />
+          )}
 
-        {/* Because You Watched Row */}
-        <BecauseYouWatchedRow onMoreInfo={handleMoreInfo} />
+          {/* Category Circles */}
+          <CategoryCircles title="TV Show Categories" categories={categories} />
 
-        {/* Only on Zoe RatedTV */}
-        {zoeOriginals.length > 0 && (
-          <ContentRow
-            title="Only on Zoe RatedTV"
-            contents={mapToContentRow(zoeOriginals)}
-            onMoreInfo={handleMoreInfo}
-          />
-        )}
+          {/* Movies */}
+          {movies.length > 0 && (
+            <ContentRow
+              title="Movies"
+              contents={mapToContentRow(movies)}
+              seeAllLink="/genre/movies"
+              onMoreInfo={handleMoreInfo}
+            />
+          )}
 
-        {/* Promo Banner */}
-        <PromoBanner 
-          title="PIECES OF HER"
-          subtitle="Now Available"
-          date="Stream Now"
-          imageUrl="/placeholder.svg"
-        />
+          {/* Exclusive Videos */}
+          <ExclusiveVideos title="Exclusive Videos" videos={exclusiveVideos} />
 
-        {/* Top 10 */}
-        {top10.length > 0 && (
-          <Top10Row
-            title="Top 10 on Zoe RatedTV Today"
-            items={mapToTop10(top10)}
-          />
-        )}
+          {/* Top News */}
+          <TopNews title="Top News" news={newsItems} />
+        </main>
 
-        {/* TV Series with expanding thumbnails */}
-        {tvShows.length > 0 && (
-          <ContentRow
-            title="TV Series"
-            contents={mapToContentRow(tvShows)}
-            seeAllLink="/genre/tv-shows"
-            onMoreInfo={handleMoreInfo}
-          />
-        )}
-
-        {/* Category Circles */}
-        <CategoryCircles title="TV Show Categories" categories={categories} />
-
-        {/* Movies */}
-        {movies.length > 0 && (
-          <ContentRow
-            title="Movies"
-            contents={mapToContentRow(movies)}
-            seeAllLink="/genre/movies"
-            onMoreInfo={handleMoreInfo}
-          />
-        )}
-
-        {/* Exclusive Videos */}
-        <ExclusiveVideos title="Exclusive Videos" videos={exclusiveVideos} />
-
-        {/* Top News */}
-        <TopNews title="Top News" news={newsItems} />
-      </main>
-
-      <BrowseFooter />
+        <BrowseFooter />
       </div>
 
       {/* Content Detail Modal */}
