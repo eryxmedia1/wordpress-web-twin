@@ -208,6 +208,18 @@ const Navbar = () => {
         >
           MY LIST
         </Link>
+
+        {/* Admin Link - only visible to admins */}
+        {isAdmin && (
+          <Link 
+            to="/admin" 
+            className={`px-4 py-2 text-sm font-semibold transition-colors hover:text-primary ${
+              location.pathname.startsWith('/admin') ? 'text-primary' : 'text-primary/80'
+            }`}
+          >
+            ADMIN
+          </Link>
+        )}
       </nav>
 
       {/* Right Side */}
