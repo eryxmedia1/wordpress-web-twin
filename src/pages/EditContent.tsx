@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Film, Plus, Trash, Video } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
@@ -28,6 +29,13 @@ interface Season {
   episodes: Episode[];
 }
 
+interface MidrollConfig {
+  enabled: boolean;
+  count: number;
+  startAfterMinutes: number;
+  intervalMinutes: number;
+}
+
 interface ContentDetails {
   title: string;
   description: string;
@@ -42,7 +50,8 @@ interface ContentDetails {
     preroll: string;
     midroll: string;
     postroll: string;
-  }
+  };
+  midrollConfig: MidrollConfig;
 }
 
 const EditContent = () => {
@@ -82,6 +91,12 @@ const EditContent = () => {
       preroll: "",
       midroll: "",
       postroll: ""
+    },
+    midrollConfig: {
+      enabled: false,
+      count: 1,
+      startAfterMinutes: 10,
+      intervalMinutes: 10
     }
   });
 
@@ -152,6 +167,12 @@ const EditContent = () => {
         preroll: content.vast_ad_preroll || "",
         midroll: content.vast_ad_midroll || "",
         postroll: content.vast_ad_postroll || ""
+      },
+      midrollConfig: {
+        enabled: false,
+        count: 1,
+        startAfterMinutes: 10,
+        intervalMinutes: 10
       }
     });
     setSelectedChannels(content.channels || []);
@@ -605,6 +626,79 @@ const EditContent = () => {
                   className="bg-gray-800 border-gray-700"
                   placeholder="https://example.com/vast/midroll.xml"
                 />
+              </div>
+
+              {/* Mid-roll Configuration */}
+              <div className="border border-gray-600 rounded-lg p-4 mt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="midroll-enabled" className="text-base font-medium">Enable Mid-roll Ads</Label>
+                    <p className="text-sm text-muted-foreground">Configure when and how many mid-roll ads play</p>
+                  </div>
+                  <Switch
+                    id="midroll-enabled"
+                    checked={contentDetails.midrollConfig.enabled}
+                    onCheckedChange={(checked) => setContentDetails({
+                      ...contentDetails,
+                      midrollConfig: { ...contentDetails.midrollConfig, enabled: checked }
+                    })}
+                  />
+                </div>
+
+                {contentDetails.midrollConfig.enabled && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    <div>
+                      <Label htmlFor="midroll-count" className="mb-2 block">Number of Mid-rolls</Label>
+                      <Input
+                        id="midroll-count"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={contentDetails.midrollConfig.count}
+                        onChange={(e) => setContentDetails({
+                          ...contentDetails,
+                          midrollConfig: { ...contentDetails.midrollConfig, count: parseInt(e.target.value) || 1 }
+                        })}
+                        className="bg-gray-900 border-gray-800"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">How many mid-roll ads to show</p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="midroll-start" className="mb-2 block">Start After (minutes)</Label>
+                      <Input
+                        id="midroll-start"
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={contentDetails.midrollConfig.startAfterMinutes}
+                        onChange={(e) => setContentDetails({
+                          ...contentDetails,
+                          midrollConfig: { ...contentDetails.midrollConfig, startAfterMinutes: parseInt(e.target.value) || 10 }
+                        })}
+                        className="bg-gray-900 border-gray-800"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">First ad plays after this many minutes</p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="midroll-interval" className="mb-2 block">Interval (minutes)</Label>
+                      <Input
+                        id="midroll-interval"
+                        type="number"
+                        min="1"
+                        max="60"
+                        value={contentDetails.midrollConfig.intervalMinutes}
+                        onChange={(e) => setContentDetails({
+                          ...contentDetails,
+                          midrollConfig: { ...contentDetails.midrollConfig, intervalMinutes: parseInt(e.target.value) || 10 }
+                        })}
+                        className="bg-gray-900 border-gray-800"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Minutes between each mid-roll</p>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div>

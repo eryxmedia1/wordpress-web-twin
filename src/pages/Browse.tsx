@@ -187,17 +187,19 @@ const Browse = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       <ExpandingSidebar />
 
-      {/* Hero Section - Full width, no sidebar offset */}
-      {featuredContents.length > 0 && (
-        <FeaturedCarousel
-          contents={featuredContents}
-          onMoreInfo={handleMoreInfo}
-        />
-      )}
+      {/* Hero Section - Full width breakout */}
+      <div className="w-full">
+        {featuredContents.length > 0 && (
+          <FeaturedCarousel
+            contents={featuredContents}
+            onMoreInfo={handleMoreInfo}
+          />
+        )}
+      </div>
 
       {/* Content Sections - offset for sidebar */}
       <div className="ml-16">
