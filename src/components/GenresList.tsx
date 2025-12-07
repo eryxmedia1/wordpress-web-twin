@@ -47,7 +47,7 @@ const GenresList = ({ className }: GenresListProps) => {
   };
 
   return (
-    <div className={`${className}`}>
+    <div className={`pt-4 ${className}`}>
       <h2 className="text-xl font-semibold mb-4 text-foreground">Genres</h2>
       <div className="flex flex-wrap gap-2">
         {genres.map((genre) => {
