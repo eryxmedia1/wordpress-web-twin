@@ -75,12 +75,17 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                   className="w-full aspect-video object-cover transition-transform duration-300 group-hover:scale-105"
                 />
                 
-                {/* Progress Bar */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted">
+                {/* Enhanced Progress Bar */}
+                <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-muted/80">
                   <div
-                    className="h-full bg-primary"
+                    className="h-full bg-primary shadow-[0_0_8px_hsl(var(--primary))] transition-all duration-300"
                     style={{ width: `${item.progress_percent}%` }}
                   />
+                </div>
+                
+                {/* Progress Percentage on Hover */}
+                <div className="absolute bottom-3 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 px-2 py-0.5 rounded text-xs font-medium text-foreground">
+                  {Math.round(item.progress_percent)}% watched
                 </div>
 
                 {/* Hover Overlay */}

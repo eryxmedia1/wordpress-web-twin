@@ -25,12 +25,14 @@ interface ContentRowProps {
 
 const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<'left' | 'center' | 'right'>('center');
   const [videoError, setVideoError] = useState<Record<string, boolean>>({});
   const [myListItems, setMyListItems] = useState<Record<string, boolean>>({});
   const [likedItems, setLikedItems] = useState<Record<string, boolean>>({});
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { currentProfile } = useProfile();
@@ -62,10 +64,26 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps
     }
   };
 
-  const handleMouseEnter = (id: string) => {
+  const handleMouseEnter = (id: string, cardElement: HTMLDivElement | null) => {
     hoverTimeoutRef.current = setTimeout(() => {
+      // Calculate position for dynamic expansion
+      if (cardElement) {
+        const rect = cardElement.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const expandedWidth = 320;
+        const cardCenter = rect.left + rect.width / 2;
+        
+        // Check if expanded card would overflow left or right
+        if (cardCenter - expandedWidth / 2 < 80) {
+          setHoverPosition('left'); // Near left edge, expand rightward
+        } else if (cardCenter + expandedWidth / 2 > viewportWidth - 80) {
+          setHoverPosition('right'); // Near right edge, expand leftward
+        } else {
+          setHoverPosition('center'); // Center expansion
+        }
+      }
       setHoveredId(id);
-    }, 500); // Delay before expanding
+    }, 500);
   };
 
   const handleMouseLeave = () => {
@@ -167,11 +185,25 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps
             const hasVideoError = videoError[content.id];
             const isHovered = hoveredId === content.id;
             
+            // Dynamic positioning styles for expanded card
+            const getExpandedCardStyle = () => {
+              const baseStyle = { width: '320px' };
+              switch (hoverPosition) {
+                case 'left':
+                  return { ...baseStyle, left: '0px', top: '-20px' };
+                case 'right':
+                  return { ...baseStyle, right: '0px', top: '-20px' };
+                default:
+                  return { ...baseStyle, left: '-80px', top: '-20px' };
+              }
+            };
+            
             return (
               <div 
                 key={content.id}
+                ref={el => cardRefs.current[content.id] = el}
                 className="flex-none relative"
-                onMouseEnter={() => handleMouseEnter(content.id)}
+                onMouseEnter={() => handleMouseEnter(content.id, cardRefs.current[content.id])}
                 onMouseLeave={handleMouseLeave}
               >
                 {/* Base Card - Always visible */}
@@ -200,11 +232,11 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps
                   </div>
                 </div>
 
-                {/* Expanded Card - Shows on hover */}
+                {/* Expanded Card - Shows on hover with dynamic positioning */}
                 {isHovered && (
                   <div 
-                    className="absolute top-[-20px] left-[-80px] z-30 animate-scale-in"
-                    style={{ width: '320px' }}
+                    className="absolute z-30 animate-scale-in"
+                    style={getExpandedCardStyle()}
                   >
                     <div className="bg-card rounded-lg overflow-hidden border border-border shadow-2xl">
                       {/* Video/Image Preview */}
