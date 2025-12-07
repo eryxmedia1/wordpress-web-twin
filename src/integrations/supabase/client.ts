@@ -104,6 +104,7 @@ export type DbContent = {
   vast_ad_midroll: string | null;
   vast_ad_postroll: string | null;
   category_id?: string | null;
+  channels?: string[] | null;
 }
 
 export type DbSeason = {
