@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Play, Info, ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -29,8 +29,12 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
   const [videoError, setVideoError] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const playerRef = useRef<ReactPlayer>(null);
 
   const currentContent = contents[currentIndex];
+  const hasTrailer = !!currentContent?.trailer_url;
   const videoUrl = currentContent?.trailer_url || currentContent?.video_url;
   const hasMultiple = contents.length > 1;
 
@@ -38,7 +42,32 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
   useEffect(() => {
     setVideoError(false);
     setIsVideoReady(false);
+    setIsPlaying(true);
+    
+    // Clear any existing timer
+    if (playbackTimerRef.current) {
+      clearTimeout(playbackTimerRef.current);
+      playbackTimerRef.current = null;
+    }
   }, [currentIndex]);
+
+  // 60-second limit for full videos (no trailer)
+  useEffect(() => {
+    if (!isVideoReady || !isPlaying) return;
+    
+    // Only apply 60-second limit if using full video (no trailer)
+    if (!hasTrailer && videoUrl) {
+      playbackTimerRef.current = setTimeout(() => {
+        setIsPlaying(false);
+      }, 60000); // 60 seconds
+    }
+
+    return () => {
+      if (playbackTimerRef.current) {
+        clearTimeout(playbackTimerRef.current);
+      }
+    };
+  }, [isVideoReady, isPlaying, hasTrailer, videoUrl]);
 
   // Auto-advance every 15 seconds if multiple items
   useEffect(() => {
@@ -50,6 +79,15 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
 
     return () => clearInterval(timer);
   }, [contents.length, hasMultiple]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (playbackTimerRef.current) {
+        clearTimeout(playbackTimerRef.current);
+      }
+    };
+  }, []);
 
   const goToPrevious = () => {
     setCurrentIndex((prev) => (prev - 1 + contents.length) % contents.length);
@@ -68,10 +106,11 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
         <>
           <div className={`absolute inset-0 transition-opacity duration-1000 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}>
             <ReactPlayer
+              ref={playerRef}
               url={videoUrl}
-              playing
+              playing={isPlaying}
               muted={isMuted}
-              loop
+              loop={hasTrailer} // Only loop if it's a trailer
               playsinline
               width="100%"
               height="100%"
@@ -107,10 +146,10 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
         <div className="absolute inset-0 bg-gradient-to-br from-secondary/30 via-background to-background" />
       )}
 
-      {/* Gradient Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-transparent" />
+      {/* Gradient Overlays - Reduced opacity for clearer video visibility */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-transparent to-transparent" />
 
       {/* Navigation Arrows - only show if multiple items */}
       {hasMultiple && (
@@ -118,7 +157,7 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 bg-background/50 hover:bg-background/80 text-foreground rounded-full backdrop-blur-sm"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 bg-background/30 hover:bg-background/60 text-foreground rounded-full backdrop-blur-sm"
             onClick={goToPrevious}
           >
             <ChevronLeft className="h-8 w-8" />
@@ -126,7 +165,7 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 bg-background/50 hover:bg-background/80 text-foreground rounded-full backdrop-blur-sm"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 bg-background/30 hover:bg-background/60 text-foreground rounded-full backdrop-blur-sm"
             onClick={goToNext}
           >
             <ChevronRight className="h-8 w-8" />
@@ -138,7 +177,7 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
       <Button
         variant="ghost"
         size="icon"
-        className="absolute bottom-32 right-8 z-20 h-10 w-10 bg-background/50 hover:bg-background/80 text-foreground rounded-full backdrop-blur-sm border border-muted-foreground/30"
+        className="absolute bottom-32 right-8 z-20 h-10 w-10 bg-background/30 hover:bg-background/60 text-foreground rounded-full backdrop-blur-sm border border-foreground/30"
         onClick={() => setIsMuted(!isMuted)}
       >
         {isMuted ? (
@@ -157,7 +196,7 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
               className={`h-2 rounded-full transition-all ${
                 index === currentIndex 
                   ? 'w-8 bg-primary' 
-                  : 'w-2 bg-muted-foreground/50 hover:bg-muted-foreground'
+                  : 'w-2 bg-foreground/50 hover:bg-foreground/70'
               }`}
               onClick={() => setCurrentIndex(index)}
             />
@@ -167,10 +206,10 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
 
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 lg:p-16 space-y-4 animate-slide-up">
-        {/* "New on Zoe RatedTV" label */}
+        {/* "Featured on Zoe RatedTV" label */}
         <div className="flex items-center gap-2 text-secondary text-sm font-medium">
-          <span className="uppercase tracking-wider">Featured on Zoe RatedTV</span>
-          {currentContent.release_year && <span>• {currentContent.release_year}</span>}
+          <span className="uppercase tracking-wider drop-shadow-md">Featured on Zoe RatedTV</span>
+          {currentContent.release_year && <span className="drop-shadow-md">• {currentContent.release_year}</span>}
         </div>
 
         {/* Title Logo or Text */}
@@ -178,10 +217,13 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
           <img
             src={currentContent.logo_url}
             alt={currentContent.title}
-            className="max-w-[280px] md:max-w-[400px] lg:max-w-[500px] h-auto mb-4"
+            className="max-w-[280px] md:max-w-[400px] lg:max-w-[500px] h-auto mb-4 drop-shadow-lg"
           />
         ) : (
-          <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold text-foreground max-w-3xl drop-shadow-lg">
+          <h1 
+            className="text-4xl md:text-5xl lg:text-7xl font-bold text-foreground max-w-3xl"
+            style={{ textShadow: '2px 2px 8px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.5)' }}
+          >
             {currentContent.title}
           </h1>
         )}
@@ -189,24 +231,27 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
         {/* Metadata Pills */}
         <div className="flex items-center gap-3 text-sm">
           {currentContent.maturity_rating && (
-            <span className="px-2 py-1 bg-secondary/20 border border-secondary/50 text-secondary rounded text-xs font-medium">
+            <span className="px-2 py-1 bg-secondary/30 border border-secondary/60 text-secondary rounded text-xs font-medium backdrop-blur-sm">
               {currentContent.maturity_rating}
             </span>
           )}
           {currentContent.release_year && (
-            <span className="text-muted-foreground">{currentContent.release_year}</span>
+            <span className="text-foreground/80 drop-shadow-md">{currentContent.release_year}</span>
           )}
           {currentContent.duration && (
-            <span className="text-muted-foreground">{currentContent.duration}</span>
+            <span className="text-foreground/80 drop-shadow-md">{currentContent.duration}</span>
           )}
           {currentContent.genre && (
-            <span className="text-secondary">{currentContent.genre}</span>
+            <span className="text-secondary drop-shadow-md">{currentContent.genre}</span>
           )}
         </div>
 
         {/* Description */}
         {currentContent.description && (
-          <p className="text-sm md:text-base text-muted-foreground max-w-xl line-clamp-3 leading-relaxed">
+          <p 
+            className="text-sm md:text-base text-foreground/90 max-w-xl line-clamp-3 leading-relaxed"
+            style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.6)' }}
+          >
             {currentContent.description}
           </p>
         )}
@@ -216,7 +261,7 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
           <Button 
             asChild 
             size="lg" 
-            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 px-6 font-semibold shadow-lg"
+            className="bg-foreground hover:bg-foreground/90 text-background gap-2 px-6 font-semibold shadow-lg"
           >
             <Link to={`/watch/${currentContent.id}`}>
               <Play className="w-5 h-5 fill-current" />
@@ -226,7 +271,7 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
           <Button
             size="lg"
             variant="outline"
-            className="gap-2 px-6 border-muted-foreground/50 hover:bg-muted/50 backdrop-blur-sm"
+            className="gap-2 px-6 border-foreground/50 bg-background/30 hover:bg-background/50 backdrop-blur-sm text-foreground"
             onClick={() => onMoreInfo(currentContent.id)}
           >
             <Info className="w-5 h-5" />
