@@ -6,6 +6,7 @@ import { CheckIcon, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase, DbContent, DbCategory, DbTag, ContentType } from "@/integrations/supabase/client";
 import { VimeoUrlInput } from "@/components/VimeoUrlInput";
+import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
 
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
   const [castInput, setCastInput] = useState("");
   const [selectedAudioLanguages, setSelectedAudioLanguages] = useState<string[]>([]);
   const [selectedSubtitleLanguages, setSelectedSubtitleLanguages] = useState<string[]>([]);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const {
@@ -212,6 +214,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           cast_members: castMembers.length > 0 ? castMembers : null,
           audio_languages: selectedAudioLanguages.length > 0 ? selectedAudioLanguages : null,
           subtitle_languages: selectedSubtitleLanguages.length > 0 ? selectedSubtitleLanguages : null,
+          channels: selectedChannels.length > 0 ? selectedChannels : [],
           duration: data.duration || null,
           vast_ad_preroll: data.vastAdPreroll || null,
           vast_ad_midroll: data.vastAdMidroll || null,
@@ -411,6 +414,12 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                   ))}
                 </div>
               </div>
+
+              {/* Channels / Networks */}
+              <ChannelsSelector
+                selectedChannels={selectedChannels}
+                onChannelsChange={setSelectedChannels}
+              />
             </TabsContent>
             
             <TabsContent value="media" className="space-y-4">

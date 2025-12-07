@@ -8,6 +8,7 @@ import { X, Loader2 } from "lucide-react";
 import { VimeoUrlInput } from "@/components/VimeoUrlInput";
 import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
 import { MembershipPlansSelector } from "@/components/admin/MembershipPlansSelector";
+import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { SubtitlesSelector } from "@/components/admin/SubtitlesSelector";
 
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,7 @@ const AddMovieForm = () => {
   const [selectedSubtitleLanguages, setSelectedSubtitleLanguages] = useState<string[]>([]);
   const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -205,6 +207,7 @@ const AddMovieForm = () => {
           cast_members: castMembers.length > 0 ? castMembers : null,
           audio_languages: selectedAudioLanguages.length > 0 ? selectedAudioLanguages : null,
           subtitle_languages: selectedSubtitleLanguages.length > 0 ? selectedSubtitleLanguages : null,
+          channels: selectedChannels.length > 0 ? selectedChannels : [],
           vast_ad_preroll: null,
           vast_ad_midroll: null,
           vast_ad_postroll: null
@@ -525,6 +528,12 @@ const AddMovieForm = () => {
                         ))}
                       </div>
                     </div>
+
+                    {/* Channels / Networks */}
+                    <ChannelsSelector
+                      selectedChannels={selectedChannels}
+                      onChannelsChange={setSelectedChannels}
+                    />
                   </div>
                 </TabsContent>
                 

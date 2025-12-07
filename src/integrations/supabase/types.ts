@@ -118,6 +118,7 @@ export type Database = {
           audio_languages: string[] | null
           backdrop_url: string | null
           cast_members: string[] | null
+          channels: string[] | null
           created_at: string
           creator: string | null
           crew_members: Json | null
@@ -151,6 +152,7 @@ export type Database = {
           audio_languages?: string[] | null
           backdrop_url?: string | null
           cast_members?: string[] | null
+          channels?: string[] | null
           created_at?: string
           creator?: string | null
           crew_members?: Json | null
@@ -184,6 +186,7 @@ export type Database = {
           audio_languages?: string[] | null
           backdrop_url?: string | null
           cast_members?: string[] | null
+          channels?: string[] | null
           created_at?: string
           creator?: string | null
           crew_members?: Json | null
