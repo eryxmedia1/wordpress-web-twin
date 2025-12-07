@@ -24,6 +24,7 @@ import ProducerProfile from "./pages/ProducerProfile";
 import RequireAuth from "./components/RequireAuth";
 import RequireProfile from "./components/RequireProfile";
 import RequireAdmin from "./components/RequireAdmin";
+import Search from "./pages/Search";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
                   <Route path="/browse/:category" element={<Browse />} />
                   <Route path="/browse/genres" element={<GenreView />} />
                   <Route path="/browse/genres/:genreId" element={<GenreView />} />
+                  <Route path="/search" element={<Search />} />
                   <Route path="/watch/:id" element={<Watch />} />
                   <Route path="/profile" element={<UserProfile />} />
                   <Route path="/profile/:id" element={<UserProfile />} />

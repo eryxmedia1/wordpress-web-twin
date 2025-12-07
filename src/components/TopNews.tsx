@@ -19,8 +19,8 @@ const TopNews = ({ title, news }: TopNewsProps) => {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl md:text-2xl font-bold text-white">{title}</h2>
-        <Link to="/news" className="text-purple-400 hover:text-purple-300 text-sm font-medium">
+        <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
+        <Link to="/news" className="text-secondary hover:text-secondary/80 text-sm font-medium">
           See All
         </Link>
       </div>
@@ -30,9 +30,8 @@ const TopNews = ({ title, news }: TopNewsProps) => {
           <Link
             key={item.id}
             to={`/news/${item.id}`}
-            className="group bg-[#1a1a2e] rounded-xl overflow-hidden hover:ring-1 hover:ring-purple-500/50 transition-all"
+            className="group bg-card rounded-lg overflow-hidden hover:ring-1 hover:ring-secondary/50 transition-all"
           >
-            {/* Image */}
             <div className="relative aspect-video overflow-hidden">
               <img
                 src={item.imageUrl}
@@ -40,21 +39,20 @@ const TopNews = ({ title, news }: TopNewsProps) => {
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
               <div className="absolute top-3 left-3">
-                <span className="px-2 py-1 bg-purple-600 text-white text-xs font-medium rounded">
+                <span className="px-2 py-1 bg-secondary text-secondary-foreground text-xs font-medium rounded">
                   {item.category}
                 </span>
               </div>
             </div>
             
-            {/* Content */}
             <div className="p-4">
-              <h3 className="text-white font-semibold text-sm group-hover:text-purple-400 transition-colors line-clamp-2 mb-2">
+              <h3 className="text-foreground font-semibold text-sm group-hover:text-secondary transition-colors line-clamp-2 mb-2">
                 {item.title}
               </h3>
-              <p className="text-gray-400 text-xs line-clamp-2 mb-3">
+              <p className="text-muted-foreground text-xs line-clamp-2 mb-3">
                 {item.excerpt}
               </p>
-              <div className="flex items-center gap-2 text-gray-500 text-xs">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
                 <Calendar className="w-3 h-3" />
                 <span>{item.date}</span>
               </div>
