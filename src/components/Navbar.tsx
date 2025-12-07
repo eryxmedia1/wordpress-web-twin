@@ -108,9 +108,9 @@ const Navbar = () => {
   ];
 
   return (
-    <header className={`px-4 py-2 flex items-center fixed w-full z-50 transition-colors ${isScrolled ? 'bg-background' : 'bg-background/80'}`}>
-      {/* Logo */}
-      <Link to="/browse" className="mr-8">
+    <header className={`pl-20 pr-4 py-2 flex items-center fixed w-full z-50 transition-colors ${isScrolled ? 'bg-background' : 'bg-background/80'}`}>
+      {/* Logo - positioned after sidebar space */}
+      <Link to="/browse" className="mr-8 flex-shrink-0">
         <img 
           src="/lovable-uploads/9a7cf8fd-061c-4786-9863-03cfcb4f3b7d.png" 
           alt="Zoe RatedTV" 
