@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Pause, Play, Volume2, VolumeX, Star, Info } from "lucide-react";
+import { ArrowLeft, Star, Info, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import ReactPlayer from "react-player";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Review {
   id: string;
@@ -18,79 +19,25 @@ interface Review {
   text: string;
 }
 
-// Sample movie data with cast
-const moviesData = {
-  "1": {
-    title: "John Wick 4",
-    description: "John Wick uncovers a path to defeating the High Table. But before he can earn his freedom, Wick must face off against a new enemy with powerful alliances across the globe and forces that turn old friends into foes.",
-    heroImage: "https://image.tmdb.org/t/p/original/h8gHn0OzBoaefsYseUByqsmEDMY.jpg",
-    posterUrl: "https://image.tmdb.org/t/p/original/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg",
-    rating: "8.2",
-    year: "2023",
-    length: "2h 49m",
-    category: ["Action", "Crime", "Thriller"],
-    cast: ["Keanu Reeves", "Donnie Yen", "Bill Skarsgård", "Laurence Fishburne", "Ian McShane"],
-    crew: ["Chad Stahelski", "Basil Iwanyk", "Erica Lee"],
-    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
-    vastAdUrl: {
-      preroll: "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=",
-      midroll: "",
-      postroll: ""
-    }
-  },
-  "featured-1": {
-    title: "John Wick 4",
-    description: "John Wick uncovers a path to defeating the High Table. But before he can earn his freedom, Wick must face off against a new enemy with powerful alliances across the globe and forces that turn old friends into foes.",
-    heroImage: "https://image.tmdb.org/t/p/original/h8gHn0OzBoaefsYseUByqsmEDMY.jpg",
-    posterUrl: "https://image.tmdb.org/t/p/original/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg",
-    rating: "8.2",
-    year: "2023",
-    length: "2h 49m",
-    category: ["Action", "Crime", "Thriller"],
-    cast: ["Keanu Reeves", "Donnie Yen", "Bill Skarsgård", "Laurence Fishburne", "Ian McShane"],
-    crew: ["Chad Stahelski", "Basil Iwanyk", "Erica Lee"],
-    videoSource: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
-    vastAdUrl: {
-      preroll: "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=",
-      midroll: "",
-      postroll: ""
-    }
-  }
-};
-
-// Sample recommended movies
-const recommendedMovies = [
-  {
-    id: "20",
-    title: "Warlock of Dusk",
-    posterUrl: "https://image.tmdb.org/t/p/w500/jOGPnX9Ufb3XyT8YW19G7TLrRRU.jpg",
-  },
-  {
-    id: "21",
-    title: "The White House Down",
-    posterUrl: "https://image.tmdb.org/t/p/w500/1jcLMx9U5yChTrMPzGRVF2iw4CL.jpg",
-  },
-  {
-    id: "22",
-    title: "The Sleeping Angel",
-    posterUrl: "https://image.tmdb.org/t/p/w500/8xV47NDrjdZDpYUtcKYNLvbGTrI.jpg",
-  },
-  {
-    id: "23",
-    title: "The Post",
-    posterUrl: "https://image.tmdb.org/t/p/w500/qyRwj5VvuTRdJ76o2grP93grNxt.jpg",
-  },
-  {
-    id: "24",
-    title: "Spider Man Meme",
-    posterUrl: "https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg",
-  },
-  {
-    id: "25",
-    title: "Man in The Black",
-    posterUrl: "https://image.tmdb.org/t/p/w500/6oNm06TPz2vGiPc2I52oXW3JwPS.jpg",
-  }
-];
+interface ContentData {
+  id: string;
+  title: string;
+  description: string | null;
+  poster_url: string | null;
+  backdrop_url: string | null;
+  video_url: string | null;
+  trailer_url: string | null;
+  rating: string | null;
+  release_year: number | null;
+  duration: string | null;
+  genre: string | null;
+  maturity_rating: string | null;
+  cast_members: string[] | null;
+  creator: string | null;
+  vast_ad_preroll: string | null;
+  vast_ad_midroll: string | null;
+  vast_ad_postroll: string | null;
+}
 
 const sampleReviews: Review[] = [
   {
@@ -99,7 +46,7 @@ const sampleReviews: Review[] = [
     avatar: "https://randomuser.me/api/portraits/women/12.jpg",
     date: "September 20, 2024",
     rating: 5,
-    text: "John Wick: Chapter 4 is a non-stop thrill ride, packed with jaw-dropping action, breathtaking visuals, and hard-earned heart in parts. The film masterfully expands the Wick universe while maintaining relentless intensity. With stunning choreography and standout performances, it's a must-see for action fans."
+    text: "Amazing content! The production quality is top-notch and the storytelling is captivating. Highly recommend watching this."
   }
 ];
 
@@ -107,42 +54,59 @@ const Watch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [showVideo, setShowVideo] = useState(false);
+  const [content, setContent] = useState<ContentData | null>(null);
+  const [recommendedContent, setRecommendedContent] = useState<ContentData[]>([]);
   const [reviewText, setReviewText] = useState("");
   const [reviewName, setReviewName] = useState("");
   const [reviewEmail, setReviewEmail] = useState("");
   const [reviewRating, setReviewRating] = useState(0);
   const [reviews, setReviews] = useState<Review[]>(sampleReviews);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  
-  // Get movie data based on ID
-  const movieData = id && moviesData[id as keyof typeof moviesData] 
-    ? moviesData[id as keyof typeof moviesData] 
-    : moviesData["1"];
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
+    const fetchContent = async () => {
+      if (!id) return;
+
+      setIsLoading(true);
+      
+      // Fetch main content
+      const { data: contentData, error } = await supabase
+        .from("contents")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error || !contentData) {
+        console.error("Error fetching content:", error);
+        toast.error("Content not found");
+        navigate("/browse");
+        return;
+      }
+
+      setContent(contentData as ContentData);
+
+      // Fetch recommended content (same genre or type)
+      const { data: recommended } = await supabase
+        .from("contents")
+        .select("*")
+        .neq("id", id)
+        .limit(6);
+
+      if (recommended) {
+        setRecommendedContent(recommended as ContentData[]);
+      }
+
       setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    };
+
+    fetchContent();
+  }, [id, navigate]);
   
   const playVideo = () => {
     setShowVideo(true);
     setIsPlaying(true);
-  };
-  
-  const togglePlay = () => {
-    setIsPlaying(!isPlaying);
-  };
-  
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
   };
 
   const handleSubmitReview = (e: React.FormEvent) => {
@@ -176,14 +140,25 @@ const Watch = () => {
 
   if (isLoading) {
     return (
-      <div className="h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
+      <div className="h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
+
+  if (!content) {
+    return (
+      <div className="h-screen bg-background flex items-center justify-center">
+        <p className="text-foreground">Content not found</p>
+      </div>
+    );
+  }
+
+  const videoUrl = content.video_url || content.trailer_url;
+  const categories = content.genre?.split(",").map(g => g.trim()) || [];
   
   return (
-    <div className="min-h-screen bg-[#0A0A1B] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       
       {showVideo ? (
@@ -191,14 +166,20 @@ const Watch = () => {
           <div className="absolute inset-0 bg-black z-0 flex items-center justify-center mt-16">
             <div className="w-full h-full max-h-[calc(100vh-64px)]">
               <ReactPlayer
-                url={movieData.videoSource}
+                url={videoUrl || ""}
                 playing={isPlaying}
-                muted={isMuted}
-                controls={showControls}
+                controls
                 width="100%"
                 height="100%"
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
+                config={{
+                  vimeo: {
+                    playerOptions: {
+                      quality: '1080p',
+                    }
+                  }
+                }}
               />
             </div>
           </div>
@@ -208,7 +189,7 @@ const Watch = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-white"
+              className="text-foreground"
               onClick={() => setShowVideo(false)}
             >
               <ArrowLeft className="h-6 w-6" />
@@ -220,142 +201,169 @@ const Watch = () => {
           {/* Hero section */}
           <div className="relative h-[500px] w-full">
             <img 
-              src={movieData.heroImage}
-              alt={movieData.title}
+              src={content.backdrop_url || content.poster_url || "/placeholder.svg"}
+              alt={content.title}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A1B] via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
             
             <div className="absolute inset-0 flex items-center justify-center">
               <Button 
                 onClick={playVideo} 
-                className="bg-purple-600/80 hover:bg-purple-600 h-16 w-16 rounded-full flex items-center justify-center"
+                className="bg-primary/80 hover:bg-primary h-16 w-16 rounded-full flex items-center justify-center"
               >
-                <Play className="h-8 w-8" />
+                <Play className="h-8 w-8 fill-current" />
               </Button>
-            </div>
-            
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-              <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm">Change Source</Button>
-                <Button variant="outline" size="sm" className="bg-transparent border-gray-500 text-gray-300">
-                  HD 1:1
-                </Button>
-              </div>
             </div>
           </div>
           
           {/* Movie info */}
           <div className="container mx-auto px-4 md:px-6 mt-6">
-            <h1 className="text-4xl font-bold mb-4">{movieData.title}</h1>
+            <h1 className="text-4xl font-bold mb-4">{content.title}</h1>
             
             <div className="flex items-center gap-2 mb-3">
               {[1, 2, 3, 4, 5].map(star => (
                 <Star 
                   key={star}
-                  className={`h-4 w-4 ${star <= parseFloat(movieData.rating) / 2 ? "fill-yellow-500 text-yellow-500" : "text-gray-500"}`}
+                  className={`h-4 w-4 ${star <= (parseFloat(content.rating || "0") / 2) ? "fill-primary text-primary" : "text-muted-foreground"}`}
                 />
               ))}
-              <span className="ml-2 text-sm">{movieData.rating}</span>
-              <span className="ml-2 text-sm text-gray-400">334k Views</span>
-              <span className="ml-2 text-xs bg-gray-700 px-1 rounded">L+1</span>
+              <span className="ml-2 text-sm">{content.rating || "N/A"}</span>
             </div>
             
-            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400 mb-6">
-              <span>{movieData.year}</span>
-              <span>•</span>
-              <span>{movieData.length}</span>
-              <span>•</span>
-              {movieData.category.map((cat, index) => (
-                <span key={cat} className={index < movieData.category.length - 1 ? "mr-1" : ""}>
-                  {cat}{index < movieData.category.length - 1 ? "," : ""}
-                </span>
-              ))}
-              <span>•</span>
-              <span className="bg-gray-800 px-2 py-0.5 rounded">TV-MA</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-6">
+              {content.release_year && <span>{content.release_year}</span>}
+              {content.duration && (
+                <>
+                  <span>•</span>
+                  <span>{content.duration}</span>
+                </>
+              )}
+              {categories.length > 0 && (
+                <>
+                  <span>•</span>
+                  {categories.map((cat, index) => (
+                    <span key={cat}>
+                      {cat}{index < categories.length - 1 ? "," : ""}
+                    </span>
+                  ))}
+                </>
+              )}
+              {content.maturity_rating && (
+                <>
+                  <span>•</span>
+                  <span className="bg-muted px-2 py-0.5 rounded">{content.maturity_rating}</span>
+                </>
+              )}
             </div>
             
-            <p className="text-gray-300 mb-8">
-              {movieData.description}
+            <p className="text-muted-foreground mb-8">
+              {content.description || "No description available."}
             </p>
             
-            <div className="mb-8">
-              <div className="mb-2">
-                <span className="text-gray-400 font-medium">Cast: </span>
-                <span>{movieData.cast.join(", ")}</span>
+            {(content.cast_members || content.creator) && (
+              <div className="mb-8">
+                {content.cast_members && content.cast_members.length > 0 && (
+                  <div className="mb-2">
+                    <span className="text-muted-foreground font-medium">Cast: </span>
+                    <span>{content.cast_members.join(", ")}</span>
+                  </div>
+                )}
+                {content.creator && (
+                  <div>
+                    <span className="text-muted-foreground font-medium">Creator: </span>
+                    <span>{content.creator}</span>
+                  </div>
+                )}
               </div>
-              <div>
-                <span className="text-gray-400 font-medium">Crew: </span>
-                <span>{movieData.crew.join(", ")}</span>
-              </div>
-            </div>
+            )}
             
-            {/* Recommended movies */}
-            <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4">Recommended For You</h2>
-              <div className="relative">
-                <div className="flex overflow-x-auto scrollbar-hide pb-4 gap-4">
-                  {recommendedMovies.map((movie) => (
-                    <div 
-                      key={movie.id}
-                      className={`flex-none transition-all duration-300 ease-in-out ${
-                        hoveredId === movie.id ? "w-[350px]" : "w-[180px]"
-                      }`}
-                      onMouseEnter={() => setHoveredId(movie.id)}
-                      onMouseLeave={() => setHoveredId(null)}
-                    >
-                      {hoveredId === movie.id ? (
-                        <div className="h-full w-full bg-black/90 rounded-lg overflow-hidden border border-gray-800 shadow-xl animate-fade-in">
-                          <div className="relative">
-                            <img 
-                              src={movie.posterUrl}
-                              alt={movie.title}
-                              className="w-full aspect-video object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
-                            
-                            <div className="absolute bottom-0 left-0 right-0 p-3">
-                              <h3 className="font-bold text-white truncate mb-3">{movie.title}</h3>
+            {/* Recommended content */}
+            {recommendedContent.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-semibold mb-4">Recommended For You</h2>
+                <div className="relative">
+                  <div className="flex overflow-x-auto scrollbar-hide pb-4 gap-4">
+                    {recommendedContent.map((rec) => (
+                      <div 
+                        key={rec.id}
+                        className={`flex-none transition-all duration-300 ease-in-out ${
+                          hoveredId === rec.id ? "w-[350px]" : "w-[180px]"
+                        }`}
+                        onMouseEnter={() => setHoveredId(rec.id)}
+                        onMouseLeave={() => setHoveredId(null)}
+                      >
+                        {hoveredId === rec.id ? (
+                          <div className="h-full w-full bg-card rounded-lg overflow-hidden border border-border shadow-xl animate-fade-in">
+                            <div className="relative">
+                              {rec.trailer_url || rec.video_url ? (
+                                <ReactPlayer
+                                  url={rec.trailer_url || rec.video_url || ""}
+                                  playing
+                                  muted
+                                  loop
+                                  width="100%"
+                                  height="200px"
+                                  config={{
+                                    vimeo: {
+                                      playerOptions: {
+                                        background: true,
+                                      }
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <img 
+                                  src={rec.poster_url || "/placeholder.svg"}
+                                  alt={rec.title}
+                                  className="w-full aspect-video object-cover"
+                                />
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
                               
-                              <div className="flex space-x-2">
-                                <Link to={`/watch/${movie.id}?trailer=true`}>
-                                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 rounded-full px-4">
-                                    <Play className="h-4 w-4 mr-1" />
-                                    Trailer
-                                  </Button>
-                                </Link>
-                                <Link to={`/watch/${movie.id}`}>
-                                  <Button variant="outline" size="sm" className="rounded-full border-white/40 hover:bg-white/10 px-4">
-                                    <Info className="h-4 w-4 mr-1" />
-                                    Detail
-                                  </Button>
-                                </Link>
+                              <div className="absolute bottom-0 left-0 right-0 p-3">
+                                <h3 className="font-bold text-foreground truncate mb-3">{rec.title}</h3>
+                                
+                                <div className="flex space-x-2">
+                                  <Link to={`/watch/${rec.id}`}>
+                                    <Button size="sm" className="bg-primary hover:bg-primary/90 rounded-full px-4">
+                                      <Play className="h-4 w-4 mr-1 fill-current" />
+                                      Watch
+                                    </Button>
+                                  </Link>
+                                  <Link to={`/watch/${rec.id}`}>
+                                    <Button variant="outline" size="sm" className="rounded-full border-muted-foreground/50 hover:bg-muted px-4">
+                                      <Info className="h-4 w-4 mr-1" />
+                                      Detail
+                                    </Button>
+                                  </Link>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="block relative cursor-pointer overflow-hidden">
-                          <div className="aspect-[2/3] overflow-hidden rounded-md">
-                            <img 
-                              src={movie.posterUrl}
-                              alt={movie.title}
-                              className="w-full h-full object-cover hover:scale-105 transition duration-300"
-                            />
-                          </div>
-                          <h3 className="mt-2 text-sm font-medium truncate">{movie.title}</h3>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        ) : (
+                          <Link to={`/watch/${rec.id}`} className="block relative cursor-pointer overflow-hidden">
+                            <div className="aspect-[2/3] overflow-hidden rounded-md">
+                              <img 
+                                src={rec.poster_url || "/placeholder.svg"}
+                                alt={rec.title}
+                                className="w-full h-full object-cover hover:scale-105 transition duration-300"
+                              />
+                            </div>
+                            <h3 className="mt-2 text-sm font-medium truncate">{rec.title}</h3>
+                          </Link>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
             
             {/* Reviews section */}
             <div className="mb-12">
               <h2 className="text-2xl font-semibold mb-4">Add a review</h2>
-              <p className="text-sm text-gray-400 mb-4">Your email address will not be published. Required fields are marked *</p>
+              <p className="text-sm text-muted-foreground mb-4">Your email address will not be published. Required fields are marked *</p>
               
               <form onSubmit={handleSubmitReview} className="space-y-4">
                 <div>
@@ -369,7 +377,7 @@ const Watch = () => {
                         onClick={() => handleStarClick(star)}
                       >
                         <Star 
-                          className={`h-5 w-5 ${star <= reviewRating ? "fill-yellow-500 text-yellow-500" : "text-gray-500"}`}
+                          className={`h-5 w-5 ${star <= reviewRating ? "fill-primary text-primary" : "text-muted-foreground"}`}
                         />
                       </button>
                     ))}
@@ -381,7 +389,7 @@ const Watch = () => {
                   <Textarea 
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
-                    className="h-32 bg-[#1a1a2e] border-gray-700 text-white"
+                    className="h-32 bg-muted border-border text-foreground"
                   />
                 </div>
                 
@@ -391,7 +399,7 @@ const Watch = () => {
                     <Input 
                       value={reviewName}
                       onChange={(e) => setReviewName(e.target.value)}
-                      className="bg-[#1a1a2e] border-gray-700 text-white"
+                      className="bg-muted border-border text-foreground"
                     />
                   </div>
                   <div>
@@ -400,12 +408,12 @@ const Watch = () => {
                       value={reviewEmail}
                       onChange={(e) => setReviewEmail(e.target.value)}
                       type="email"
-                      className="bg-[#1a1a2e] border-gray-700 text-white"
+                      className="bg-muted border-border text-foreground"
                     />
                   </div>
                 </div>
                 
-                <Button type="submit" className="bg-purple-600 hover:bg-purple-700">Submit</Button>
+                <Button type="submit" className="bg-primary hover:bg-primary/90">Submit</Button>
               </form>
             </div>
             
@@ -413,7 +421,7 @@ const Watch = () => {
             {reviews.length > 0 && (
               <div className="mb-12">
                 {reviews.map(review => (
-                  <Card key={review.id} className="bg-[#1a1a2e] border-gray-700 mb-4 p-4">
+                  <Card key={review.id} className="bg-card border-border mb-4 p-4">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="h-12 w-12 rounded-full overflow-hidden">
                         <img 
@@ -424,7 +432,7 @@ const Watch = () => {
                       </div>
                       <div>
                         <div className="font-medium">{review.name}</div>
-                        <div className="text-xs text-gray-400">{review.date}</div>
+                        <div className="text-xs text-muted-foreground">{review.date}</div>
                       </div>
                     </div>
                     
@@ -432,12 +440,12 @@ const Watch = () => {
                       {[1, 2, 3, 4, 5].map(star => (
                         <Star 
                           key={star}
-                          className={`h-4 w-4 ${star <= review.rating ? "fill-yellow-500 text-yellow-500" : "text-gray-500"}`}
+                          className={`h-4 w-4 ${star <= review.rating ? "fill-primary text-primary" : "text-muted-foreground"}`}
                         />
                       ))}
                     </div>
                     
-                    <p className="text-gray-300">{review.text}</p>
+                    <p className="text-muted-foreground">{review.text}</p>
                   </Card>
                 ))}
               </div>

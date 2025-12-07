@@ -1,16 +1,18 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Play, Plus, ThumbsUp, Info, Check } from "lucide-react";
+import { Play, Plus, ThumbsUp, Info, Check, X } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import ReactPlayer from "react-player";
 
 interface WatchHistoryItem {
   id: string;
   content_id: string;
   progress_percent: number;
+  episode_id: string | null;
   content: {
     id: string;
     title: string;
@@ -23,6 +25,14 @@ interface WatchHistoryItem {
     genre: string | null;
     release_year: number | null;
   };
+  episode?: {
+    id: string;
+    title: string;
+    episode_number: number;
+    season: {
+      season_number: number;
+    };
+  } | null;
 }
 
 interface ContinueWatchingRowProps {
@@ -67,7 +77,6 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
   const [cardPositions, setCardPositions] = useState<Record<string, 'left' | 'center' | 'right'>>({});
   const [myList, setMyList] = useState<Set<string>>(new Set());
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
-  const [videoErrors, setVideoErrors] = useState<Set<string>>(new Set());
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -75,7 +84,7 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
     if (!currentProfile?.id) return;
 
     const fetchData = async () => {
-      // Fetch watch history, favorites, and likes in parallel
+      // Fetch watch history with episode info, favorites, and likes in parallel
       const [historyResult, favoritesResult, likesResult] = await Promise.all([
         supabase
           .from("watch_history")
@@ -83,6 +92,7 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
             id,
             content_id,
             progress_percent,
+            episode_id,
             content:contents(id, title, poster_url, type, duration, trailer_url, video_url, maturity_rating, genre, release_year)
           `)
           .eq("profile_id", currentProfile.id)
@@ -101,7 +111,33 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
       ]);
 
       if (!historyResult.error && historyResult.data) {
-        setItems(historyResult.data.filter(item => item.content) as unknown as WatchHistoryItem[]);
+        // For items with episode_id, fetch episode details
+        const itemsWithEpisodes = await Promise.all(
+          historyResult.data.filter(item => item.content).map(async (item) => {
+            if (item.episode_id) {
+              const { data: episodeData } = await supabase
+                .from("episodes")
+                .select(`
+                  id,
+                  title,
+                  episode_number,
+                  season:seasons(season_number)
+                `)
+                .eq("id", item.episode_id)
+                .single();
+              
+              return {
+                ...item,
+                episode: episodeData ? {
+                  ...episodeData,
+                  season: Array.isArray(episodeData.season) ? episodeData.season[0] : episodeData.season
+                } : null
+              };
+            }
+            return { ...item, episode: null };
+          })
+        );
+        setItems(itemsWithEpisodes as unknown as WatchHistoryItem[]);
       }
       if (!favoritesResult.error && favoritesResult.data) {
         setMyList(new Set(favoritesResult.data.map(f => f.content_id)));
@@ -122,7 +158,7 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
     const rect = cardElement.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const cardCenter = rect.left + rect.width / 2;
-    const expandedWidth = rect.width * 1.5;
+    const expandedWidth = 320;
     const halfExpanded = expandedWidth / 2;
 
     if (cardCenter - halfExpanded < 80) return 'left';
@@ -137,7 +173,7 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
       const position = calculateCardPosition(itemId);
       setCardPositions(prev => ({ ...prev, [itemId]: position }));
       setHoveredId(itemId);
-    }, 300);
+    }, 400);
   }, [calculateCardPosition]);
 
   const handleMouseLeave = useCallback(() => {
@@ -211,6 +247,24 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
     }
   };
 
+  const removeFromHistory = async (historyId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!currentProfile?.id) return;
+
+    const { error } = await supabase
+      .from("watch_history")
+      .delete()
+      .eq("id", historyId);
+
+    if (!error) {
+      setItems(prev => prev.filter(item => item.id !== historyId));
+      toast.success("Removed from Continue Watching");
+    } else {
+      toast.error("Failed to remove");
+    }
+  };
+
   const getPositionStyles = (position: 'left' | 'center' | 'right') => {
     switch (position) {
       case 'left':
@@ -238,13 +292,20 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
             const positionStyles = getPositionStyles(position);
             const isInList = myList.has(item.content_id);
             const isLiked = likedItems.has(item.content_id);
-            const hasVideoError = videoErrors.has(item.id);
             
             // Calculate remaining time
             const totalMinutes = parseDurationToMinutes(item.content.duration);
             const watchedMinutes = totalMinutes * (item.progress_percent / 100);
             const remainingMinutes = totalMinutes - watchedMinutes;
             const remainingTimeText = formatRemainingTime(remainingMinutes);
+
+            // Episode info display
+            const episodeInfo = item.episode 
+              ? `S${item.episode.season?.season_number || 1}E${item.episode.episode_number}`
+              : null;
+
+            // Video URL - prefer trailer, fall back to video_url
+            const videoUrl = item.content.trailer_url || item.content.video_url;
 
             return (
               <div
@@ -255,56 +316,83 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                 onMouseLeave={handleMouseLeave}
               >
                 {/* Base Card */}
-                <div className="relative rounded-lg overflow-hidden cursor-pointer group">
-                  <img
-                    src={item.content.poster_url || "/placeholder.svg"}
-                    alt={item.content.title}
-                    className="w-full aspect-video object-cover"
-                  />
-                  
-                  {/* Progress Bar */}
-                  <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-muted/80">
-                    <div
-                      className="h-full bg-primary shadow-[0_0_8px_hsl(var(--primary))] transition-all duration-300"
-                      style={{ width: `${item.progress_percent}%` }}
+                <Link to={`/watch/${item.content.id}`} className="block">
+                  <div className="relative rounded-lg overflow-hidden cursor-pointer group">
+                    <img
+                      src={item.content.poster_url || "/placeholder.svg"}
+                      alt={item.content.title}
+                      className="w-full aspect-video object-cover"
                     />
-                  </div>
-                  
-                  {/* Remaining Time Badge */}
-                  <div className="absolute bottom-3 right-2 bg-background/90 px-2 py-0.5 rounded text-xs font-medium text-foreground">
-                    {remainingTimeText}
+                    
+                    {/* Progress Bar */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-muted/80">
+                      <div
+                        className="h-full bg-primary shadow-[0_0_8px_hsl(var(--primary))] transition-all duration-300"
+                        style={{ width: `${item.progress_percent}%` }}
+                      />
+                    </div>
+                    
+                    {/* Remaining Time Badge */}
+                    <div className="absolute bottom-3 right-2 bg-background/90 px-2 py-0.5 rounded text-xs font-medium text-foreground">
+                      {remainingTimeText}
+                    </div>
+
+                    {/* Play Icon Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                      <Play className="w-10 h-10 text-foreground fill-current" />
+                    </div>
                   </div>
 
-                  {/* Play Icon Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                    <Play className="w-10 h-10 text-foreground fill-current" />
+                  <div className="mt-2">
+                    <p className="text-sm text-foreground truncate">
+                      {item.content.title}
+                    </p>
+                    {/* Episode Info */}
+                    {episodeInfo && (
+                      <p className="text-xs text-muted-foreground">
+                        {episodeInfo}: {item.episode?.title}
+                      </p>
+                    )}
                   </div>
-                </div>
-
-                <p className="mt-2 text-sm text-foreground truncate">
-                  {item.content.title}
-                </p>
+                </Link>
 
                 {/* Expanded Hover Card */}
                 {isHovered && (
                   <div
-                    className="absolute z-50 w-[280px] md:w-[320px] bg-card rounded-lg overflow-hidden shadow-2xl animate-scale-in"
+                    className="absolute z-50 w-[280px] md:w-[320px] bg-card rounded-lg overflow-hidden shadow-2xl border border-border animate-scale-in"
                     style={{
                       top: '-10px',
                       ...positionStyles,
                     }}
                   >
-                    {/* Video/Image Preview */}
+                    {/* Remove Button */}
+                    <button
+                      onClick={(e) => removeFromHistory(item.id, e)}
+                      className="absolute top-2 right-2 z-10 bg-background/80 hover:bg-background rounded-full p-1.5 transition-colors"
+                      title="Remove from Continue Watching"
+                    >
+                      <X className="w-4 h-4 text-foreground" />
+                    </button>
+
+                    {/* Video/Image Preview with ReactPlayer */}
                     <div className="relative aspect-video bg-black">
-                      {(item.content.trailer_url || item.content.video_url) && !hasVideoError ? (
-                        <video
-                          src={item.content.trailer_url || item.content.video_url || undefined}
-                          autoPlay
+                      {videoUrl ? (
+                        <ReactPlayer
+                          url={videoUrl}
+                          playing
                           muted
                           loop
-                          playsInline
-                          className="w-full h-full object-cover"
-                          onError={() => setVideoErrors(prev => new Set(prev).add(item.id))}
+                          playsinline
+                          width="100%"
+                          height="100%"
+                          config={{
+                            vimeo: {
+                              playerOptions: {
+                                background: true,
+                                quality: '720p',
+                              }
+                            }
+                          }}
                         />
                       ) : (
                         <img
@@ -327,9 +415,11 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                     <div className="p-4 space-y-3">
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
-                        <Link to={`/watch/${item.content.id}`}>
-                          <Button size="icon" className="rounded-full bg-foreground hover:bg-foreground/90 text-background h-10 w-10">
-                            <Play className="h-5 w-5 fill-current" />
+                        {/* Resume Button */}
+                        <Link to={`/watch/${item.content.id}`} className="flex-1">
+                          <Button className="w-full rounded-full bg-foreground hover:bg-foreground/90 text-background gap-2">
+                            <Play className="h-4 w-4 fill-current" />
+                            Resume
                           </Button>
                         </Link>
                         
@@ -358,7 +448,7 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                         <Button
                           size="icon"
                           variant="outline"
-                          className="rounded-full border-muted-foreground/50 hover:border-foreground h-10 w-10 ml-auto"
+                          className="rounded-full border-muted-foreground/50 hover:border-foreground h-10 w-10"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -367,6 +457,16 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                         >
                           <Info className="h-5 w-5" />
                         </Button>
+                      </div>
+
+                      {/* Title & Episode Info */}
+                      <div>
+                        <h3 className="font-bold text-foreground truncate">{item.content.title}</h3>
+                        {episodeInfo && (
+                          <p className="text-sm text-muted-foreground">
+                            {episodeInfo}: {item.episode?.title}
+                          </p>
+                        )}
                       </div>
 
                       {/* Metadata */}

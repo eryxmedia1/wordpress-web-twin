@@ -4,6 +4,7 @@ import { ChevronRight, Play, Info, Plus, Check, ThumbsUp, ChevronLeft } from "lu
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
+import ReactPlayer from "react-player";
 
 interface Content {
   id: string;
@@ -242,17 +243,24 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps
                       {/* Video/Image Preview */}
                       <div className="relative aspect-video">
                         {previewUrl && !hasVideoError ? (
-                          <video
-                            ref={el => videoRefs.current[content.id] = el}
-                            autoPlay
+                          <ReactPlayer
+                            url={previewUrl}
+                            playing
                             muted
                             loop
-                            playsInline
-                            className="w-full h-full object-cover"
+                            playsinline
+                            width="100%"
+                            height="100%"
+                            config={{
+                              vimeo: {
+                                playerOptions: {
+                                  background: true,
+                                  quality: '720p',
+                                }
+                              }
+                            }}
                             onError={() => setVideoError(prev => ({ ...prev, [content.id]: true }))}
-                          >
-                            <source src={previewUrl} type="video/mp4" />
-                          </video>
+                          />
                         ) : (
                           <img 
                             src={content.posterUrl}
