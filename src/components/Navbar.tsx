@@ -244,14 +244,6 @@ const Navbar = () => {
           </Button>
         </form>
 
-        {/* Kids Link */}
-        <Link 
-          to="/browse/kids" 
-          className="hidden md:block text-sm font-medium text-foreground hover:text-primary transition-colors"
-        >
-          Kids
-        </Link>
-        
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative text-foreground">
           <Bell className="h-5 w-5" />
