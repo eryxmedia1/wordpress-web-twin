@@ -71,8 +71,8 @@ serve(async (req) => {
       );
     }
 
-    // Use Vimeo oEmbed API to fetch metadata (no API key required)
-    const oembedUrl = `https://vimeo.com/api/oembed.json?url=https://vimeo.com/${videoId}`;
+    // Use Vimeo oEmbed API to fetch metadata with higher resolution thumbnails
+    const oembedUrl = `https://vimeo.com/api/oembed.json?url=https://vimeo.com/${videoId}&width=1920&height=1080`;
     console.log("Fetching oEmbed data from:", oembedUrl);
     
     const response = await fetch(oembedUrl);
@@ -114,10 +114,19 @@ serve(async (req) => {
       }
     }
 
+    // Get the highest quality thumbnail available
+    let thumbnailUrl = data.thumbnail_url || null;
+    if (thumbnailUrl) {
+      // Replace small dimensions with larger ones for better quality
+      thumbnailUrl = thumbnailUrl
+        .replace(/_\d+x\d+/, '_1920x1080')
+        .replace(/d_\d+x\d+/, 'd_1920x1080');
+    }
+
     const metadata = {
       title: data.title || null,
-      thumbnail_url: data.thumbnail_url || null,
-      thumbnail_large: data.thumbnail_url?.replace('_640', '_1280') || null,
+      thumbnail_url: thumbnailUrl,
+      thumbnail_large: thumbnailUrl,
       duration: durationFormatted,
       duration_seconds: data.duration || null,
       description: data.description || null,

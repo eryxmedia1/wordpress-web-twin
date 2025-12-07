@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Play, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import ReactPlayer from "react-player";
 
 interface HeroAutoplayProps {
   content: {
@@ -23,7 +24,7 @@ interface HeroAutoplayProps {
 
 const HeroAutoplay = ({ content, onMoreInfo }: HeroAutoplayProps) => {
   const [videoError, setVideoError] = useState(false);
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const videoUrl = content.trailer_url || content.video_url;
 
   return (
@@ -31,19 +32,30 @@ const HeroAutoplay = ({ content, onMoreInfo }: HeroAutoplayProps) => {
       {/* Video Background */}
       {videoUrl && !videoError ? (
         <>
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onError={() => setVideoError(true)}
-            onLoadedData={() => setIsVideoLoaded(true)}
-          >
-            <source src={videoUrl} type="video/mp4" />
-          </video>
+          <div className={`absolute inset-0 transition-opacity duration-1000 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}>
+            <ReactPlayer
+              url={videoUrl}
+              playing
+              muted
+              loop
+              playsinline
+              width="100%"
+              height="100%"
+              style={{ position: 'absolute', top: 0, left: 0, objectFit: 'cover' }}
+              config={{
+                vimeo: {
+                  playerOptions: {
+                    background: true,
+                    quality: '1080p',
+                  }
+                }
+              }}
+              onReady={() => setIsVideoReady(true)}
+              onError={() => setVideoError(true)}
+            />
+          </div>
           {/* Fallback image while video loads */}
-          {!isVideoLoaded && content.backdrop_url && (
+          {!isVideoReady && content.backdrop_url && (
             <img
               src={content.backdrop_url}
               alt={content.title}
