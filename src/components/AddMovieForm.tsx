@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { supabase, DbContent, DbCategory, DbTag } from "@/integrations/supabase/client";
+import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 type FormData = {
   title: string;
@@ -31,12 +33,35 @@ type FormData = {
   videoUrl: string;
   thumbnailUrl: string;
   backdropUrl: string;
+  trailerUrl: string;
+  logoUrl: string;
   isMature: boolean;
   isExclusive: boolean;
   isNewRelease: boolean;
   featured: boolean;
+  isZoeOriginal: boolean;
+  topRank: string;
+  maturityRating: string;
+  creator: string;
   tags: string[];
 }
+
+const MATURITY_RATINGS = [
+  { value: "G", label: "G (General Audience)" },
+  { value: "PG", label: "PG (Parental Guidance)" },
+  { value: "PG-13", label: "PG-13 (13+ Years)" },
+  { value: "R", label: "R (Restricted)" },
+  { value: "NC-17", label: "NC-17 (Adults Only)" },
+  { value: "TV-Y", label: "TV-Y (All Children)" },
+  { value: "TV-Y7", label: "TV-Y7 (7+ Years)" },
+  { value: "TV-G", label: "TV-G (General Audience)" },
+  { value: "TV-PG", label: "TV-PG (Parental Guidance)" },
+  { value: "TV-14", label: "TV-14 (14+ Years)" },
+  { value: "TV-MA", label: "TV-MA (Mature Audience)" },
+];
+
+const AUDIO_LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Japanese", "Korean", "Chinese", "Hindi"];
+const SUBTITLE_LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Japanese", "Korean", "Chinese", "Hindi"];
 
 const AddMovieForm = () => {
   const navigate = useNavigate();
@@ -45,6 +70,10 @@ const AddMovieForm = () => {
   const [availableTags, setAvailableTags] = useState<DbTag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("info");
+  const [castMembers, setCastMembers] = useState<string[]>([]);
+  const [castInput, setCastInput] = useState("");
+  const [selectedAudioLanguages, setSelectedAudioLanguages] = useState<string[]>([]);
+  const [selectedSubtitleLanguages, setSelectedSubtitleLanguages] = useState<string[]>([]);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -57,15 +86,20 @@ const AddMovieForm = () => {
       videoUrl: "",
       thumbnailUrl: "",
       backdropUrl: "",
+      trailerUrl: "",
+      logoUrl: "",
       isMature: false,
       isExclusive: false,
       isNewRelease: false,
       featured: false,
+      isZoeOriginal: false,
+      topRank: "",
+      maturityRating: "PG-13",
+      creator: "",
       tags: []
     }
   });
   
-  // Fetch categories and tags on component mount
   useEffect(() => {
     fetchCategories();
     fetchTags();
@@ -109,12 +143,34 @@ const AddMovieForm = () => {
         : [...prev, tagId]
     );
   };
+
+  const addCastMember = () => {
+    if (castInput.trim() && !castMembers.includes(castInput.trim())) {
+      setCastMembers([...castMembers, castInput.trim()]);
+      setCastInput("");
+    }
+  };
+
+  const removeCastMember = (member: string) => {
+    setCastMembers(castMembers.filter(m => m !== member));
+  };
+
+  const toggleAudioLanguage = (lang: string) => {
+    setSelectedAudioLanguages(prev =>
+      prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]
+    );
+  };
+
+  const toggleSubtitleLanguage = (lang: string) => {
+    setSelectedSubtitleLanguages(prev =>
+      prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]
+    );
+  };
   
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     
     try {
-      // Create the movie content record
       const { data: content, error: contentError } = await supabase
         .from("contents")
         .insert({
@@ -128,8 +184,16 @@ const AddMovieForm = () => {
           poster_url: data.thumbnailUrl,
           backdrop_url: data.backdropUrl,
           video_url: data.videoUrl,
+          trailer_url: data.trailerUrl || null,
+          logo_url: data.logoUrl || null,
           featured: data.featured,
-          trailer_url: null,
+          is_zoe_original: data.isZoeOriginal,
+          top_rank: data.topRank ? parseInt(data.topRank) : null,
+          maturity_rating: data.maturityRating,
+          creator: data.creator || null,
+          cast_members: castMembers.length > 0 ? castMembers : null,
+          audio_languages: selectedAudioLanguages.length > 0 ? selectedAudioLanguages : null,
+          subtitle_languages: selectedSubtitleLanguages.length > 0 ? selectedSubtitleLanguages : null,
           vast_ad_preroll: null,
           vast_ad_midroll: null,
           vast_ad_postroll: null
@@ -139,7 +203,6 @@ const AddMovieForm = () => {
         
       if (contentError) throw contentError;
       
-      // Associate tags with the content
       if (selectedTags.length > 0) {
         const tagRelations = selectedTags.map(tagId => ({
           content_id: content.id,
@@ -169,9 +232,10 @@ const AddMovieForm = () => {
       <Card className="bg-gray-800 border-gray-700 shadow-lg">
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-6">
+            <TabsList className="grid grid-cols-3 mb-6">
               <TabsTrigger value="info">General Info</TabsTrigger>
-              <TabsTrigger value="media">Media & Metadata</TabsTrigger>
+              <TabsTrigger value="media">Media & URLs</TabsTrigger>
+              <TabsTrigger value="metadata">Metadata</TabsTrigger>
             </TabsList>
             
             <Form {...form}>
@@ -245,10 +309,10 @@ const AddMovieForm = () => {
                       
                       <FormField
                         control={form.control}
-                        name="rating"
+                        name="maturityRating"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Rating</FormLabel>
+                            <FormLabel>Maturity Rating</FormLabel>
                             <Select 
                               onValueChange={field.onChange} 
                               defaultValue={field.value}
@@ -259,11 +323,11 @@ const AddMovieForm = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent className="bg-gray-800 border-gray-700">
-                                <SelectItem value="G">G (General Audience)</SelectItem>
-                                <SelectItem value="PG">PG (Parental Guidance)</SelectItem>
-                                <SelectItem value="PG-13">PG-13 (13+ Years)</SelectItem>
-                                <SelectItem value="R">R (Restricted)</SelectItem>
-                                <SelectItem value="NC-17">NC-17 (Adults Only)</SelectItem>
+                                {MATURITY_RATINGS.map(rating => (
+                                  <SelectItem key={rating.value} value={rating.value}>
+                                    {rating.label}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -307,87 +371,114 @@ const AddMovieForm = () => {
                           </FormItem>
                         )}
                       />
+
+                      <FormField
+                        control={form.control}
+                        name="rating"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Star Rating</FormLabel>
+                            <FormControl>
+                              <Input 
+                                className="bg-gray-900 border-gray-700"
+                                placeholder="8.5" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="topRank"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Top 10 Rank (1-10)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                className="bg-gray-900 border-gray-700"
+                                type="number"
+                                min="1"
+                                max="10"
+                                placeholder="Leave empty if not in Top 10" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                     
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium">Content Properties</h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <FormField
-                            control={form.control}
-                            name="isMature"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center space-x-2">
-                                <FormControl>
-                                  <Switch 
-                                    checked={field.value} 
-                                    onCheckedChange={field.onChange} 
-                                  />
-                                </FormControl>
-                                <FormLabel className="m-0">Mature Content</FormLabel>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                        <FormField
+                          control={form.control}
+                          name="featured"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange} 
+                                />
+                              </FormControl>
+                              <FormLabel className="m-0">Featured Content</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="isZoeOriginal"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange} 
+                                />
+                              </FormControl>
+                              <FormLabel className="m-0">Zoe Original</FormLabel>
+                            </FormItem>
+                          )}
+                        />
                         
-                        <div className="flex items-center space-x-2">
-                          <FormField
-                            control={form.control}
-                            name="isExclusive"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center space-x-2">
-                                <FormControl>
-                                  <Switch 
-                                    checked={field.value} 
-                                    onCheckedChange={field.onChange} 
-                                  />
-                                </FormControl>
-                                <FormLabel className="m-0">Exclusive Content</FormLabel>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                        <FormField
+                          control={form.control}
+                          name="isMature"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange} 
+                                />
+                              </FormControl>
+                              <FormLabel className="m-0">Mature Content</FormLabel>
+                            </FormItem>
+                          )}
+                        />
                         
-                        <div className="flex items-center space-x-2">
-                          <FormField
-                            control={form.control}
-                            name="isNewRelease"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center space-x-2">
-                                <FormControl>
-                                  <Switch 
-                                    checked={field.value} 
-                                    onCheckedChange={field.onChange} 
-                                  />
-                                </FormControl>
-                                <FormLabel className="m-0">New Release</FormLabel>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <FormField
-                            control={form.control}
-                            name="featured"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center space-x-2">
-                                <FormControl>
-                                  <Switch 
-                                    checked={field.value} 
-                                    onCheckedChange={field.onChange} 
-                                  />
-                                </FormControl>
-                                <FormLabel className="m-0">Featured Content</FormLabel>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                        <FormField
+                          control={form.control}
+                          name="isNewRelease"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange} 
+                                />
+                              </FormControl>
+                              <FormLabel className="m-0">New Release</FormLabel>
+                            </FormItem>
+                          )}
+                        />
                       </div>
                     </div>
                     
@@ -399,7 +490,7 @@ const AddMovieForm = () => {
                             key={tag.id}
                             type="button"
                             variant={selectedTags.includes(tag.id) ? "default" : "outline"}
-                            className={selectedTags.includes(tag.id) ? "bg-blue-600" : ""}
+                            className={selectedTags.includes(tag.id) ? "bg-primary" : ""}
                             onClick={() => toggleTag(tag.id)}
                             size="sm"
                           >
@@ -415,14 +506,50 @@ const AddMovieForm = () => {
                   <div className="space-y-6">
                     <FormField
                       control={form.control}
-                      name="thumbnailUrl"
+                      name="videoUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Thumbnail URL</FormLabel>
+                          <FormLabel>Video URL</FormLabel>
                           <FormControl>
                             <Input 
                               className="bg-gray-900 border-gray-700"
-                              placeholder="https://example.com/thumbnail.jpg" 
+                              placeholder="https://example.com/movie.mp4" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="trailerUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Trailer URL</FormLabel>
+                          <FormControl>
+                            <Input 
+                              className="bg-gray-900 border-gray-700"
+                              placeholder="https://example.com/trailer.mp4" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="thumbnailUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Poster/Thumbnail URL</FormLabel>
+                          <FormControl>
+                            <Input 
+                              className="bg-gray-900 border-gray-700"
+                              placeholder="https://example.com/poster.jpg" 
                               {...field} 
                             />
                           </FormControl>
@@ -448,17 +575,40 @@ const AddMovieForm = () => {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
-                      name="videoUrl"
+                      name="logoUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Video URL</FormLabel>
+                          <FormLabel>Logo/Title Card URL</FormLabel>
                           <FormControl>
                             <Input 
                               className="bg-gray-900 border-gray-700"
-                              placeholder="https://example.com/movie.mp4" 
+                              placeholder="https://example.com/logo.png" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <p className="text-xs text-gray-400">Title logo image shown in hero and detail views</p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="metadata">
+                  <div className="space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="creator"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Creator/Director</FormLabel>
+                          <FormControl>
+                            <Input 
+                              className="bg-gray-900 border-gray-700"
+                              placeholder="Christopher Nolan" 
                               {...field} 
                             />
                           </FormControl>
@@ -466,13 +616,81 @@ const AddMovieForm = () => {
                         </FormItem>
                       )}
                     />
+
+                    {/* Cast Members */}
+                    <div className="space-y-2">
+                      <Label>Cast Members</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          className="bg-gray-900 border-gray-700"
+                          placeholder="Add cast member name"
+                          value={castInput}
+                          onChange={(e) => setCastInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addCastMember();
+                            }
+                          }}
+                        />
+                        <Button type="button" onClick={addCastMember} variant="secondary">
+                          Add
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {castMembers.map((member) => (
+                          <Badge key={member} variant="secondary" className="flex items-center gap-1">
+                            {member}
+                            <X className="h-3 w-3 cursor-pointer" onClick={() => removeCastMember(member)} />
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Audio Languages */}
+                    <div className="space-y-2">
+                      <Label>Audio Languages</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {AUDIO_LANGUAGES.map((lang) => (
+                          <Button
+                            key={lang}
+                            type="button"
+                            variant={selectedAudioLanguages.includes(lang) ? "default" : "outline"}
+                            className={selectedAudioLanguages.includes(lang) ? "bg-primary" : ""}
+                            onClick={() => toggleAudioLanguage(lang)}
+                            size="sm"
+                          >
+                            {lang}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Subtitle Languages */}
+                    <div className="space-y-2">
+                      <Label>Subtitle Languages</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {SUBTITLE_LANGUAGES.map((lang) => (
+                          <Button
+                            key={lang}
+                            type="button"
+                            variant={selectedSubtitleLanguages.includes(lang) ? "default" : "outline"}
+                            className={selectedSubtitleLanguages.includes(lang) ? "bg-primary" : ""}
+                            onClick={() => toggleSubtitleLanguage(lang)}
+                            size="sm"
+                          >
+                            {lang}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
                 
                 <div className="flex justify-end pt-6">
                   <Button
                     type="submit"
-                    className="bg-[#e50914] hover:bg-[#f6121d]"
+                    className="bg-primary hover:bg-primary/90"
                     disabled={loading}
                   >
                     {loading ? "Publishing..." : "Publish Movie"}
