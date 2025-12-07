@@ -160,7 +160,7 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps
 
         <div 
           ref={scrollContainerRef}
-          className="flex overflow-x-auto scrollbar-hide pb-4 gap-3 md:gap-4"
+          className="flex overflow-x-auto scrollbar-hide pb-16 pt-4 gap-2 md:gap-3"
         >
           {contents.map((content, index) => {
             const previewUrl = content.trailerUrl || content.videoUrl;
@@ -170,91 +170,117 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps
             return (
               <div 
                 key={content.id}
-                className={`flex-none transition-all duration-300 ease-out ${
-                  isHovered ? "w-[320px] md:w-[400px] z-20 scale-105" : "w-[140px] md:w-[180px]"
-                }`}
-                style={{ 
-                  transitionDelay: isHovered ? '0ms' : `${index * 20}ms`,
-                  marginLeft: isHovered && index === 0 ? '0' : undefined,
-                  marginRight: isHovered && index === contents.length - 1 ? '0' : undefined
-                }}
+                className="flex-none relative"
                 onMouseEnter={() => handleMouseEnter(content.id)}
                 onMouseLeave={handleMouseLeave}
               >
-                {isHovered ? (
-                  <div className="h-full w-full bg-card rounded-lg overflow-hidden border border-border shadow-2xl animate-scale-in">
-                    <div className="relative">
-                      {/* Video Preview */}
-                      {previewUrl && !hasVideoError ? (
-                        <video
-                          ref={el => videoRefs.current[content.id] = el}
-                          autoPlay
-                          muted
-                          loop
-                          playsInline
-                          className="w-full aspect-video object-cover"
-                          onError={() => setVideoError(prev => ({ ...prev, [content.id]: true }))}
-                        >
-                          <source src={previewUrl} type="video/mp4" />
-                        </video>
-                      ) : (
-                        <img 
-                          src={content.posterUrl}
-                          alt={content.title}
-                          className="w-full aspect-video object-cover"
-                        />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
-                    </div>
-                    
-                    <div className="p-4 space-y-3">
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          className="rounded-full w-10 h-10 p-0 bg-primary hover:bg-primary/90 text-primary-foreground"
-                          asChild
-                        >
-                          <Link to={`/watch/${content.id}`}>
-                            <Play className="w-5 h-5 fill-current" />
-                          </Link>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full w-10 h-10 p-0 border-muted-foreground/50 hover:border-foreground"
-                          onClick={(e) => toggleMyList(e, content.id)}
-                        >
-                          {myListItems[content.id] ? (
-                            <Check className="w-5 h-5" />
-                          ) : (
-                            <Plus className="w-5 h-5" />
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className={`rounded-full w-10 h-10 p-0 border-muted-foreground/50 hover:border-foreground ${
-                            likedItems[content.id] ? "text-primary border-primary" : ""
-                          }`}
-                          onClick={(e) => toggleLike(e, content.id)}
-                        >
-                          <ThumbsUp className="w-5 h-5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full w-10 h-10 p-0 border-muted-foreground/50 hover:border-foreground ml-auto"
-                          onClick={(e) => handleMoreInfo(e, content.id)}
-                        >
-                          <Info className="w-5 h-5" />
-                        </Button>
+                {/* Base Card - Always visible */}
+                <div 
+                  className={`transition-all duration-300 ease-out cursor-pointer ${
+                    isHovered ? "opacity-0" : "opacity-100"
+                  }`}
+                  style={{ width: '160px' }}
+                >
+                  <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-card">
+                    <img 
+                      src={content.posterUrl}
+                      alt={content.title}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      loading="lazy"
+                    />
+                    {content.rating && (
+                      <div className="absolute top-2 right-2 bg-secondary text-secondary-foreground px-1.5 py-0.5 text-xs font-medium rounded-sm">
+                        {content.rating}
                       </div>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-medium truncate text-foreground mt-2">{content.title}</h3>
+                  <div className="text-xs text-muted-foreground">
+                    {content.year} {content.category && `• ${content.category}`}
+                  </div>
+                </div>
 
-                      {/* Title and Metadata */}
-                      <div>
+                {/* Expanded Card - Shows on hover */}
+                {isHovered && (
+                  <div 
+                    className="absolute top-[-20px] left-[-80px] z-30 animate-scale-in"
+                    style={{ width: '320px' }}
+                  >
+                    <div className="bg-card rounded-lg overflow-hidden border border-border shadow-2xl">
+                      {/* Video/Image Preview */}
+                      <div className="relative aspect-video">
+                        {previewUrl && !hasVideoError ? (
+                          <video
+                            ref={el => videoRefs.current[content.id] = el}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            className="w-full h-full object-cover"
+                            onError={() => setVideoError(prev => ({ ...prev, [content.id]: true }))}
+                          >
+                            <source src={previewUrl} type="video/mp4" />
+                          </video>
+                        ) : (
+                          <img 
+                            src={content.posterUrl}
+                            alt={content.title}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                      </div>
+                      
+                      {/* Content Info */}
+                      <div className="p-4 space-y-3">
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            className="rounded-full w-10 h-10 p-0 bg-primary hover:bg-primary/90 text-primary-foreground"
+                            asChild
+                          >
+                            <Link to={`/watch/${content.id}`}>
+                              <Play className="w-5 h-5 fill-current" />
+                            </Link>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full w-10 h-10 p-0 border-muted-foreground/50 hover:border-foreground"
+                            onClick={(e) => toggleMyList(e, content.id)}
+                          >
+                            {myListItems[content.id] ? (
+                              <Check className="w-5 h-5" />
+                            ) : (
+                              <Plus className="w-5 h-5" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={`rounded-full w-10 h-10 p-0 border-muted-foreground/50 hover:border-foreground ${
+                              likedItems[content.id] ? "text-primary border-primary" : ""
+                            }`}
+                            onClick={(e) => toggleLike(e, content.id)}
+                          >
+                            <ThumbsUp className="w-5 h-5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full w-10 h-10 p-0 border-muted-foreground/50 hover:border-foreground ml-auto"
+                            onClick={(e) => handleMoreInfo(e, content.id)}
+                          >
+                            <Info className="w-5 h-5" />
+                          </Button>
+                        </div>
+
+                        {/* Title */}
                         <h3 className="font-bold text-lg text-foreground truncate">{content.title}</h3>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        
+                        {/* Metadata */}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           {content.rating && (
                             <span className="px-2 py-0.5 border border-secondary/50 text-secondary rounded text-xs">
                               {content.rating}
@@ -263,51 +289,29 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps
                           {content.year && <span>{content.year}</span>}
                           {content.category && <span>• {content.category}</span>}
                         </div>
-                      </div>
 
-                      {/* Trailer & Play Buttons */}
-                      <div className="flex gap-2 pt-1">
-                        <Button
-                          size="sm"
-                          className="flex-1 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                          asChild
-                        >
-                          <Link to={`/watch/${content.id}`}>
-                            <Play className="w-4 h-4 mr-1" />
-                            Trailer
-                          </Link>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1 border-muted-foreground/50"
-                          onClick={(e) => handleMoreInfo(e, content.id)}
-                        >
-                          Details
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="group block relative cursor-pointer overflow-hidden">
-                    <div className="relative aspect-[2/3] overflow-hidden rounded-md mb-2 bg-card">
-                      <img 
-                        src={content.posterUrl}
-                        alt={content.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                      {content.rating && (
-                        <div className="absolute top-2 right-2 bg-secondary text-secondary-foreground px-1.5 py-0.5 text-xs font-medium rounded-sm">
-                          {content.rating}
+                        {/* Trailer & Details Buttons */}
+                        <div className="flex gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            className="flex-1 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                            asChild
+                          >
+                            <Link to={`/watch/${content.id}`}>
+                              <Play className="w-4 h-4 mr-1" />
+                              Trailer
+                            </Link>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 border-muted-foreground/50"
+                            onClick={(e) => handleMoreInfo(e, content.id)}
+                          >
+                            Details
+                          </Button>
                         </div>
-                      )}
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-background/0 group-hover:bg-background/20 transition-colors" />
-                    </div>
-                    <h3 className="text-sm font-medium truncate text-foreground">{content.title}</h3>
-                    <div className="text-xs text-muted-foreground">
-                      {content.year} {content.category && `• ${content.category}`}
+                      </div>
                     </div>
                   </div>
                 )}
