@@ -315,8 +315,8 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                 onMouseEnter={() => handleMouseEnter(item.id)}
                 onMouseLeave={handleMouseLeave}
               >
-                {/* Base Card */}
-                <Link to={`/watch/${item.content.id}`} className="block">
+                {/* Base Card - Always clickable */}
+                <Link to={`/watch/${item.content.id}`} className="block relative z-10">
                   <div className="relative rounded-lg overflow-hidden cursor-pointer group">
                     <img
                       src={item.content.poster_url || "/placeholder.svg"}
