@@ -437,6 +437,8 @@ export type Database = {
       }
       live_channel_playlists: {
         Row: {
+          ad_break_duration_seconds: number | null
+          ad_breaks_per_hour: number | null
           channel_id: string
           created_at: string | null
           id: string
@@ -448,6 +450,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          ad_break_duration_seconds?: number | null
+          ad_breaks_per_hour?: number | null
           channel_id: string
           created_at?: string | null
           id?: string
@@ -459,6 +463,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          ad_break_duration_seconds?: number | null
+          ad_breaks_per_hour?: number | null
           channel_id?: string
           created_at?: string | null
           id?: string
