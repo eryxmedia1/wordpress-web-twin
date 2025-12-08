@@ -296,15 +296,29 @@ const Watch = () => {
                 controls
                 width="100%"
                 height="100%"
+                playsinline
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
                 onProgress={handleProgress}
                 onDuration={handleDuration}
+                onReady={() => console.log("Player ready")}
+                onError={(e) => console.error("Player error:", e)}
+                onBuffer={() => console.log("Buffering...")}
+                onBufferEnd={() => console.log("Buffering complete")}
                 progressInterval={1000}
                 config={{
                   vimeo: {
                     playerOptions: {
-                      quality: '1080p',
+                      responsive: true,
+                      playsinline: true,
+                      autoplay: true,
+                      muted: false,
+                    }
+                  },
+                  file: {
+                    attributes: {
+                      playsInline: true,
+                      crossOrigin: "anonymous",
                     }
                   }
                 }}
