@@ -336,6 +336,7 @@ const Browse = () => {
             <Top10Row
               title="Top 10 on Zoe RatedTV Today"
               items={mapToTop10(top10)}
+              onMoreInfo={handleMoreInfo}
             />
           )}
 

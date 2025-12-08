@@ -1,7 +1,12 @@
 import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ContentLockBadge } from "@/components/ContentLockBadge";
+import { Button } from "@/components/ui/button";
+import { Play, Plus, Check, ThumbsUp, Info } from "lucide-react";
+import { useProfile } from "@/context/ProfileContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import ReactPlayer from "react-player";
 
 interface Top10Item {
@@ -18,11 +23,16 @@ interface Top10RowProps {
   title: string;
   items: Top10Item[];
   userPlan?: string;
+  onMoreInfo?: (id: string) => void;
 }
 
-const Top10Row = ({ title, items, userPlan = 'free' }: Top10RowProps) => {
+const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps) => {
+  const navigate = useNavigate();
+  const { currentProfile } = useProfile();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [videoErrors, setVideoErrors] = useState<Set<string>>(new Set());
+  const [myListItems, setMyListItems] = useState<Set<string>>(new Set());
+  const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = (id: string) => {
@@ -42,6 +52,84 @@ const Top10Row = ({ title, items, userPlan = 'free' }: Top10RowProps) => {
     setVideoErrors(prev => new Set(prev).add(id));
   };
 
+  const handlePlay = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/watch/${id}`);
+  };
+
+  const handleMoreInfo = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onMoreInfo) {
+      onMoreInfo(id);
+    }
+  };
+
+  const toggleMyList = async (e: React.MouseEvent, contentId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!currentProfile) {
+      toast.error("Please select a profile first");
+      return;
+    }
+
+    const isInList = myListItems.has(contentId);
+
+    if (isInList) {
+      await supabase
+        .from("favorites")
+        .delete()
+        .eq("profile_id", currentProfile.id)
+        .eq("content_id", contentId);
+      setMyListItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(contentId);
+        return newSet;
+      });
+      toast.success("Removed from My List");
+    } else {
+      await supabase.from("favorites").insert({
+        profile_id: currentProfile.id,
+        content_id: contentId,
+      });
+      setMyListItems(prev => new Set(prev).add(contentId));
+      toast.success("Added to My List");
+    }
+  };
+
+  const toggleLike = async (e: React.MouseEvent, contentId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!currentProfile) {
+      toast.error("Please select a profile first");
+      return;
+    }
+
+    const isLiked = likedItems.has(contentId);
+
+    if (isLiked) {
+      await supabase
+        .from("likes")
+        .delete()
+        .eq("profile_id", currentProfile.id)
+        .eq("content_id", contentId);
+      setLikedItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(contentId);
+        return newSet;
+      });
+      toast.success("Removed like");
+    } else {
+      await supabase.from("likes").insert({
+        profile_id: currentProfile.id,
+        content_id: contentId,
+      });
+      setLikedItems(prev => new Set(prev).add(contentId));
+      toast.success("Liked!");
+    }
+  };
+
   if (items.length === 0) return null;
 
   return (
@@ -55,11 +143,12 @@ const Top10Row = ({ title, items, userPlan = 'free' }: Top10RowProps) => {
             const videoUrl = item.trailerUrl || item.videoUrl;
             const hasVideoError = videoErrors.has(item.id);
             const showVideo = isHovered && videoUrl && !hasVideoError;
+            const isInList = myListItems.has(item.id);
+            const isLiked = likedItems.has(item.id);
 
             return (
-              <Link
+              <div
                 key={item.id}
-                to={`/watch/${item.id}`}
                 className="relative flex-shrink-0 group flex items-end"
                 style={{ minWidth: '180px' }}
                 onMouseEnter={() => handleMouseEnter(item.id)}
@@ -84,42 +173,80 @@ const Top10Row = ({ title, items, userPlan = 'free' }: Top10RowProps) => {
                 <div 
                   className={`relative ml-12 md:ml-16 rounded-lg overflow-hidden bg-card z-10 shadow-xl transition-all duration-300 ease-out ${
                     isHovered 
-                      ? 'w-44 md:w-56 h-56 md:h-72 scale-110 shadow-2xl' 
+                      ? 'w-52 md:w-64 h-64 md:h-80 scale-110 shadow-2xl' 
                       : 'w-28 md:w-36 h-40 md:h-52'
                   }`}
                 >
-                  {showVideo ? (
-                    <ReactPlayer
-                      url={videoUrl}
-                      playing
-                      muted
-                      loop
-                      width="100%"
-                      height="100%"
-                      style={{ position: 'absolute', top: 0, left: 0 }}
-                      onError={() => handleVideoError(item.id)}
-                      config={{
-                        file: {
-                          attributes: {
-                            style: { objectFit: 'cover', width: '100%', height: '100%' }
+                  <Link to={`/watch/${item.id}`} className="block w-full h-full">
+                    {showVideo ? (
+                      <ReactPlayer
+                        url={videoUrl}
+                        playing
+                        muted
+                        loop
+                        width="100%"
+                        height="100%"
+                        style={{ position: 'absolute', top: 0, left: 0 }}
+                        onError={() => handleVideoError(item.id)}
+                        config={{
+                          file: {
+                            attributes: {
+                              style: { objectFit: 'cover', width: '100%', height: '100%' }
+                            }
                           }
-                        }
-                      }}
-                    />
-                  ) : (
-                    <img
-                      src={item.posterUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={item.posterUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </Link>
                   
                   {/* Gradient overlay on hover */}
-                  <div className={`absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
+                  <div className={`absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent transition-opacity pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
                   
-                  {/* Title on hover */}
+                  {/* Action buttons and title on hover */}
                   {isHovered && (
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <div className="absolute bottom-0 left-0 right-0 p-3 space-y-2">
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          className="h-8 w-8 rounded-full bg-white hover:bg-white/90 text-black"
+                          onClick={(e) => handlePlay(e, item.id)}
+                        >
+                          <Play className="h-4 w-4 fill-current" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80"
+                          onClick={(e) => toggleMyList(e, item.id)}
+                        >
+                          {isInList ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className={`h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isLiked ? 'text-primary' : ''}`}
+                          onClick={(e) => toggleLike(e, item.id)}
+                        >
+                          <ThumbsUp className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                        </Button>
+                        {onMoreInfo && (
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ml-auto"
+                            onClick={(e) => handleMoreInfo(e, item.id)}
+                          >
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                       <p className="text-sm font-semibold text-foreground line-clamp-2">{item.title}</p>
                     </div>
                   )}
@@ -132,7 +259,7 @@ const Top10Row = ({ title, items, userPlan = 'free' }: Top10RowProps) => {
                     />
                   )}
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>
