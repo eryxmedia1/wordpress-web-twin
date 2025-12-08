@@ -284,9 +284,11 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
       }
 
       // Update show with first episode's thumbnail and trailer if not manually set
+      // Also update if posterUrl contains a video URL instead of an image URL
       if (firstEpisodeThumbnail || firstEpisodeVideoUrl) {
         const updateData: Record<string, string | null> = {};
-        if (!posterUrl && firstEpisodeThumbnail) {
+        const isInvalidPosterUrl = !posterUrl || posterUrl.includes('vimeo.com') || posterUrl.includes('player.vimeo.com');
+        if (isInvalidPosterUrl && firstEpisodeThumbnail) {
           updateData.poster_url = firstEpisodeThumbnail;
           updateData.backdrop_url = firstEpisodeThumbnail;
         }
