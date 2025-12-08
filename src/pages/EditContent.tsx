@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { TagsSelector } from "@/components/admin/TagsSelector";
+import { MembershipPlansSelector } from "@/components/admin/MembershipPlansSelector";
 import { supabase, DbContent, DbProfile, DbSeason, DbEpisode, ContentType, MidrollConfig } from "@/integrations/supabase/client";
 
 interface Episode {
@@ -58,6 +59,7 @@ const EditContent = () => {
   const [loading, setLoading] = useState(false);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   
   // For TV shows
   const [seasons, setSeasons] = useState<Season[]>([{ 
@@ -179,8 +181,11 @@ const EditContent = () => {
     });
     setSelectedChannels(content.channels || []);
     
-    // Fetch associated tags
-    await fetchContentTags(content.id);
+    // Fetch associated tags and membership plans
+    await Promise.all([
+      fetchContentTags(content.id),
+      fetchContentMembershipPlans(content.id)
+    ]);
     
     if (content.type === 'show') {
       await fetchSeasons(content.id);
@@ -201,6 +206,20 @@ const EditContent = () => {
     }
     
     setSelectedTagIds((contentTags || []).map(ct => ct.tag_id));
+  }
+
+  async function fetchContentMembershipPlans(contentId: string) {
+    const { data: contentPlans, error } = await supabase
+      .from('content_membership_plans')
+      .select('plan_id')
+      .eq('content_id', contentId);
+      
+    if (error) {
+      console.error("Failed to fetch content membership plans:", error);
+      return;
+    }
+    
+    setSelectedPlanIds((contentPlans || []).map(cp => cp.plan_id));
   }
 
   async function fetchSeasons(contentId: string) {
@@ -471,6 +490,32 @@ const EditContent = () => {
           if (tagsError) {
             console.error("Failed to save tags:", tagsError);
             toast.error("Content saved but failed to save some tags");
+          }
+        }
+      }
+      
+      // Save content membership plans
+      if (contentId) {
+        // Delete existing content_membership_plans for this content
+        await supabase
+          .from('content_membership_plans')
+          .delete()
+          .eq('content_id', contentId);
+        
+        // Insert new content_membership_plans
+        if (selectedPlanIds.length > 0) {
+          const contentPlansToInsert = selectedPlanIds.map(planId => ({
+            content_id: contentId,
+            plan_id: planId
+          }));
+          
+          const { error: plansError } = await supabase
+            .from('content_membership_plans')
+            .insert(contentPlansToInsert as any);
+            
+          if (plansError) {
+            console.error("Failed to save membership plans:", plansError);
+            toast.error("Content saved but failed to save membership plan access");
           }
         }
       }
@@ -776,6 +821,17 @@ const EditContent = () => {
               selectedTagIds={selectedTagIds} 
               onTagsChange={setSelectedTagIds}
               contentType={contentType}
+            />
+          </div>
+          
+          <div className="border border-gray-700 rounded-md p-6">
+            <h3 className="text-lg font-medium mb-3">Available On Membership Plans</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Select which membership tiers can access this content. By default, new content is available on Standard and Premium plans.
+            </p>
+            <MembershipPlansSelector 
+              selectedPlans={selectedPlanIds} 
+              onSelectedPlansChange={setSelectedPlanIds} 
             />
           </div>
           

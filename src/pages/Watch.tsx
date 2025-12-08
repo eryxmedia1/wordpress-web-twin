@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import ReactPlayer from "react-player";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/context/ProfileContext";
+import { useMembershipAccess } from "@/hooks/useMembershipAccess";
+import { UpgradeGate } from "@/components/UpgradeGate";
 
 interface Review {
   id: string;
@@ -55,9 +57,11 @@ const Watch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentProfile } = useProfile();
+  const { userPlan, contentPlans, hasAccess, loading: accessLoading, getAdConfig } = useMembershipAccess(id);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showVideo, setShowVideo] = useState(false);
+  const [showUpgradeGate, setShowUpgradeGate] = useState(false);
   const [content, setContent] = useState<ContentData | null>(null);
   const [recommendedContent, setRecommendedContent] = useState<ContentData[]>([]);
   const [reviewText, setReviewText] = useState("");
@@ -66,6 +70,7 @@ const Watch = () => {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviews, setReviews] = useState<Review[]>(sampleReviews);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [adBreakCount, setAdBreakCount] = useState(0);
   
   // Progress tracking state
   const [progress, setProgress] = useState(0);
@@ -195,9 +200,17 @@ const Watch = () => {
   }, [progress, saveProgress]);
 
   const playVideo = () => {
+    // Check access before playing
+    if (!hasAccess && contentPlans.length > 0) {
+      setShowUpgradeGate(true);
+      return;
+    }
     setShowVideo(true);
     setIsPlaying(true);
   };
+
+  // Get ad configuration based on user's plan
+  const adConfig = getAdConfig();
 
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,6 +276,15 @@ const Watch = () => {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       
+      {/* Upgrade Gate Modal */}
+      {showUpgradeGate && content && (
+        <UpgradeGate
+          requiredPlans={contentPlans}
+          currentPlan={userPlan}
+          contentTitle={content.title}
+          onClose={() => setShowUpgradeGate(false)}
+        />
+      )}
       {showVideo ? (
         <div className="h-screen w-full bg-black relative overflow-hidden pt-16">
           <div className="absolute inset-0 bg-black z-0 flex items-center justify-center mt-16">
