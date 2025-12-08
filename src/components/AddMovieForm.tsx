@@ -456,10 +456,37 @@ const AddMovieForm = () => {
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium">Content Properties</h3>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Featured Hero Carousel Checkbox - Prominent */}
+                      <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
                         <FormField
                           control={form.control}
                           name="featured"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-3">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  className="data-[state=checked]:bg-primary"
+                                />
+                              </FormControl>
+                              <div>
+                                <FormLabel className="text-base font-semibold text-primary">
+                                  ⭐ Display in Hero Carousel
+                                </FormLabel>
+                                <p className="text-xs text-muted-foreground">
+                                  Enable this to show the video in the top hero section on the home page (max 10 videos)
+                                </p>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="isZoeOriginal"
                           render={({ field }) => (
                             <FormItem className="flex items-center space-x-2">
                               <FormControl>

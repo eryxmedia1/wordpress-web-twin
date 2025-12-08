@@ -380,17 +380,27 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-2">
+              {/* Featured Hero Carousel Checkbox - Prominent */}
+              <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                <div className="flex items-center space-x-3">
                   <input 
                     type="checkbox" 
                     {...register("featured")} 
                     id="featured" 
-                    className="rounded bg-gray-700 border-gray-600"
+                    className="h-5 w-5 rounded bg-gray-700 border-primary accent-primary"
                   />
-                  <Label htmlFor="featured" className="text-white">Featured</Label>
+                  <div>
+                    <Label htmlFor="featured" className="text-base font-semibold text-primary">
+                      ⭐ Display in Hero Carousel
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Enable this to show the video in the top hero section on the home page (max 10 videos)
+                    </p>
+                  </div>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
                   <input 
                     type="checkbox" 
