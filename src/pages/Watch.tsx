@@ -50,6 +50,7 @@ const Watch = () => {
   // Progress tracking state
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const estimatedDuration = duration || 3600; // Default to 1 hour if duration unknown
   const lastSavedProgress = useRef(0);
   const playerRef = useRef<ReactPlayer>(null);
   const hasInitialSeek = useRef(false);
@@ -412,13 +413,20 @@ const Watch = () => {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
             
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Button 
                 onClick={playVideo} 
                 className="bg-primary/80 hover:bg-primary h-16 w-16 rounded-full flex items-center justify-center"
               >
                 <Play className="h-8 w-8 fill-current" />
               </Button>
+              {progress > 0 && progress < 100 && (
+                <div className="bg-background/90 backdrop-blur-sm px-4 py-2 rounded-full">
+                  <span className="text-sm font-medium">
+                    Resume from {formatTime((progress / 100) * (duration || estimatedDuration))}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Resume progress indicator */}
