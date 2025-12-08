@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.get-live-segment]
 verify_jwt = false
+
+[functions.mux-live-stream]
+verify_jwt = false

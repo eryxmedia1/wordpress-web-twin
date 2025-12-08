@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Tv, Plus, Pencil, Trash2, ArrowLeft, Loader2, Radio, Upload, X } from "lucide-react";
+import { Tv, Plus, Pencil, Trash2, ArrowLeft, Loader2, Radio, Upload, X, Copy, Video, Wifi } from "lucide-react";
 
 interface Channel {
   id: string;
@@ -36,6 +36,11 @@ interface Channel {
   timezone: string;
   is_active: boolean;
   default_ad_interval_minutes: number;
+  mux_stream_id: string | null;
+  rtmp_url: string | null;
+  stream_key: string | null;
+  playback_url: string | null;
+  is_live_streaming: boolean;
 }
 
 const TIMEZONES = [
@@ -53,6 +58,8 @@ export default function AdminLiveTVChannels() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [generatingStream, setGeneratingStream] = useState<string | null>(null);
+  const [selectedChannelForRTMP, setSelectedChannelForRTMP] = useState<Channel | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -251,6 +258,51 @@ export default function AdminLiveTVChannels() {
     } catch (error: any) {
       toast.error(error.message || 'Failed to update channel');
     }
+  };
+
+  const generateMuxStream = async (channel: Channel) => {
+    setGeneratingStream(channel.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('mux-live-stream', {
+        body: { action: 'create', channelId: channel.id }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      toast.success('RTMP stream created! Copy credentials to Switcher Studio.');
+      fetchChannels();
+      
+      // Show the RTMP credentials modal
+      const updatedChannel = { ...channel, ...data };
+      setSelectedChannelForRTMP(updatedChannel);
+    } catch (error: any) {
+      console.error('Error generating stream:', error);
+      toast.error(error.message || 'Failed to create Mux stream');
+    } finally {
+      setGeneratingStream(null);
+    }
+  };
+
+  const deleteMuxStream = async (channel: Channel) => {
+    if (!confirm('Delete RTMP stream? You will need to generate a new one.')) return;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('mux-live-stream', {
+        body: { action: 'delete', channelId: channel.id }
+      });
+
+      if (error) throw error;
+      toast.success('RTMP stream deleted');
+      fetchChannels();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete stream');
+    }
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
   };
 
   if (isLoading) {
@@ -496,7 +548,34 @@ export default function AdminLiveTVChannels() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* RTMP Stream Button */}
+                      {channel.stream_key ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedChannelForRTMP(channel)}
+                          className="text-green-500 border-green-500"
+                        >
+                          <Wifi className="h-4 w-4 mr-1" />
+                          RTMP Info
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => generateMuxStream(channel)}
+                          disabled={generatingStream === channel.id}
+                        >
+                          {generatingStream === channel.id ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <Video className="h-4 w-4 mr-1" />
+                          )}
+                          Generate RTMP
+                        </Button>
+                      )}
+                      
                       <Link to={`/admin/livetv/playlists/${channel.id}`}>
                         <Button variant="outline" size="sm">
                           Manage Playlists
@@ -532,6 +611,100 @@ export default function AdminLiveTVChannels() {
             ))}
           </div>
         )}
+
+        {/* RTMP Credentials Modal */}
+        <Dialog open={!!selectedChannelForRTMP} onOpenChange={(open) => !open && setSelectedChannelForRTMP(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Wifi className="h-5 w-5 text-primary" />
+                RTMP Stream Credentials
+              </DialogTitle>
+            </DialogHeader>
+            {selectedChannelForRTMP && (
+              <div className="space-y-4 mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Copy these credentials into <strong>Switcher Studio</strong> to broadcast to your channel.
+                </p>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">RTMP Server URL</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={selectedChannelForRTMP.rtmp_url || 'rtmps://global-live.mux.com:443/app'}
+                        readOnly
+                        className="font-mono text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(selectedChannelForRTMP.rtmp_url || 'rtmps://global-live.mux.com:443/app', 'RTMP URL')}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Stream Key</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={selectedChannelForRTMP.stream_key || ''}
+                        readOnly
+                        className="font-mono text-sm"
+                        type="password"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(selectedChannelForRTMP.stream_key || '', 'Stream Key')}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Keep this secret!</p>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-muted-foreground">HLS Playback URL (for website player)</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={selectedChannelForRTMP.playback_url || ''}
+                        readOnly
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(selectedChannelForRTMP.playback_url || '', 'Playback URL')}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-4 border-t border-border">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      deleteMuxStream(selectedChannelForRTMP);
+                      setSelectedChannelForRTMP(null);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete Stream
+                  </Button>
+                  <Button onClick={() => setSelectedChannelForRTMP(null)}>
+                    Done
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
