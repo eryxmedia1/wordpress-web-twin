@@ -60,40 +60,78 @@ export const TagsSelector = ({ selectedTagIds, onTagsChange, contentType = "all"
     }
   };
 
-  const handleCreateTag = async () => {
+  const handleCreateTags = async () => {
     if (!newTagName.trim()) return;
 
     setCreating(true);
     try {
-      const slug = newTagName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
+      // Split by comma and clean up each tag name
+      const tagNames = newTagName
+        .split(',')
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
 
-      const tagData = {
-        name: newTagName.trim(),
-        slug,
-        content_type: contentType === "all" ? null : contentType
-      };
+      if (tagNames.length === 0) return;
 
-      const { data, error } = await supabase
-        .from('tags')
-        .insert(tagData as any)
-        .select()
-        .single();
+      const newTagIds: string[] = [];
+      const createdTags: DbTag[] = [];
 
-      if (error) throw error;
+      for (const tagName of tagNames) {
+        const slug = tagName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+
+        // Check if tag already exists
+        const existingTag = tags.find(t => t.slug === slug || t.name.toLowerCase() === tagName.toLowerCase());
+        if (existingTag) {
+          if (!selectedTagIds.includes(existingTag.id)) {
+            newTagIds.push(existingTag.id);
+          }
+          continue;
+        }
+
+        const tagData = {
+          name: tagName,
+          slug,
+          content_type: contentType === "all" ? null : contentType
+        };
+
+        const { data, error } = await supabase
+          .from('tags')
+          .insert(tagData as any)
+          .select()
+          .single();
+
+        if (error) {
+          console.error(`Error creating tag "${tagName}":`, error);
+          continue;
+        }
+        
+        const newTag = data as unknown as DbTag;
+        createdTags.push(newTag);
+        newTagIds.push(newTag.id);
+      }
+
+      if (createdTags.length > 0) {
+        setTags([...tags, ...createdTags]);
+      }
       
-      const newTag = data as unknown as DbTag;
+      if (newTagIds.length > 0) {
+        onTagsChange([...selectedTagIds, ...newTagIds]);
+      }
 
-      setTags([...tags, newTag]);
-      onTagsChange([...selectedTagIds, newTag.id]);
       setNewTagName("");
       setShowNewTagInput(false);
-      toast.success(`Tag "${newTagName}" created`);
+      
+      if (createdTags.length > 0) {
+        toast.success(`${createdTags.length} tag${createdTags.length !== 1 ? 's' : ''} created`);
+      } else if (newTagIds.length > 0) {
+        toast.success(`${newTagIds.length} existing tag${newTagIds.length !== 1 ? 's' : ''} selected`);
+      }
     } catch (error: any) {
-      console.error("Error creating tag:", error);
-      toast.error(error.message || "Failed to create tag");
+      console.error("Error creating tags:", error);
+      toast.error(error.message || "Failed to create tags");
     } finally {
       setCreating(false);
     }
@@ -137,27 +175,32 @@ export const TagsSelector = ({ selectedTagIds, onTagsChange, contentType = "all"
       </p>
 
       {showNewTagInput && (
-        <div className="flex gap-2 p-3 bg-muted/50 rounded-lg">
+        <div className="flex flex-col gap-2 p-3 bg-muted/50 rounded-lg">
           <Input
-            placeholder="Enter tag name..."
+            placeholder="Enter tag names separated by commas (e.g., Comedy, Drama, Action)"
             value={newTagName}
             onChange={(e) => setNewTagName(e.target.value)}
             className="bg-background"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                handleCreateTag();
+                handleCreateTags();
               }
             }}
           />
-          <Button
-            type="button"
-            onClick={handleCreateTag}
-            disabled={creating || !newTagName.trim()}
-            className="bg-primary hover:bg-primary/90"
-          >
-            {creating ? "Adding..." : "Add"}
-          </Button>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Separate multiple tags with commas
+            </p>
+            <Button
+              type="button"
+              onClick={handleCreateTags}
+              disabled={creating || !newTagName.trim()}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {creating ? "Adding..." : "Add Tags"}
+            </Button>
+          </div>
         </div>
       )}
 
