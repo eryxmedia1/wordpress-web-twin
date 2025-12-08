@@ -3,13 +3,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Film, Plus, Search, Trash } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase, DbContent } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AddMovieForm from "@/components/AddMovieForm";
+import MovieCard from "@/components/admin/MovieCard";
 
 const AdminMovies = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -111,39 +111,12 @@ const AdminMovies = () => {
             ) : filteredMovies.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredMovies.map(movie => (
-                  <Card key={movie.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-xl font-medium">{movie.title}</h3>
-                          <div className="flex items-center mt-2 text-gray-400">
-                            <Film className="w-4 h-4 mr-1" /> Movie
-                            {movie.duration && (
-                              <span className="ml-2">• {movie.duration}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="text-white"
-                            onClick={() => handleEditMovie(movie.id)}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="text-red-500 hover:text-red-400"
-                            onClick={() => handleDeleteMovie(movie.id)}
-                          >
-                            <Trash className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <MovieCard
+                    key={movie.id}
+                    movie={movie}
+                    onEdit={handleEditMovie}
+                    onDelete={handleDeleteMovie}
+                  />
                 ))}
               </div>
             ) : (

@@ -1,0 +1,25 @@
+-- Add missing genre-based tags
+INSERT INTO public.tags (name, slug, content_type) VALUES
+  ('Action', 'action', NULL),
+  ('Adventure', 'adventure', NULL),
+  ('Animation', 'animation', NULL),
+  ('Biography', 'biography', NULL),
+  ('Crime', 'crime', NULL),
+  ('Dramatic Videos', 'dramatic-videos', NULL),
+  ('Family', 'family', NULL),
+  ('Fantasy', 'fantasy', NULL),
+  ('Funny Videos', 'funny-videos', NULL),
+  ('History', 'history', NULL),
+  ('Inspirational', 'inspirational', NULL),
+  ('Mother Nature', 'mother-nature', NULL),
+  ('Music', 'music', NULL),
+  ('Mystery', 'mystery', NULL),
+  ('News', 'news', NULL),
+  ('Reality', 'reality', NULL),
+  ('Sci-Fi', 'sci-fi', NULL),
+  ('Sports', 'sports', NULL),
+  ('Talk Show', 'talk-show', NULL),
+  ('Thriller', 'thriller', NULL),
+  ('War', 'war', NULL),
+  ('Western', 'western', NULL)
+ON CONFLICT (slug) DO NOTHING;
