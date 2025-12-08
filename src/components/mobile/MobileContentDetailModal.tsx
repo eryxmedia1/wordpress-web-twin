@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { X, Play, Plus, Check, ThumbsUp, ChevronDown, Download } from "lucide-react";
+import { X, Play, Plus, Check, ThumbsUp, ChevronDown, Download, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import MobileBottomNav from "./MobileBottomNav";
+import ReactPlayer from "react-player";
 
 interface MobileContentDetailModalProps {
   contentId: string | null;
@@ -58,6 +60,8 @@ const MobileContentDetailModal = ({ contentId, isOpen, onClose }: MobileContentD
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showSeasonPicker, setShowSeasonPicker] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [videoError, setVideoError] = useState(false);
 
   useEffect(() => {
     if (!contentId || !isOpen) return;
@@ -156,29 +160,69 @@ const MobileContentDetailModal = ({ contentId, isOpen, onClose }: MobileContentD
 
   if (!isOpen) return null;
 
+  const previewUrl = content?.trailer_url || content?.video_url;
+
   return (
-    <div className="fixed inset-0 z-50 bg-background md:hidden overflow-y-auto">
-      {/* Header Image */}
+    <div className="fixed inset-0 z-50 bg-background md:hidden overflow-y-auto pb-20">
+      {/* Header Video/Image */}
       <div className="relative w-full aspect-video">
-        <img
-          src={content?.backdrop_url || content?.poster_url || "/placeholder.svg"}
-          alt={content?.title || ""}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        {previewUrl && !videoError ? (
+          <ReactPlayer
+            url={previewUrl}
+            playing
+            muted={isMuted}
+            loop
+            playsinline
+            width="100%"
+            height="100%"
+            style={{ position: 'absolute', top: 0, left: 0 }}
+            onError={() => setVideoError(true)}
+            config={{
+              vimeo: {
+                playerOptions: {
+                  background: false,
+                  responsive: true,
+                  quality: 'auto'
+                }
+              },
+              file: {
+                attributes: {
+                  playsInline: true
+                }
+              }
+            }}
+          />
+        ) : (
+          <img
+            src={content?.backdrop_url || content?.poster_url || "/placeholder.svg"}
+            alt={content?.title || ""}
+            className="w-full h-full object-cover"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent pointer-events-none" />
 
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 p-2 rounded-full bg-background/80 text-foreground"
+          className="absolute top-4 left-4 p-2 rounded-full bg-background/80 text-foreground z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
+        {/* Mute/Unmute Button */}
+        {previewUrl && !videoError && (
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-background/80 text-foreground z-10"
+          >
+            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </button>
+        )}
+
         {/* Play Button Overlay */}
         <Link
           to={`/watch/${content?.id}`}
-          className="absolute inset-0 flex items-center justify-center"
+          className="absolute inset-0 flex items-center justify-center z-10"
         >
           <div className="w-16 h-16 rounded-full bg-foreground/90 flex items-center justify-center">
             <Play className="w-8 h-8 text-background fill-current ml-1" />
@@ -337,11 +381,14 @@ const MobileContentDetailModal = ({ contentId, isOpen, onClose }: MobileContentD
         )}
 
         {/* More Like This placeholder */}
-        <div className="pb-20">
+        <div className="pb-8">
           <h3 className="text-lg font-semibold text-foreground mb-4">More Like This</h3>
           <p className="text-muted-foreground text-sm">Similar content will appear here</p>
         </div>
       </div>
+
+      {/* Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 };
