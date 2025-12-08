@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Content {
@@ -12,9 +13,11 @@ interface Content {
 interface MobileChannelRowProps {
   channelName: string;
   onItemClick: (id: string) => void;
+  seeAllLink?: string;
 }
 
-const MobileChannelRow = ({ channelName, onItemClick }: MobileChannelRowProps) => {
+const MobileChannelRow = ({ channelName, onItemClick, seeAllLink }: MobileChannelRowProps) => {
+  const navigate = useNavigate();
   const [items, setItems] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -36,6 +39,12 @@ const MobileChannelRow = ({ channelName, onItemClick }: MobileChannelRowProps) =
     fetchChannelContent();
   }, [channelName]);
 
+  const handleSeeAll = () => {
+    if (seeAllLink) {
+      navigate(seeAllLink);
+    }
+  };
+
   if (isLoading || items.length === 0) return null;
 
   return (
@@ -43,10 +52,15 @@ const MobileChannelRow = ({ channelName, onItemClick }: MobileChannelRowProps) =
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-3">
         <h2 className="text-base font-semibold text-foreground">{channelName}</h2>
-        <button className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors">
-          See All
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        {seeAllLink && (
+          <button 
+            onClick={handleSeeAll}
+            className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+          >
+            See All
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Horizontal Scroll */}

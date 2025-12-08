@@ -34,9 +34,10 @@ interface WatchHistoryItem {
 
 interface MobileContinueWatchingRowProps {
   onItemClick: (id: string) => void;
+  seeAllLink?: string;
 }
 
-const MobileContinueWatchingRow = ({ onItemClick }: MobileContinueWatchingRowProps) => {
+const MobileContinueWatchingRow = ({ onItemClick, seeAllLink }: MobileContinueWatchingRowProps) => {
   const { currentProfile } = useProfile();
   const navigate = useNavigate();
   const [items, setItems] = useState<WatchHistoryItem[]>([]);
@@ -113,18 +114,26 @@ const MobileContinueWatchingRow = ({ onItemClick }: MobileContinueWatchingRowPro
     }
   };
 
+  const handleSeeAll = () => {
+    if (seeAllLink) {
+      navigate(seeAllLink);
+    }
+  };
+
   return (
     <div className="py-3">
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-3">
         <h2 className="text-lg font-bold text-foreground">Keep Watching</h2>
-        <button 
-          onClick={() => navigate('/search?filter=continue')}
-          className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
-        >
-          See All
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        {seeAllLink && (
+          <button 
+            onClick={handleSeeAll}
+            className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+          >
+            See All
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Horizontal Scroll - Landscape Cards */}

@@ -26,9 +26,10 @@ interface MobileTop10RowProps {
   items: Top10Item[];
   onItemClick: (id: string) => void;
   userPlan?: string;
+  seeAllLink?: string;
 }
 
-const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: MobileTop10RowProps) => {
+const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free', seeAllLink }: MobileTop10RowProps) => {
   const navigate = useNavigate();
   const { currentProfile } = useProfile();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -176,16 +177,27 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
     }
   };
 
+  const handleSeeAll = () => {
+    if (seeAllLink) {
+      navigate(seeAllLink);
+    }
+  };
+
   if (items.length === 0) return null;
 
   return (
     <div className="py-2">
       <div className="flex items-center justify-between px-4 mb-3">
         <h2 className="text-base font-semibold text-foreground">{title}</h2>
-        <button className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors">
-          See All
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        {seeAllLink && (
+          <button 
+            onClick={handleSeeAll}
+            className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+          >
+            See All
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       <div className="flex gap-4 overflow-x-auto scrollbar-hide px-4">

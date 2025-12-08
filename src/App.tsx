@@ -13,6 +13,7 @@ import OtpVerification from "./pages/OtpVerification";
 import ProfileSelection from "./pages/ProfileSelection";
 import Browse from "./pages/Browse";
 import GenreView from "./pages/GenreView";
+import CategoryView from "./pages/CategoryView";
 import Watch from "./pages/Watch";
 import Admin from "./pages/Admin";
 import AdminMovies from "./pages/AdminMovies";
@@ -57,6 +58,7 @@ const App = () => (
                   <Route path="/browse/:category" element={<Browse />} />
                   <Route path="/browse/genres" element={<GenreView />} />
                   <Route path="/browse/genres/:genreId" element={<GenreView />} />
+                  <Route path="/category/:category" element={<CategoryView />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/plans" element={<Plans />} />
                   <Route path="/watch/:id" element={<Watch />} />

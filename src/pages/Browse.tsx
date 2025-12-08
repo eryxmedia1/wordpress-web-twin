@@ -222,10 +222,10 @@ const Browse = () => {
         {/* Mobile Content Rows */}
         <div className="space-y-2 pb-4">
           {/* Continue Watching */}
-          <MobileContinueWatchingRow onItemClick={handleMoreInfo} />
+          <MobileContinueWatchingRow onItemClick={handleMoreInfo} seeAllLink="/category/continue-watching" />
 
           {/* My List */}
-          <MobileMyListRow onItemClick={handleMoreInfo} />
+          <MobileMyListRow onItemClick={handleMoreInfo} seeAllLink="/category/my-list" />
 
           {/* Zoe Originals */}
           {zoeOriginals.length > 0 && (
@@ -233,6 +233,7 @@ const Browse = () => {
               title="Only on Zoe RatedTV"
               items={mapToContentRow(zoeOriginals)}
               onItemClick={handleMoreInfo}
+              seeAllLink="/category/originals"
             />
           )}
 
@@ -241,6 +242,7 @@ const Browse = () => {
             title="We Think You'll Love These"
             items={mapToContentRow([...movies, ...tvShows].slice(0, 10))}
             onItemClick={handleMoreInfo}
+            seeAllLink="/category/we-think-youll-love"
           />
 
           {/* Top 10 with large numbers - Above New on Zoe RatedTV */}
@@ -249,6 +251,7 @@ const Browse = () => {
               title="Top 10 on Zoe RatedTV"
               items={mapToTop10(top10)}
               onItemClick={handleMoreInfo}
+              seeAllLink="/category/top-10"
             />
           )}
 
@@ -259,6 +262,7 @@ const Browse = () => {
               new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
             ).slice(0, 10))}
             onItemClick={handleMoreInfo}
+            seeAllLink="/category/new"
           />
 
           {/* Movies */}
@@ -267,7 +271,7 @@ const Browse = () => {
               title="Movies"
               items={mapToContentRow(movies)}
               onItemClick={handleMoreInfo}
-              seeAllLink="/genre/movies"
+              seeAllLink="/category/movies"
             />
           )}
 
@@ -277,7 +281,7 @@ const Browse = () => {
               title="TV Series"
               items={mapToContentRow(tvShows)}
               onItemClick={handleMoreInfo}
-              seeAllLink="/genre/tv-shows"
+              seeAllLink="/category/tv-shows"
             />
           )}
 
@@ -287,6 +291,7 @@ const Browse = () => {
               key={channel}
               channelName={channel}
               onItemClick={handleMoreInfo}
+              seeAllLink={`/category/${channel.toLowerCase().replace(/\s+/g, '-')}`}
             />
           ))}
         </div>
