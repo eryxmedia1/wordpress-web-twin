@@ -201,7 +201,7 @@ export default function AdminLiveTVAds() {
   return (
     <div className="min-h-screen bg-background">
       <AdminNavbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 pt-24">
         <div className="flex items-center gap-4 mb-8">
           <Link to="/admin/livetv">
             <Button variant="ghost" size="icon">
