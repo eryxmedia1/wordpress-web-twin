@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Star, Info, Play, Plus, Check, ThumbsUp, ListVideo } from "lucide-react";
+import { ArrowLeft, Star, Info, Play, Plus, Check, ThumbsUp, ListVideo, ChevronDown, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { useMembershipAccess } from "@/hooks/useMembershipAccess";
 import { UpgradeGate } from "@/components/UpgradeGate";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ContentData {
   id: string;
@@ -46,6 +47,13 @@ interface EpisodeData {
   season_id: string;
 }
 
+interface SeasonWithEpisodes {
+  id: string;
+  season_number: number;
+  title: string | null;
+  episodes: EpisodeData[];
+}
+
 interface UserPlaylist {
   id: string;
   name: string;
@@ -53,7 +61,7 @@ interface UserPlaylist {
 
 const Watch = () => {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const episodeId = searchParams.get('episode');
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -65,11 +73,13 @@ const Watch = () => {
   const [showUpgradeGate, setShowUpgradeGate] = useState(false);
   const [content, setContent] = useState<ContentData | null>(null);
   const [episode, setEpisode] = useState<EpisodeData | null>(null);
+  const [seasonsWithEpisodes, setSeasonsWithEpisodes] = useState<SeasonWithEpisodes[]>([]);
   const [recommendedContent, setRecommendedContent] = useState<ContentData[]>([]);
   const [userRating, setUserRating] = useState(0);
   const [isSavingRating, setIsSavingRating] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [adBreakCount, setAdBreakCount] = useState(0);
+  const [autoPlayNext, setAutoPlayNext] = useState(true);
   
   // My List and Playlist state
   const [isInList, setIsInList] = useState(false);
@@ -93,6 +103,41 @@ const Watch = () => {
     setShowVideo(false);
     setIsPlaying(false);
   }, [id, episodeId]);
+
+  // Fetch all episodes for the content (for episode selector and auto-play next)
+  useEffect(() => {
+    const fetchAllEpisodes = async () => {
+      if (!id) return;
+      
+      // Fetch seasons for this content
+      const { data: seasons } = await supabase
+        .from("seasons")
+        .select("id, season_number, title")
+        .eq("content_id", id)
+        .order("season_number", { ascending: true });
+      
+      if (seasons && seasons.length > 0) {
+        // Fetch all episodes for these seasons
+        const { data: allEpisodes } = await supabase
+          .from("episodes")
+          .select("*")
+          .in("season_id", seasons.map(s => s.id))
+          .order("episode_number", { ascending: true });
+        
+        // Group episodes by season
+        const grouped: SeasonWithEpisodes[] = seasons.map(season => ({
+          id: season.id,
+          season_number: season.season_number,
+          title: season.title,
+          episodes: (allEpisodes || []).filter(ep => ep.season_id === season.id) as EpisodeData[]
+        }));
+        
+        setSeasonsWithEpisodes(grouped);
+      }
+    };
+    
+    fetchAllEpisodes();
+  }, [id]);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -217,6 +262,28 @@ const Watch = () => {
     fetchContent();
   }, [id, episodeId, navigate, currentProfile?.id]);
 
+  // Get all episodes flattened for navigation
+  const allEpisodes = useMemo(() => {
+    return seasonsWithEpisodes.flatMap(season => 
+      season.episodes.map(ep => ({
+        ...ep,
+        seasonNumber: season.season_number,
+        seasonTitle: season.title
+      }))
+    );
+  }, [seasonsWithEpisodes]);
+
+  // Find current episode index and next episode
+  const currentEpisodeIndex = useMemo(() => {
+    if (!episodeId) return -1;
+    return allEpisodes.findIndex(ep => ep.id === episodeId);
+  }, [allEpisodes, episodeId]);
+
+  const nextEpisode = useMemo(() => {
+    if (currentEpisodeIndex === -1 || currentEpisodeIndex >= allEpisodes.length - 1) return null;
+    return allEpisodes[currentEpisodeIndex + 1];
+  }, [allEpisodes, currentEpisodeIndex]);
+
   // Seek to saved progress when player is ready and progress is loaded
   useEffect(() => {
     if (playerReady && showVideo && progress > 0 && progress < 95 && !hasInitialSeek.current && playerRef.current) {
@@ -278,6 +345,36 @@ const Watch = () => {
         });
     }
   }, [currentProfile?.id, id, episodeId]);
+
+  // Handle episode end - auto-play next episode
+  const handleVideoEnded = useCallback(() => {
+    saveProgress(100);
+    
+    if (autoPlayNext && nextEpisode && nextEpisode.video_url) {
+      toast.success(`Playing next: ${nextEpisode.title}`);
+      setSearchParams({ episode: nextEpisode.id });
+    } else if (!nextEpisode) {
+      toast.info("You've reached the end of this series!");
+      setShowVideo(false);
+      setIsPlaying(false);
+    }
+  }, [autoPlayNext, nextEpisode, saveProgress, setSearchParams]);
+
+  // Handle episode selection from dropdown
+  const handleEpisodeSelect = useCallback((selectedEpisodeId: string) => {
+    if (selectedEpisodeId !== episodeId) {
+      saveProgress(progress);
+      setSearchParams({ episode: selectedEpisodeId });
+    }
+  }, [episodeId, progress, saveProgress, setSearchParams]);
+
+  // Play next episode manually
+  const playNextEpisode = useCallback(() => {
+    if (nextEpisode && nextEpisode.video_url) {
+      saveProgress(progress);
+      setSearchParams({ episode: nextEpisode.id });
+    }
+  }, [nextEpisode, progress, saveProgress, setSearchParams]);
 
   // Handle video progress updates
   const handleProgress = useCallback((state: { played: number; playedSeconds: number }) => {
@@ -528,6 +625,7 @@ const Watch = () => {
                   
                   setIsPlaying(true);
                 }}
+                onEnded={handleVideoEnded}
                 onError={(e) => console.error("Player error:", e)}
                 onBuffer={() => console.log("Buffering...")}
                 onBufferEnd={() => console.log("Buffering complete")}
@@ -563,8 +661,8 @@ const Watch = () => {
             </div>
           </div>
           
-          {/* Back button */}
-          <div className="absolute top-20 left-4 z-20">
+          {/* Top Controls - Back button and Episode Selector */}
+          <div className="absolute top-20 left-4 right-4 z-20 flex items-center justify-between">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -576,10 +674,94 @@ const Watch = () => {
             >
               <ArrowLeft className="h-6 w-6" />
             </Button>
+
+            {/* Episode Selector Dropdown - Only show for episodic content */}
+            {allEpisodes.length > 0 && episodeId && (
+              <div className="flex items-center gap-2">
+                <Select value={episodeId} onValueChange={handleEpisodeSelect}>
+                  <SelectTrigger className="w-[200px] md:w-[280px] bg-background/80 border-border backdrop-blur-sm">
+                    <SelectValue placeholder="Select Episode" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border max-h-[300px]">
+                    {seasonsWithEpisodes.map(season => (
+                      <div key={season.id}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                          Season {season.season_number}{season.title ? `: ${season.title}` : ''}
+                        </div>
+                        {season.episodes.map(ep => (
+                          <SelectItem 
+                            key={ep.id} 
+                            value={ep.id}
+                            disabled={!ep.video_url}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-primary font-medium">E{ep.episode_number}</span>
+                              <span className="truncate">{ep.title}</span>
+                              {ep.id === episodeId && <span className="text-xs text-primary">(Playing)</span>}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Next Episode Button */}
+                {nextEpisode && nextEpisode.video_url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={playNextEpisode}
+                    className="bg-background/80 border-border backdrop-blur-sm gap-1 hidden md:flex"
+                  >
+                    <SkipForward className="h-4 w-4" />
+                    Next
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Progress Bar Overlay at bottom */}
           <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-4">
+            {/* Next Episode Preview - Shows when near end */}
+            {nextEpisode && progress > 90 && autoPlayNext && (
+              <div className="mb-3 bg-card/90 backdrop-blur-sm rounded-lg p-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {nextEpisode.thumbnail_url && (
+                    <img 
+                      src={nextEpisode.thumbnail_url} 
+                      alt={nextEpisode.title}
+                      className="w-20 h-12 object-cover rounded"
+                    />
+                  )}
+                  <div>
+                    <p className="text-xs text-muted-foreground">Up Next</p>
+                    <p className="text-sm font-medium">S{nextEpisode.seasonNumber} E{nextEpisode.episode_number}: {nextEpisode.title}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAutoPlayNext(false)}
+                    className="text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={playNextEpisode}
+                    className="bg-primary hover:bg-primary/90 gap-1"
+                  >
+                    <SkipForward className="h-4 w-4" />
+                    Play Now
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <div className="flex items-center gap-3 text-sm text-foreground">
               <span>{formatTime(currentTime)}</span>
               <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
@@ -592,6 +774,7 @@ const Watch = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-1 text-center">
               {Math.round(progress)}% watched • Progress saved automatically
+              {autoPlayNext && nextEpisode && ' • Auto-play next enabled'}
             </p>
           </div>
         </div>
@@ -643,21 +826,68 @@ const Watch = () => {
           
           {/* Movie/Episode info */}
           <div className="container mx-auto px-4 md:px-6 mt-6">
-            {/* Episode indicator */}
+            {/* Episode indicator and selector */}
             {episode && (
-              <div className="mb-2">
-                <span className="text-primary font-medium">Episode {episode.episode_number}</span>
-                <span className="text-muted-foreground mx-2">•</span>
-                <Link to={`/watch/${id}`} className="text-muted-foreground hover:text-foreground transition-colors">
-                  {content.title}
-                </Link>
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-primary font-medium">Episode {episode.episode_number}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <Link to={`/watch/${id}`} className="text-muted-foreground hover:text-foreground transition-colors">
+                    {content.title}
+                  </Link>
+                </div>
+                
+                {/* Episode Selector for non-playing view */}
+                {allEpisodes.length > 0 && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Select value={episodeId || ''} onValueChange={handleEpisodeSelect}>
+                      <SelectTrigger className="w-full md:w-[320px] bg-card border-border">
+                        <SelectValue placeholder="Select Episode" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border max-h-[300px]">
+                        {seasonsWithEpisodes.map(season => (
+                          <div key={season.id}>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                              Season {season.season_number}{season.title ? `: ${season.title}` : ''}
+                            </div>
+                            {season.episodes.map(ep => (
+                              <SelectItem 
+                                key={ep.id} 
+                                value={ep.id}
+                                disabled={!ep.video_url}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-primary font-medium">E{ep.episode_number}</span>
+                                  <span className="truncate">{ep.title}</span>
+                                  {!ep.video_url && <span className="text-xs text-muted-foreground">(No video)</span>}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {nextEpisode && nextEpisode.video_url && (
+                      <Button
+                        variant="outline"
+                        onClick={playNextEpisode}
+                        className="gap-2"
+                      >
+                        <SkipForward className="h-4 w-4" />
+                        Next Episode
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             
             <h1 className="text-4xl font-bold mb-4">{episode ? episode.title : content.title}</h1>
             
             {/* Action Buttons Row */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-6 flex-wrap">
               <Button onClick={playVideo} className="bg-primary hover:bg-primary/90 gap-2">
                 <Play className="w-5 h-5 fill-current" />
                 Play
