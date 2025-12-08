@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import MobileHeader from "./MobileHeader";
 import MobileBottomNav from "./MobileBottomNav";
+import PWAInstallBanner from "./PWAInstallBanner";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -14,14 +15,17 @@ const MobileLayout = ({
   hideBottomNav = false 
 }: MobileLayoutProps) => {
   return (
-    <div className="min-h-screen bg-background md:hidden">
+    <div className="mobile-full-height bg-background md:hidden overflow-y-auto overflow-x-hidden">
       {!hideHeader && <MobileHeader />}
       
-      <main className={!hideBottomNav ? "pb-20" : ""}>
+      <main className={!hideBottomNav ? "pb-24" : ""}>
         {children}
       </main>
 
       {!hideBottomNav && <MobileBottomNav />}
+      
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
     </div>
   );
 };

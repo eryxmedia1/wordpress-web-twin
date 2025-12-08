@@ -85,8 +85,16 @@
   * {
     @apply border-border;
   }
-  body {
+  html, body {
     @apply bg-background text-foreground;
+    /* Dynamic viewport height for mobile */
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Prevent overscroll bounce on iOS */
+  html {
+    overscroll-behavior: none;
   }
 }
 
@@ -135,5 +143,20 @@
 
   .animate-scale-in {
     animation: scale-in 0.5s ease-out forwards;
+  }
+
+  /* Safe area utilities for notched devices */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Full height mobile layout */
+  .mobile-full-height {
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
   }
 }
