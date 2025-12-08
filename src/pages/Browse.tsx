@@ -329,7 +329,7 @@ const Browse = () => {
           {/* Next To Watch */}
           <NextToWatchRow onMoreInfo={handleMoreInfo} />
 
-          {/* Top 10 Shows on Zoe RatedTV */}
+          {/* Top 10 Shows on Zoe RatedTV - Large numbers behind posters */}
           {top10.length > 0 && (
             <Top10Row
               title="Top 10 on Zoe RatedTV Today"
@@ -345,16 +345,6 @@ const Browse = () => {
               onMoreInfo={handleMoreInfo}
             />
           )}
-
-          {/* Promo Banner */}
-          <PromoBanner 
-            title="PIECES OF HER"
-            subtitle="Now Available"
-            date="Stream Now"
-            imageUrl="/placeholder.svg"
-          />
-
-          {/* TV Series */}
           {tvShows.length > 0 && (
             <ContentRow
               title="TV Series"
