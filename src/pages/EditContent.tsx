@@ -111,14 +111,14 @@ const EditContent = () => {
   const [seasons, setSeasons] = useState<Season[]>([]);
   
   // Available videos for episode selection
-  const [availableVideos, setAvailableVideos] = useState<{id: string; title: string; video_url: string | null; poster_url: string | null}[]>([]);
+  const [availableVideos, setAvailableVideos] = useState<{id: string; title: string; video_url: string | null; poster_url: string | null; duration: string | null}[]>([]);
   
   // Fetch available videos for episode selection
   useEffect(() => {
     async function fetchAvailableVideos() {
       const { data, error } = await supabase
         .from('contents')
-        .select('id, title, video_url, poster_url')
+        .select('id, title, video_url, poster_url, duration')
         .not('video_url', 'is', null)
         .order('title', { ascending: true });
         
@@ -1035,6 +1035,7 @@ const EditContent = () => {
                           title: v.title,
                           video_url: v.video_url,
                           poster_url: v.poster_url,
+                          duration: v.duration,
                         }))}
                         selectedVideos={season.episodes.map((ep, idx) => {
                           const matchedVideo = availableVideos.find(v => v.video_url === ep.videoUrl);
@@ -1045,6 +1046,7 @@ const EditContent = () => {
                             title: matchedVideo?.title || ep.title,
                             video_url: ep.videoUrl,
                             poster_url: matchedVideo?.poster_url || ep.thumbnail || null,
+                            duration: ep.duration || matchedVideo?.duration,
                             episodeNumber: ep.number,
                             episodeTitle: ep.title,
                             description: ep.description,
@@ -1056,13 +1058,14 @@ const EditContent = () => {
                             number: idx + 1,
                             title: v.episodeTitle,
                             description: v.description || "",
-                            duration: "",
+                            duration: v.duration || "",
                             videoUrl: v.video_url || "",
                             thumbnail: v.poster_url || "",
                             vastAdUrl: DEFAULT_VAST_AD_URL
                           }));
                           setSeasons(newSeasons);
                         }}
+                        onFetchMetadata={fetchVimeoMetadata}
                       />
                     </div>
 
