@@ -96,6 +96,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
       tags: [] as string[],
       featured: false,
       isZoeOriginal: false,
+      isComingSoon: false,
       topRank: "",
       maturityRating: "TV-PG",
       creator: "",
@@ -208,6 +209,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           logo_url: data.logoUrl || null,
           featured: data.featured || false,
           is_zoe_original: data.isZoeOriginal || false,
+          is_coming_soon: data.isComingSoon || false,
           top_rank: data.topRank ? parseInt(data.topRank) : null,
           maturity_rating: data.maturityRating || null,
           creator: data.creator || null,
@@ -376,7 +378,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-2">
                   <input 
                     type="checkbox" 
@@ -395,6 +397,16 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                     className="rounded bg-gray-700 border-gray-600"
                   />
                   <Label htmlFor="isZoeOriginal" className="text-white">Zoe Original</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="checkbox" 
+                    {...register("isComingSoon")} 
+                    id="isComingSoon" 
+                    className="rounded bg-gray-700 border-gray-600"
+                  />
+                  <Label htmlFor="isComingSoon" className="text-white">Coming Soon</Label>
                 </div>
               </div>
 

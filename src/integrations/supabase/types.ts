@@ -130,6 +130,7 @@ export type Database = {
           genre: string | null
           id: string
           is_affiliate_url: boolean | null
+          is_coming_soon: boolean | null
           is_zoe_original: boolean | null
           logo_url: string | null
           maturity_rating: string | null
@@ -165,6 +166,7 @@ export type Database = {
           genre?: string | null
           id?: string
           is_affiliate_url?: boolean | null
+          is_coming_soon?: boolean | null
           is_zoe_original?: boolean | null
           logo_url?: string | null
           maturity_rating?: string | null
@@ -200,6 +202,7 @@ export type Database = {
           genre?: string | null
           id?: string
           is_affiliate_url?: boolean | null
+          is_coming_soon?: boolean | null
           is_zoe_original?: boolean | null
           logo_url?: string | null
           maturity_rating?: string | null

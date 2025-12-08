@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import ExpandingSidebar from "@/components/ExpandingSidebar";
 import FeaturedCarousel from "@/components/FeaturedCarousel";
 import ContinueWatchingRow from "@/components/ContinueWatchingRow";
+import ComingSoonRow from "@/components/ComingSoonRow";
 import MyListRow from "@/components/MyListRow";
 import ContentRow from "@/components/ContentRow";
 import Top10Row from "@/components/Top10Row";
@@ -316,6 +317,9 @@ const Browse = () => {
 
           {/* Continue Watching for {ProfileName} */}
           <ContinueWatchingRow onMoreInfo={handleMoreInfo} />
+
+          {/* Coming Soon To Zoe RatedTV */}
+          <ComingSoonRow onMoreInfo={handleMoreInfo} />
 
           {/* My List */}
           <MyListRow onMoreInfo={handleMoreInfo} />
