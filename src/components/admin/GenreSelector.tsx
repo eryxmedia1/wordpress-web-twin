@@ -16,6 +16,7 @@ const GENRES = [
   "Educational",
   "Family",
   "Fantasy",
+  "Funny",
   "Funny Videos",
   "History",
   "Horror",
