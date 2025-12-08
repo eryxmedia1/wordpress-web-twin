@@ -8,13 +8,24 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Film, Plus, Trash, Video } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { TagsSelector } from "@/components/admin/TagsSelector";
 import { MembershipPlansSelector } from "@/components/admin/MembershipPlansSelector";
+import { GenreSelector } from "@/components/admin/GenreSelector";
 import { supabase, DbContent, DbProfile, DbSeason, DbEpisode, ContentType, MidrollConfig } from "@/integrations/supabase/client";
+
+const RATING_OPTIONS = [
+  "G", "PG", "PG-13", "R", "NC-17",
+  "TV-Y", "TV-Y7", "TV-G", "TV-PG", "TV-14", "TV-MA",
+  "NR", "Unrated"
+];
+
+const currentYear = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 50 }, (_, i) => (currentYear - i).toString());
 
 interface Episode {
   number: number;
@@ -592,13 +603,19 @@ const EditContent = () => {
             
             <div>
               <Label htmlFor="releaseYear" className="mb-2 block">Release Year</Label>
-              <Input 
-                id="releaseYear"
+              <Select
                 value={contentDetails.releaseYear}
-                onChange={(e) => setContentDetails({...contentDetails, releaseYear: e.target.value})}
-                className="bg-gray-800 border-gray-700"
-                placeholder="e.g. 2023"
-              />
+                onValueChange={(value) => setContentDetails({...contentDetails, releaseYear: value})}
+              >
+                <SelectTrigger className="bg-gray-800 border-gray-700">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
+                  {YEAR_OPTIONS.map((year) => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
@@ -615,25 +632,28 @@ const EditContent = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <Label htmlFor="genre" className="mb-2 block">Genre</Label>
-              <Input 
-                id="genre"
-                value={contentDetails.genre}
-                onChange={(e) => setContentDetails({...contentDetails, genre: e.target.value})}
-                className="bg-gray-800 border-gray-700"
-                placeholder="e.g. Action, Drama"
+              <Label className="mb-2 block">Genre</Label>
+              <GenreSelector
+                selectedGenres={contentDetails.genre ? contentDetails.genre.split(', ').filter(Boolean) : []}
+                onGenresChange={(genres) => setContentDetails({...contentDetails, genre: genres.join(', ')})}
               />
             </div>
             
             <div>
               <Label htmlFor="rating" className="mb-2 block">Rating</Label>
-              <Input 
-                id="rating"
+              <Select
                 value={contentDetails.rating}
-                onChange={(e) => setContentDetails({...contentDetails, rating: e.target.value})}
-                className="bg-gray-800 border-gray-700"
-                placeholder="e.g. PG-13"
-              />
+                onValueChange={(value) => setContentDetails({...contentDetails, rating: value})}
+              >
+                <SelectTrigger className="bg-gray-800 border-gray-700">
+                  <SelectValue placeholder="Select rating" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {RATING_OPTIONS.map((rating) => (
+                    <SelectItem key={rating} value={rating}>{rating}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div>
