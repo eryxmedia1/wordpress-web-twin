@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Play, Plus, Check, ThumbsUp, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
+import ReactPlayer from "react-player";
 
 interface HoverPreviewCardProps {
   content: {
@@ -25,7 +26,6 @@ const HoverPreviewCard = ({ content, onMoreInfo }: HoverPreviewCardProps) => {
   const [isInList, setIsInList] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [videoError, setVideoError] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const previewUrl = content.trailerUrl || content.videoUrl;
 
@@ -70,17 +70,30 @@ const HoverPreviewCard = ({ content, onMoreInfo }: HoverPreviewCardProps) => {
       {/* Video Preview */}
       <div className="relative aspect-video bg-muted">
         {previewUrl && !videoError ? (
-          <video
-            ref={videoRef}
-            autoPlay
+          <ReactPlayer
+            url={previewUrl}
+            playing
             muted
             loop
-            playsInline
-            className="w-full h-full object-cover"
+            playsinline
+            width="100%"
+            height="100%"
+            style={{ position: 'absolute', top: 0, left: 0 }}
             onError={() => setVideoError(true)}
-          >
-            <source src={previewUrl} type="video/mp4" />
-          </video>
+            config={{
+              vimeo: {
+                playerOptions: {
+                  background: true,
+                  responsive: true
+                }
+              },
+              file: {
+                attributes: {
+                  playsInline: true
+                }
+              }
+            }}
+          />
         ) : (
           <img
             src={content.posterUrl || "/placeholder.svg"}
