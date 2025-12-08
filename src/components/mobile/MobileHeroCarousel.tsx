@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Play, Plus, X, Check } from "lucide-react";
+import { Play, Plus, X, Volume2, VolumeX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,8 @@ import useEmblaCarousel from "embla-carousel-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/context/ProfileContext";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import ReactPlayer from "react-player";
 
 interface Content {
   id: string;
@@ -16,6 +18,7 @@ interface Content {
   backdrop_url: string | null;
   logo_url: string | null;
   video_url: string | null;
+  trailer_url?: string | null;
   genre: string | null;
   maturity_rating: string | null;
 }
@@ -29,6 +32,9 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
   const [currentIndex, setCurrentIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
+  const [isMuted, setIsMuted] = useState(true);
+  const [videoReady, setVideoReady] = useState<{ [key: string]: boolean }>({});
+  const [videoError, setVideoError] = useState<{ [key: string]: boolean }>({});
   const navigate = useNavigate();
   const { currentProfile } = useProfile();
 
@@ -116,14 +122,10 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
   );
 
   const toggleMyList = async (e: React.MouseEvent, contentId: string, contentTitle: string) => {
-    // Prevent event bubbling to parent card
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("toggleMyList called:", { contentId, contentTitle, profileId: currentProfile?.id });
-    
     if (!currentProfile?.id) {
-      console.error("No profile selected - cannot add to My List");
       toast.error("Please select a profile first");
       return;
     }
@@ -131,45 +133,32 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
     setIsLoading((prev) => ({ ...prev, [contentId]: true }));
 
     const isInList = favorites.has(contentId);
-    console.log("Current state:", { isInList, favoritesCount: favorites.size });
 
     try {
       if (isInList) {
-        // Remove from favorites
-        console.log("Removing from favorites...");
         const { error } = await supabase
           .from("favorites")
           .delete()
           .eq("profile_id", currentProfile.id)
           .eq("content_id", contentId);
 
-        if (error) {
-          console.error("Supabase delete error:", error);
-          throw error;
-        }
+        if (error) throw error;
 
         setFavorites((prev) => {
           const updated = new Set(prev);
           updated.delete(contentId);
           return updated;
         });
-        console.log("Successfully removed from My List");
         toast.success(`Removed "${contentTitle}" from My List`);
       } else {
-        // Add to favorites
-        console.log("Adding to favorites...");
         const { error } = await supabase.from("favorites").insert({
           profile_id: currentProfile.id,
           content_id: contentId,
         });
 
-        if (error) {
-          console.error("Supabase insert error:", error);
-          throw error;
-        }
+        if (error) throw error;
 
         setFavorites((prev) => new Set([...prev, contentId]));
-        console.log("Successfully added to My List");
         toast.success(`Added "${contentTitle}" to My List`);
       }
     } catch (error) {
@@ -178,6 +167,18 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
     } finally {
       setIsLoading((prev) => ({ ...prev, [contentId]: false }));
     }
+  };
+
+  const handleVideoReady = (contentId: string) => {
+    setVideoReady((prev) => ({ ...prev, [contentId]: true }));
+  };
+
+  const handleVideoError = (contentId: string) => {
+    setVideoError((prev) => ({ ...prev, [contentId]: true }));
+  };
+
+  const getVideoUrl = (content: Content) => {
+    return content.trailer_url || content.video_url;
   };
 
   if (contents.length === 0) return null;
@@ -190,6 +191,11 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
           {contents.map((content, index) => {
             const isInList = favorites.has(content.id);
             const loading = isLoading[content.id];
+            const isActive = index === currentIndex;
+            const videoUrl = getVideoUrl(content);
+            const isVideoReady = videoReady[content.id];
+            const hasVideoError = videoError[content.id];
+            const showVideo = isActive && videoUrl && !hasVideoError;
 
             return (
               <div
@@ -199,22 +205,89 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
                 <div
                   className={cn(
                     "relative aspect-[16/10] rounded-2xl overflow-hidden bg-card transition-transform duration-300",
-                    index === currentIndex ? "scale-100" : "scale-95 opacity-80"
+                    isActive ? "scale-100" : "scale-95 opacity-80"
                   )}
                   onClick={() => onMoreInfo(content.id)}
                 >
-                  {/* Background Image */}
+                  {/* Loading Skeleton */}
+                  {showVideo && !isVideoReady && (
+                    <div className="absolute inset-0 z-10">
+                      <Skeleton className="w-full h-full rounded-none" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Video Player */}
+                  {showVideo && (
+                    <div className={cn(
+                      "absolute inset-0 z-5 transition-opacity duration-500",
+                      isVideoReady ? "opacity-100" : "opacity-0"
+                    )}>
+                      <ReactPlayer
+                        url={videoUrl}
+                        playing={isActive}
+                        muted={isMuted}
+                        loop
+                        playsinline
+                        width="100%"
+                        height="100%"
+                        style={{ position: 'absolute', top: 0, left: 0 }}
+                        onReady={() => handleVideoReady(content.id)}
+                        onError={() => handleVideoError(content.id)}
+                        config={{
+                          vimeo: {
+                            playerOptions: {
+                              background: true,
+                              responsive: true,
+                              quality: 'auto',
+                            },
+                          },
+                          file: {
+                            attributes: {
+                              playsInline: true,
+                            },
+                          },
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Fallback Background Image */}
                   <img
                     src={content.backdrop_url || content.poster_url || "/placeholder.svg"}
                     alt={content.title}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className={cn(
+                      "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
+                      showVideo && isVideoReady ? "opacity-0" : "opacity-100"
+                    )}
                   />
 
                   {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
+
+                  {/* Mute/Unmute Button */}
+                  {showVideo && isVideoReady && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsMuted(!isMuted);
+                      }}
+                      className="absolute top-3 right-3 z-20 p-2 rounded-full bg-background/30 backdrop-blur-sm border border-foreground/20 transition-all hover:bg-background/50 touch-manipulation"
+                    >
+                      {isMuted ? (
+                        <VolumeX className="w-4 h-4 text-foreground" />
+                      ) : (
+                        <Volume2 className="w-4 h-4 text-foreground" />
+                      )}
+                    </button>
+                  )}
 
                   {/* Content */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
                     {/* Logo or Title */}
                     {content.logo_url ? (
                       <img
@@ -236,11 +309,13 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
                     {/* Buttons */}
                     <div className="flex gap-2">
                       <Button
+                        type="button"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           navigate(`/watch/${content.id}`);
                         }}
-                        className="flex-1 bg-foreground text-background hover:bg-foreground/90 h-9 text-sm font-semibold"
+                        className="flex-1 bg-foreground text-background hover:bg-foreground/90 h-9 text-sm font-semibold touch-manipulation"
                       >
                         <Play className="w-4 h-4 mr-1 fill-current" />
                         WATCH NOW
