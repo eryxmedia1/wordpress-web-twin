@@ -377,25 +377,26 @@ export default function AdminLiveTVPlaylists() {
   return (
     <div className="min-h-screen bg-background">
       <AdminNavbar />
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-8">
+      <main className="container mx-auto px-4 py-8 pb-24">
+        {/* Header - always visible */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
           <Link to="/admin/livetv/channels">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-3">
               {channel?.logo_url ? (
-                <img src={channel.logo_url} alt={channel.name} className="h-10" />
+                <img src={channel.logo_url} alt={channel.name} className="h-8 sm:h-10" />
               ) : (
-                <Tv className="h-8 w-8 text-primary" />
+                <Tv className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
               )}
               {channel?.name} Playlists
             </h1>
-            <p className="text-muted-foreground mt-1">Schedule and manage content for this channel</p>
+            <p className="text-muted-foreground mt-1 text-sm">Schedule and manage content for this channel</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />New Playlist</Button>
+              <Button className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" />New Playlist</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -434,6 +435,23 @@ export default function AdminLiveTVPlaylists() {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Instructions Banner */}
+        {playlists.length === 0 && (
+          <Card className="mb-6 border-primary/30 bg-primary/5">
+            <CardContent className="py-4">
+              <h3 className="font-semibold text-foreground mb-2">How to add videos to your Live TV channel:</h3>
+              <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
+                <li>Click <strong>"New Playlist"</strong> button above to create a playlist</li>
+                <li>Set the playlist name, start date/time, and loop mode</li>
+                <li>After creating, <strong>select the playlist</strong> from the left panel</li>
+                <li>Click <strong>"Add Video"</strong> button to search and add videos</li>
+                <li>Drag and drop to reorder videos in the playlist</li>
+                <li>Click <strong>"Activate"</strong> on a playlist to make it live</li>
+              </ol>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Playlists List */}

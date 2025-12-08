@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNavbar from "@/components/AdminNavbar";
@@ -23,8 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Tv, Plus, Pencil, Trash2, ArrowLeft, Loader2, Radio } from "lucide-react";
+import { Tv, Plus, Pencil, Trash2, ArrowLeft, Loader2, Radio, Upload, X } from "lucide-react";
 
 interface Channel {
   id: string;
@@ -62,6 +63,57 @@ export default function AdminLiveTVChannels() {
     is_active: true,
     default_ad_interval_minutes: 15,
   });
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be less than 2MB');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `channel-logos/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      // Upload to Supabase storage
+      const { data, error } = await supabase.storage
+        .from('channel-logos')
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+      if (error) {
+        // If bucket doesn't exist, show helpful message
+        if (error.message.includes('bucket') || error.message.includes('Bucket')) {
+          toast.error('Storage bucket not configured. Using URL input for now.');
+          return;
+        }
+        throw error;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage.from('channel-logos').getPublicUrl(fileName);
+      
+      setFormData(prev => ({ ...prev, logo_url: urlData.publicUrl }));
+      toast.success('Logo uploaded successfully');
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Failed to upload logo');
+    } finally {
+      setIsUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const fetchChannels = async () => {
     const { data, error } = await supabase
@@ -241,41 +293,91 @@ export default function AdminLiveTVChannels() {
                 Add Channel
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle>
                   {editingChannel ? 'Edit Channel' : 'Create New Channel'}
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div>
-                  <Label>Channel Name *</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="e.g., MadFaceTV"
-                  />
-                </div>
+              <ScrollArea className="flex-1 pr-4">
+                <div className="space-y-4 mt-4">
+                  <div>
+                    <Label>Channel Name *</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                      placeholder="e.g., MadFaceTV"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Slug *</Label>
+                    <Input
+                      value={formData.slug}
+                      onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                      placeholder="e.g., madfacetv"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Used in URLs: /live/{formData.slug || 'channel-slug'}
+                    </p>
+                  </div>
 
                 <div>
-                  <Label>Slug *</Label>
-                  <Input
-                    value={formData.slug}
-                    onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                    placeholder="e.g., madfacetv"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Used in URLs: /live/{formData.slug || 'channel-slug'}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>Logo URL</Label>
-                  <Input
-                    value={formData.logo_url}
-                    onChange={(e) => setFormData(prev => ({ ...prev, logo_url: e.target.value }))}
-                    placeholder="https://..."
-                  />
+                  <Label>Channel Logo</Label>
+                  <div className="space-y-2">
+                    {/* Logo Preview */}
+                    {formData.logo_url && (
+                      <div className="relative inline-block">
+                        <img 
+                          src={formData.logo_url} 
+                          alt="Logo preview" 
+                          className="h-16 w-auto rounded border border-border"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6"
+                          onClick={() => setFormData(prev => ({ ...prev, logo_url: '' }))}
+                          type="button"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {/* Upload Button */}
+                    <div className="flex gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingLogo}
+                        className="flex-1"
+                      >
+                        {isUploadingLogo ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4 mr-2" />
+                        )}
+                        Upload Logo
+                      </Button>
+                    </div>
+                    
+                    {/* URL Input as fallback */}
+                    <Input
+                      value={formData.logo_url}
+                      onChange={(e) => setFormData(prev => ({ ...prev, logo_url: e.target.value }))}
+                      placeholder="Or paste image URL..."
+                      className="text-xs"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -318,19 +420,20 @@ export default function AdminLiveTVChannels() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label>Active</Label>
-                  <Switch
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
-                  />
-                </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Active</Label>
+                    <Switch
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                    />
+                  </div>
 
-                <Button onClick={handleSave} className="w-full" disabled={isSaving}>
-                  {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {editingChannel ? 'Update Channel' : 'Create Channel'}
-                </Button>
-              </div>
+                  <Button onClick={handleSave} className="w-full" disabled={isSaving}>
+                    {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {editingChannel ? 'Update Channel' : 'Create Channel'}
+                  </Button>
+                </div>
+              </ScrollArea>
             </DialogContent>
           </Dialog>
         </div>
