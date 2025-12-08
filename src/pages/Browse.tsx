@@ -78,23 +78,16 @@ const Browse = () => {
 
   useEffect(() => {
     const fetchContent = async () => {
-      // Fetch all featured content for hero carousel
+      // Fetch ONLY content explicitly marked as featured for hero carousel (up to 10)
       const { data: featured } = await supabase
         .from("contents")
         .select("*")
         .eq("featured", true)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-      if (featured && featured.length > 0) {
+      if (featured) {
         setFeaturedContents(featured as Content[]);
-      } else {
-        // Fallback to latest content if none featured
-        const { data: fallback } = await supabase
-          .from("contents")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(3);
-        if (fallback) setFeaturedContents(fallback as Content[]);
       }
 
       // Fetch movies
