@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase, DbContent, DbCategory, DbTag, ContentType } from "@/integrations/supabase/client";
 import { VimeoUrlInput } from "@/components/VimeoUrlInput";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
+import { GenreSelector } from "@/components/admin/GenreSelector";
 import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
 
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
   const [selectedAudioLanguages, setSelectedAudioLanguages] = useState<string[]>([]);
   const [selectedSubtitleLanguages, setSelectedSubtitleLanguages] = useState<string[]>([]);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const {
@@ -199,7 +201,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           title: data.title || "Untitled Show",
           description: data.description || null,
           type: showType,
-          genre: data.genre || null,
+          genre: selectedGenres.length > 0 ? selectedGenres.join(", ") : null,
           release_year: data.releaseYear ? parseInt(data.releaseYear) : new Date().getFullYear(),
           rating: data.rating || null,
           poster_url: data.posterUrl || null,
@@ -297,15 +299,13 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                 />
               </div>
 
+              {/* Genre Multi-Select */}
+              <GenreSelector
+                selectedGenres={selectedGenres}
+                onGenresChange={setSelectedGenres}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-white">Genre</Label>
-                  <Input
-                    type="text"
-                    {...register("genre")}
-                    className="mt-1 bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
 
                 <div>
                   <Label className="text-white">Maturity Rating</Label>
