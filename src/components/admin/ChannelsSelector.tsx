@@ -8,7 +8,10 @@ const CHANNELS = [
   "MyPureTV",
   "Yard MonTV",
   "Indie Films",
-  "More Networks"
+  "More Networks",
+  "Boss Mogul TV",
+  "Caught On Camera",
+  "Cap Village Media"
 ];
 
 interface ChannelsSelectorProps {
