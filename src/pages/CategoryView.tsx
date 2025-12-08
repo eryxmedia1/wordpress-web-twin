@@ -347,12 +347,12 @@ const CategoryView = () => {
     <div className={`${showFilters || !isMobile ? 'block' : 'hidden'} space-y-4`}>
       <div className="flex flex-wrap gap-3">
         {/* Genre Filter */}
-        <Select value={selectedGenre || ""} onValueChange={(v) => setSelectedGenre(v || null)}>
+        <Select value={selectedGenre || "all"} onValueChange={(v) => setSelectedGenre(v === "all" ? null : v)}>
           <SelectTrigger className="w-[140px] bg-card border-border">
             <SelectValue placeholder="Genre" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Genres</SelectItem>
+            <SelectItem value="all">All Genres</SelectItem>
             {GENRES.map((genre) => (
               <SelectItem key={genre} value={genre}>{genre}</SelectItem>
             ))}
@@ -360,12 +360,12 @@ const CategoryView = () => {
         </Select>
 
         {/* Year Filter */}
-        <Select value={selectedYear || ""} onValueChange={(v) => setSelectedYear(v || null)}>
+        <Select value={selectedYear || "all"} onValueChange={(v) => setSelectedYear(v === "all" ? null : v)}>
           <SelectTrigger className="w-[120px] bg-card border-border">
             <SelectValue placeholder="Year" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Years</SelectItem>
+            <SelectItem value="all">All Years</SelectItem>
             {YEARS.map((year) => (
               <SelectItem key={year} value={year}>{year}</SelectItem>
             ))}
@@ -373,12 +373,12 @@ const CategoryView = () => {
         </Select>
 
         {/* Rating Filter */}
-        <Select value={selectedRating || ""} onValueChange={(v) => setSelectedRating(v || null)}>
+        <Select value={selectedRating || "all"} onValueChange={(v) => setSelectedRating(v === "all" ? null : v)}>
           <SelectTrigger className="w-[120px] bg-card border-border">
             <SelectValue placeholder="Rating" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Ratings</SelectItem>
+            <SelectItem value="all">All Ratings</SelectItem>
             {RATINGS.map((rating) => (
               <SelectItem key={rating} value={rating}>{rating}</SelectItem>
             ))}
