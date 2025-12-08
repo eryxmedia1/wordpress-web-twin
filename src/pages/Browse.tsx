@@ -166,6 +166,8 @@ const Browse = () => {
       title: item.title,
       posterUrl: item.poster_url || "/placeholder.svg",
       rank: item.top_rank || index + 1,
+      trailerUrl: item.trailer_url || undefined,
+      videoUrl: item.video_url || undefined,
     }));
 
   // Sample data for components
