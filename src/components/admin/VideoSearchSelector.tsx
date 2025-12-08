@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Plus, X, GripVertical, Check } from "lucide-react";
+import { Search, Plus, X, GripVertical, Check, Loader2 } from "lucide-react";
 
 interface Video {
   id: string;
@@ -18,19 +18,29 @@ interface SelectedVideo extends Video {
   description: string;
 }
 
+interface VimeoMetadata {
+  title: string;
+  thumbnail: string;
+  duration: string;
+  description: string;
+}
+
 interface VideoSearchSelectorProps {
   availableVideos: Video[];
   selectedVideos: SelectedVideo[];
   onSelectedVideosChange: (videos: SelectedVideo[]) => void;
+  onFetchMetadata?: (url: string) => Promise<VimeoMetadata | null>;
 }
 
 export const VideoSearchSelector = ({
   availableVideos,
   selectedVideos,
   onSelectedVideosChange,
+  onFetchMetadata,
 }: VideoSearchSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [fetchingId, setFetchingId] = useState<string | null>(null);
 
   // Filter available videos based on search term
   const filteredVideos = useMemo(() => {
@@ -45,8 +55,37 @@ export const VideoSearchSelector = ({
   }, [selectedVideos]);
 
   // Add a video to the selection
-  const handleAddVideo = (video: Video) => {
+  const handleAddVideo = async (video: Video) => {
     const newEpisodeNumber = selectedVideos.length + 1;
+    
+    // Check if we should fetch metadata (no poster and has a Vimeo URL)
+    const isVimeoUrl = video.video_url?.includes('vimeo.com') || video.video_url?.includes('vimeo');
+    const needsMetadata = !video.poster_url && isVimeoUrl && onFetchMetadata;
+    
+    if (needsMetadata) {
+      setFetchingId(video.id);
+      try {
+        const metadata = await onFetchMetadata!(video.video_url!);
+        if (metadata) {
+          const newSelectedVideo: SelectedVideo = {
+            ...video,
+            poster_url: metadata.thumbnail || video.poster_url,
+            duration: metadata.duration || video.duration,
+            episodeNumber: newEpisodeNumber,
+            episodeTitle: metadata.title || video.title,
+            description: metadata.description || "",
+          };
+          onSelectedVideosChange([...selectedVideos, newSelectedVideo]);
+          setFetchingId(null);
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to fetch Vimeo metadata:', err);
+      }
+      setFetchingId(null);
+    }
+    
+    // Default behavior if no metadata fetch needed or fetch failed
     const newSelectedVideo: SelectedVideo = {
       ...video,
       episodeNumber: newEpisodeNumber,
@@ -183,6 +222,10 @@ export const VideoSearchSelector = ({
                     {isSelected ? (
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20">
                         <Check className="w-4 h-4 text-primary" />
+                      </div>
+                    ) : fetchingId === video.id ? (
+                      <div className="flex items-center justify-center w-8 h-8">
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
                       </div>
                     ) : (
                       <Button
