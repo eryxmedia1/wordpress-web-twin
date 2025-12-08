@@ -10,6 +10,7 @@ interface Segment {
   type: 'show' | 'ad';
   videoUrl: string;
   videoId?: string;
+  episodeId?: string;
   title: string;
   thumbnail?: string;
   duration: number;
@@ -95,12 +96,13 @@ serve(async (req) => {
       );
     }
 
-    // Fetch playlist items with video details
+    // Fetch playlist items with video and episode details
     const { data: items, error: itemsError } = await supabase
       .from('live_playlist_items')
       .select(`
         *,
         video:contents(id, title, poster_url, video_url, trailer_url, duration),
+        episode:episodes(id, title, thumbnail_url, video_url, duration),
         preroll_ad:ads!live_playlist_items_preroll_ad_id_fkey(id, name, video_url, duration_seconds),
         postroll_ad:ads!live_playlist_items_postroll_ad_id_fkey(id, name, video_url, duration_seconds)
       `)
@@ -123,10 +125,20 @@ serve(async (req) => {
     const segments: Segment[] = [];
     
     for (const item of items) {
-      const video = item.video;
+      // Determine if this is an episode or a content item
+      const isEpisode = !!item.episode_id && item.episode;
+      const video = isEpisode ? item.episode : item.video;
+      
       if (!video) continue;
 
-      // Parse duration from video (format: "1h 30m" or "45m" or seconds)
+      // Get video URL - for episodes use episode's video_url, for content use video_url or trailer_url
+      const videoUrl = isEpisode 
+        ? video.video_url 
+        : (video.video_url || video.trailer_url || '');
+      
+      if (!videoUrl) continue; // Skip items without a video URL
+
+      // Parse duration
       let videoDuration = item.duration_seconds;
       if (!videoDuration && video.duration) {
         videoDuration = parseDuration(video.duration);
@@ -154,10 +166,11 @@ serve(async (req) => {
             // Show segment before midroll
             segments.push({
               type: 'show',
-              videoUrl: video.video_url || video.trailer_url || '',
-              videoId: video.id,
+              videoUrl,
+              videoId: item.video?.id,
+              episodeId: item.episode_id,
               title: video.title,
-              thumbnail: video.poster_url,
+              thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
               duration: breakAt - lastBreak,
               startOffset: lastBreak,
             });
@@ -178,10 +191,11 @@ serve(async (req) => {
         if (lastBreak < videoDuration) {
           segments.push({
             type: 'show',
-            videoUrl: video.video_url || video.trailer_url || '',
-            videoId: video.id,
+            videoUrl,
+            videoId: item.video?.id,
+            episodeId: item.episode_id,
             title: video.title,
-            thumbnail: video.poster_url,
+            thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
             duration: videoDuration - lastBreak,
             startOffset: lastBreak,
           });
@@ -190,10 +204,11 @@ serve(async (req) => {
         // No midrolls, add whole show as one segment
         segments.push({
           type: 'show',
-          videoUrl: video.video_url || video.trailer_url || '',
-          videoId: video.id,
+          videoUrl,
+          videoId: item.video?.id,
+          episodeId: item.episode_id,
           title: video.title,
-          thumbnail: video.poster_url,
+          thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
           duration: videoDuration,
           startOffset: 0,
         });
@@ -224,7 +239,8 @@ serve(async (req) => {
     // Calculate total cycle duration
     const totalDuration = segments.reduce((sum, seg) => sum + seg.duration, 0);
 
-    // Get current time in channel timezone
+    // Get current time - use channel timezone for proper scheduling
+    const timezone = channel.timezone || 'America/New_York';
     const nowUtc = new Date();
     
     // Parse playlist start datetime

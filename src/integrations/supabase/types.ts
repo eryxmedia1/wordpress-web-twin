@@ -523,6 +523,7 @@ export type Database = {
           channel_playlist_id: string
           created_at: string | null
           duration_seconds: number | null
+          episode_id: string | null
           id: string
           midroll_breaks_json: Json | null
           order_index: number
@@ -534,6 +535,7 @@ export type Database = {
           channel_playlist_id: string
           created_at?: string | null
           duration_seconds?: number | null
+          episode_id?: string | null
           id?: string
           midroll_breaks_json?: Json | null
           order_index: number
@@ -545,6 +547,7 @@ export type Database = {
           channel_playlist_id?: string
           created_at?: string | null
           duration_seconds?: number | null
+          episode_id?: string | null
           id?: string
           midroll_breaks_json?: Json | null
           order_index?: number
@@ -558,6 +561,13 @@ export type Database = {
             columns: ["channel_playlist_id"]
             isOneToOne: false
             referencedRelation: "live_channel_playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_playlist_items_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
             referencedColumns: ["id"]
           },
           {

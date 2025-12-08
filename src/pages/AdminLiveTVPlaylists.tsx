@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, PlayCircle, GripVertical, Search, Clock, Tv, Radio } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, PlayCircle, GripVertical, Search, Clock, Tv, Radio, Film, List } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -54,12 +54,27 @@ interface PlaylistItem {
   id: string;
   order_index: number;
   duration_seconds: number | null;
+  episode_id: string | null;
   video: {
     id: string;
     title: string;
     poster_url: string | null;
     duration: string | null;
-  };
+    type: string;
+  } | null;
+  episode?: {
+    id: string;
+    title: string;
+    thumbnail_url: string | null;
+    duration: string | null;
+    episode_number: number;
+    season: {
+      season_number: number;
+      content: {
+        title: string;
+      };
+    };
+  } | null;
 }
 
 interface Video {
@@ -70,9 +85,35 @@ interface Video {
   type: string;
 }
 
+interface Episode {
+  id: string;
+  title: string;
+  thumbnail_url: string | null;
+  duration: string | null;
+  episode_number: number;
+  video_url: string | null;
+  season: {
+    season_number: number;
+    content_id: string;
+    content: {
+      title: string;
+    };
+  };
+}
+
 function SortableItem({ item, onRemove }: { item: PlaylistItem; onRemove: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
+
+  // Determine display info based on whether it's an episode or content
+  const isEpisode = !!item.episode_id && item.episode;
+  const title = isEpisode 
+    ? `${item.episode?.season?.content?.title}: S${item.episode?.season?.season_number}E${item.episode?.episode_number} - ${item.episode?.title}`
+    : item.video?.title || 'Unknown';
+  const thumbnail = isEpisode ? item.episode?.thumbnail_url : item.video?.poster_url;
+  const duration = item.duration_seconds 
+    ? `${Math.floor(item.duration_seconds / 60)}m ${item.duration_seconds % 60}s` 
+    : (isEpisode ? item.episode?.duration : item.video?.duration) || 'Unknown duration';
 
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
@@ -80,18 +121,19 @@ function SortableItem({ item, onRemove }: { item: PlaylistItem; onRemove: () => 
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </button>
       <span className="text-sm font-medium text-muted-foreground w-8">{item.order_index}</span>
-      {item.video?.poster_url ? (
-        <img src={item.video.poster_url} alt={item.video?.title} className="w-20 h-12 object-cover rounded" />
+      {thumbnail ? (
+        <img src={thumbnail} alt={title} className="w-20 h-12 object-cover rounded" />
       ) : (
         <div className="w-20 h-12 bg-muted rounded flex items-center justify-center">
-          <Tv className="h-5 w-5 text-muted-foreground" />
+          {isEpisode ? <Film className="h-5 w-5 text-muted-foreground" /> : <Tv className="h-5 w-5 text-muted-foreground" />}
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-foreground truncate">{item.video?.title}</p>
-        <p className="text-xs text-muted-foreground">
-          {item.duration_seconds ? `${Math.floor(item.duration_seconds / 60)}m ${item.duration_seconds % 60}s` : item.video?.duration || 'Unknown duration'}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-foreground truncate">{title}</p>
+          {isEpisode && <Badge variant="secondary" className="text-xs">Episode</Badge>}
+        </div>
+        <p className="text-xs text-muted-foreground">{duration}</p>
       </div>
       <Button variant="ghost" size="icon" onClick={onRemove} className="text-destructive hover:text-destructive">
         <Trash2 className="h-4 w-4" />
@@ -114,15 +156,17 @@ export default function AdminLiveTVPlaylists() {
   // Video search
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Video[]>([]);
+  const [episodicShows, setEpisodicShows] = useState<Video[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAddingEpisodes, setIsAddingEpisodes] = useState(false);
 
   const [formData, setFormData] = useState({
     playlist_name: '',
     start_date: new Date().toISOString().split('T')[0],
     start_time: '08:00',
     loop_mode: 'continuous_loop',
-    is_active: false,
+    is_active: true, // Default to active
   });
 
   const sensors = useSensors(
@@ -157,9 +201,17 @@ export default function AdminLiveTVPlaylists() {
       setPlaylistItems([]);
       return;
     }
+    // Fetch items with both video (contents) and episode data
     const { data } = await supabase
       .from('live_playlist_items')
-      .select(`*, video:contents(id, title, poster_url, duration)`)
+      .select(`
+        *,
+        video:contents(id, title, poster_url, duration, type),
+        episode:episodes(
+          id, title, thumbnail_url, duration, episode_number, video_url,
+          season:seasons(season_number, content_id, content:contents(title))
+        )
+      `)
       .eq('channel_playlist_id', selectedPlaylist.id)
       .order('order_index');
     if (data) setPlaylistItems(data as PlaylistItem[]);
@@ -177,15 +229,25 @@ export default function AdminLiveTVPlaylists() {
   const searchVideos = useCallback(async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
+      setEpisodicShows([]);
       return;
     }
     setIsSearching(true);
+    
+    // Search for all content
     const { data } = await supabase
       .from('contents')
       .select('id, title, poster_url, duration, type')
       .ilike('title', `%${query}%`)
       .limit(20);
-    setSearchResults(data || []);
+    
+    if (data) {
+      // Separate episodic shows (type = 'show') from movies/single videos
+      const shows = data.filter(v => v.type === 'show');
+      const others = data.filter(v => v.type !== 'show');
+      setEpisodicShows(shows);
+      setSearchResults(others);
+    }
     setIsSearching(false);
   }, []);
 
@@ -200,7 +262,7 @@ export default function AdminLiveTVPlaylists() {
       start_date: new Date().toISOString().split('T')[0],
       start_time: '08:00',
       loop_mode: 'continuous_loop',
-      is_active: false,
+      is_active: true, // Default to active
     });
     setEditingPlaylist(null);
   };
@@ -225,7 +287,23 @@ export default function AdminLiveTVPlaylists() {
     setIsSaving(true);
 
     try {
+      // If creating a new active playlist, deactivate others first
+      if (!editingPlaylist && formData.is_active) {
+        await supabase
+          .from('live_channel_playlists')
+          .update({ is_active: false })
+          .eq('channel_id', channelId);
+      }
+
       if (editingPlaylist) {
+        // If activating this playlist, deactivate others
+        if (formData.is_active && !editingPlaylist.is_active) {
+          await supabase
+            .from('live_channel_playlists')
+            .update({ is_active: false })
+            .eq('channel_id', channelId);
+        }
+        
         const { error } = await supabase
           .from('live_channel_playlists')
           .update({
@@ -311,6 +389,76 @@ export default function AdminLiveTVPlaylists() {
       fetchPlaylistItems();
     } catch (error: any) {
       toast.error(error.message);
+    }
+  };
+
+  // Add all episodes from an episodic show
+  const handleAddEpisodicShow = async (show: Video) => {
+    if (!selectedPlaylist) return;
+    setIsAddingEpisodes(true);
+    
+    try {
+      // Fetch all seasons and episodes for this show
+      const { data: seasons, error: seasonsError } = await supabase
+        .from('seasons')
+        .select('id, season_number')
+        .eq('content_id', show.id)
+        .order('season_number');
+      
+      if (seasonsError) throw seasonsError;
+      if (!seasons || seasons.length === 0) {
+        toast.error('No seasons found for this show');
+        setIsAddingEpisodes(false);
+        return;
+      }
+
+      // Fetch all episodes for all seasons
+      const seasonIds = seasons.map(s => s.id);
+      const { data: episodes, error: episodesError } = await supabase
+        .from('episodes')
+        .select('id, title, thumbnail_url, duration, episode_number, video_url, season_id')
+        .in('season_id', seasonIds)
+        .order('episode_number');
+      
+      if (episodesError) throw episodesError;
+      if (!episodes || episodes.length === 0) {
+        toast.error('No episodes found for this show');
+        setIsAddingEpisodes(false);
+        return;
+      }
+
+      // Sort episodes by season and episode number
+      const sortedEpisodes = episodes.sort((a, b) => {
+        const seasonA = seasons.find(s => s.id === a.season_id)?.season_number || 0;
+        const seasonB = seasons.find(s => s.id === b.season_id)?.season_number || 0;
+        if (seasonA !== seasonB) return seasonA - seasonB;
+        return a.episode_number - b.episode_number;
+      });
+
+      // Add each episode to the playlist
+      let nextOrder = playlistItems.length + 1;
+      const insertItems = sortedEpisodes.map((ep, index) => ({
+        channel_playlist_id: selectedPlaylist.id,
+        video_id: show.id, // Keep reference to parent show
+        episode_id: ep.id,
+        order_index: nextOrder + index,
+        duration_seconds: parseDuration(ep.duration || '') || null,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('live_playlist_items')
+        .insert(insertItems);
+      
+      if (insertError) throw insertError;
+      
+      toast.success(`Added ${sortedEpisodes.length} episodes from "${show.title}"`);
+      setSearchQuery('');
+      setIsSearchOpen(false);
+      fetchPlaylistItems();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add episodes');
+    } finally {
+      setIsAddingEpisodes(false);
     }
   };
 
@@ -427,6 +575,13 @@ export default function AdminLiveTVPlaylists() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="flex items-center justify-between">
+                  <Label>Activate Immediately</Label>
+                  <Switch 
+                    checked={formData.is_active} 
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))} 
+                  />
+                </div>
                 <Button onClick={handleSavePlaylist} className="w-full" disabled={isSaving}>
                   {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {editingPlaylist ? 'Update' : 'Create'} Playlist
@@ -444,10 +599,11 @@ export default function AdminLiveTVPlaylists() {
               <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
                 <li>Click <strong>"New Playlist"</strong> button above to create a playlist</li>
                 <li>Set the playlist name, start date/time, and loop mode</li>
+                <li>Toggle <strong>"Activate Immediately"</strong> to make playlist live when created</li>
                 <li>After creating, <strong>select the playlist</strong> from the left panel</li>
                 <li>Click <strong>"Add Video"</strong> button to search and add videos</li>
+                <li>For <strong>TV shows</strong>, click "Add All Episodes" to add every episode</li>
                 <li>Drag and drop to reorder videos in the playlist</li>
-                <li>Click <strong>"Activate"</strong> on a playlist to make it live</li>
               </ol>
             </CardContent>
           </Card>
@@ -515,29 +671,78 @@ export default function AdminLiveTVPlaylists() {
                             <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search videos..." className="pl-9" autoFocus />
                           </div>
                         </div>
-                        <ScrollArea className="h-80">
-                          {isSearching ? (
-                            <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>
-                          ) : searchResults.length > 0 ? (
-                            <div className="p-2 space-y-1">
-                              {searchResults.map((video) => (
-                                <button key={video.id} onClick={() => handleAddVideo(video)} className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent text-left">
-                                  {video.poster_url ? (
-                                    <img src={video.poster_url} alt={video.title} className="w-16 h-10 object-cover rounded" />
-                                  ) : (
-                                    <div className="w-16 h-10 bg-muted rounded" />
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">{video.title}</p>
-                                    <p className="text-xs text-muted-foreground">{video.type} • {video.duration || 'N/A'}</p>
-                                  </div>
-                                </button>
-                              ))}
+                        <ScrollArea className="h-96">
+                          {isSearching || isAddingEpisodes ? (
+                            <div className="flex flex-col items-center justify-center p-4 gap-2">
+                              <Loader2 className="h-6 w-6 animate-spin" />
+                              {isAddingEpisodes && <p className="text-sm text-muted-foreground">Adding episodes...</p>}
                             </div>
-                          ) : searchQuery ? (
-                            <p className="p-4 text-center text-muted-foreground">No videos found</p>
                           ) : (
-                            <p className="p-4 text-center text-muted-foreground">Start typing to search</p>
+                            <div className="p-2 space-y-2">
+                              {/* Episodic Shows Section */}
+                              {episodicShows.length > 0 && (
+                                <div className="mb-3">
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2 flex items-center gap-1">
+                                    <List className="h-3 w-3" /> TV Shows (Add All Episodes)
+                                  </p>
+                                  <div className="space-y-1">
+                                    {episodicShows.map((show) => (
+                                      <button
+                                        key={show.id}
+                                        onClick={() => handleAddEpisodicShow(show)}
+                                        className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent text-left border border-primary/30 bg-primary/5"
+                                      >
+                                        {show.poster_url ? (
+                                          <img src={show.poster_url} alt={show.title} className="w-16 h-10 object-cover rounded" />
+                                        ) : (
+                                          <div className="w-16 h-10 bg-muted rounded flex items-center justify-center">
+                                            <Tv className="h-4 w-4 text-muted-foreground" />
+                                          </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium truncate">{show.title}</p>
+                                          <p className="text-xs text-primary">Click to add all episodes</p>
+                                        </div>
+                                        <Badge variant="secondary"><List className="h-3 w-3 mr-1" />Series</Badge>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Movies/Single Videos Section */}
+                              {searchResults.length > 0 && (
+                                <div>
+                                  {episodicShows.length > 0 && (
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2 flex items-center gap-1">
+                                      <Film className="h-3 w-3" /> Movies & Videos
+                                    </p>
+                                  )}
+                                  <div className="space-y-1">
+                                    {searchResults.map((video) => (
+                                      <button key={video.id} onClick={() => handleAddVideo(video)} className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent text-left">
+                                        {video.poster_url ? (
+                                          <img src={video.poster_url} alt={video.title} className="w-16 h-10 object-cover rounded" />
+                                        ) : (
+                                          <div className="w-16 h-10 bg-muted rounded" />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium truncate">{video.title}</p>
+                                          <p className="text-xs text-muted-foreground">{video.type} • {video.duration || 'N/A'}</p>
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {searchQuery && searchResults.length === 0 && episodicShows.length === 0 && (
+                                <p className="p-4 text-center text-muted-foreground">No videos found</p>
+                              )}
+                              {!searchQuery && (
+                                <p className="p-4 text-center text-muted-foreground">Start typing to search</p>
+                              )}
+                            </div>
                           )}
                         </ScrollArea>
                       </PopoverContent>
