@@ -98,7 +98,7 @@ const ContinueWatchingRow = ({ onMoreInfo, seeAllLink = "/category/continue-watc
             content:contents(id, title, poster_url, type, duration, trailer_url, video_url, maturity_rating, genre, release_year)
           `)
           .eq("profile_id", currentProfile.id)
-          .gt("progress_percent", 0)
+          .gte("progress_percent", 0) // Include videos that were started (even with 0 progress initially recorded)
           .lt("progress_percent", 95) // Only remove when 95% complete (nearly finished)
           .order("last_watched_at", { ascending: false })
           .limit(20),
