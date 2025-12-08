@@ -93,16 +93,14 @@ export default function LiveTV() {
     if (!selectedChannel) return;
 
     try {
-      const response = await supabase.functions.invoke('get-live-segment', {
-        body: null,
-        headers: {},
-      });
-
-      // Use query params approach
+      // Use query params approach to pass channel slug
       const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/get-live-segment?channel=${selectedChannel.slug}`;
+      const session = await supabase.auth.getSession();
+      
       const res = await fetch(funcUrl, {
         headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+          'Authorization': `Bearer ${session.data.session?.access_token || ''}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRqdHZzbG9qeGtrY3JwY29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjUxNjcsImV4cCI6MjA2MjYwMTE2N30.TC4eACBOJsfggnuB3OyOK7x4O9yp7bjzOP5Tr9_jHds',
         },
       });
 
@@ -115,6 +113,14 @@ export default function LiveTV() {
           setTimeout(() => {
             playerRef.current?.seekTo(data.offsetSeconds, 'seconds');
           }, 500);
+        }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.log('Live segment response:', res.status, errorData);
+        
+        // If it's an idle response, still set it
+        if (errorData.type === 'idle') {
+          setLiveSegment(errorData);
         }
       }
     } catch (error) {
