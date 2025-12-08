@@ -52,6 +52,14 @@ const Watch = () => {
   const [duration, setDuration] = useState(0);
   const lastSavedProgress = useRef(0);
   const playerRef = useRef<ReactPlayer>(null);
+  const hasInitialSeek = useRef(false);
+  const [playerReady, setPlayerReady] = useState(false);
+
+  // Reset seek flag when navigating to new content
+  useEffect(() => {
+    hasInitialSeek.current = false;
+    setPlayerReady(false);
+  }, [id]);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -118,6 +126,16 @@ const Watch = () => {
 
     fetchContent();
   }, [id, navigate, currentProfile?.id]);
+
+  // Seek to saved progress when player is ready and progress is loaded
+  useEffect(() => {
+    if (playerReady && showVideo && progress > 0 && progress < 100 && !hasInitialSeek.current && playerRef.current) {
+      const seekPosition = progress / 100;
+      console.log("Seeking to saved progress:", seekPosition, "(" + progress + "%)");
+      playerRef.current.seekTo(seekPosition, 'fraction');
+      hasInitialSeek.current = true;
+    }
+  }, [playerReady, showVideo, progress]);
 
   // Save progress to database
   const saveProgress = useCallback(async (progressPercent: number) => {
@@ -310,7 +328,17 @@ const Watch = () => {
                 onProgress={handleProgress}
                 onDuration={handleDuration}
                 onReady={() => {
-                  console.log("Player ready");
+                  console.log("Player ready, saved progress:", progress);
+                  setPlayerReady(true);
+                  
+                  // Seek to saved progress immediately if available
+                  if (progress > 0 && progress < 100 && !hasInitialSeek.current && playerRef.current) {
+                    const seekPosition = progress / 100;
+                    console.log("Seeking to position:", seekPosition);
+                    playerRef.current.seekTo(seekPosition, 'fraction');
+                    hasInitialSeek.current = true;
+                  }
+                  
                   setIsPlaying(true);
                 }}
                 onError={(e) => console.error("Player error:", e)}
