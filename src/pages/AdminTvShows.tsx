@@ -7,6 +7,7 @@ import { Plus, Search } from "lucide-react";
 import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate, useParams } from "react-router-dom";
 import AddTVShowForm from "@/components/AddTVShowForm";
+import AddEpisodicShowForm from "@/components/admin/AddEpisodicShowForm";
 import TvShowsList from "@/components/admin/TvShowsList";
 import CategoriesTab from "@/components/admin/tabs/CategoriesTab";
 import TagsTab from "@/components/admin/tabs/TagsTab";
@@ -49,7 +50,7 @@ const AdminTvShows = () => {
               searchTerm={searchTerm} 
               onEdit={handleEditTvShow} 
               onRefresh={refreshList}
-              key={refreshTrigger} // Force re-render on refresh
+              key={refreshTrigger}
             />
           </div>
         );
@@ -58,6 +59,13 @@ const AdminTvShows = () => {
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4 text-white">Add New TV Show</h2>
             <AddTVShowForm onClose={() => navigate('/admin/tvshows')} />
+          </div>
+        );
+      case "add-episodic":
+        return (
+          <div className="mt-6">
+            <h2 className="text-2xl font-bold mb-4 text-white">Add Episodic Show</h2>
+            <AddEpisodicShowForm onClose={() => navigate('/admin/tvshows')} />
           </div>
         );
       case "categories":
@@ -105,9 +113,10 @@ const AdminTvShows = () => {
         </div>
         
         <Tabs value={activeTab} onValueChange={handleNavigateToTab} className="w-full">
-          <TabsList className="bg-gray-800 text-gray-400 p-1">
+          <TabsList className="bg-gray-800 text-gray-400 p-1 flex-wrap">
             <TabsTrigger value="all" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white">All TV Shows</TabsTrigger>
             <TabsTrigger value="add" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white">Add TV Show</TabsTrigger>
+            <TabsTrigger value="add-episodic" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white">Add Episodic Show</TabsTrigger>
             <TabsTrigger value="categories" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white">Categories</TabsTrigger>
             <TabsTrigger value="tags" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white">Tags</TabsTrigger>
             <TabsTrigger value="episodes" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white">Episodes</TabsTrigger>
