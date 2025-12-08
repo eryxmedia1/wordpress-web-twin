@@ -235,6 +235,9 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
       if (showError) throw showError;
 
       // Create seasons and episodes
+      let firstEpisodeThumbnail: string | null = null;
+      let firstEpisodeVideoUrl: string | null = null;
+
       for (const season of seasons) {
         const validEpisodes = season.episodes.filter(ep => ep.title.trim() && ep.vimeoUrl.trim());
         if (validEpisodes.length === 0) continue;
@@ -254,6 +257,12 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
 
         if (seasonError) throw seasonError;
 
+        // Capture first episode data for show thumbnail/trailer
+        if (!firstEpisodeThumbnail && validEpisodes.length > 0) {
+          firstEpisodeThumbnail = validEpisodes[0].thumbnailUrl || null;
+          firstEpisodeVideoUrl = validEpisodes[0].vimeoUrl || null;
+        }
+
         // Create episodes for this season
         const episodeInserts = validEpisodes.map((ep, index) => ({
           season_id: seasonData.id,
@@ -271,6 +280,24 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
           .insert(episodeInserts);
 
         if (episodesError) throw episodesError;
+      }
+
+      // Update show with first episode's thumbnail and trailer if not manually set
+      if (firstEpisodeThumbnail || firstEpisodeVideoUrl) {
+        const updateData: Record<string, string | null> = {};
+        if (!posterUrl && firstEpisodeThumbnail) {
+          updateData.poster_url = firstEpisodeThumbnail;
+          updateData.backdrop_url = firstEpisodeThumbnail;
+        }
+        if (firstEpisodeVideoUrl) {
+          updateData.trailer_url = firstEpisodeVideoUrl;
+        }
+        if (Object.keys(updateData).length > 0) {
+          await supabase
+            .from('contents')
+            .update(updateData)
+            .eq('id', showData.id);
+        }
       }
 
       // Add membership plans
