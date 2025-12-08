@@ -376,20 +376,6 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                 </div>
               </div>
 
-              <div>
-                <Label className="text-white">Category</Label>
-                <select
-                  {...register("category")}
-                  className="mt-1 w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
-                >
-                  <option value="">Select a category</option>
-                  {categories.map((category) => (
-                    <option key={category.value} value={category.value}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
 
               {/* Featured Hero Carousel Checkbox - Prominent */}
               <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
