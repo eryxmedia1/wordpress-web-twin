@@ -16,6 +16,7 @@ import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { TagsSelector } from "@/components/admin/TagsSelector";
 import { MembershipPlansSelector } from "@/components/admin/MembershipPlansSelector";
 import { GenreSelector } from "@/components/admin/GenreSelector";
+import { VideoSearchSelector } from "@/components/admin/VideoSearchSelector";
 import { supabase, DbContent, DbProfile, DbSeason, DbEpisode, ContentType, MidrollConfig } from "@/integrations/supabase/client";
 
 const RATING_OPTIONS = [
@@ -958,9 +959,50 @@ const EditContent = () => {
                       </Select>
                     </div>
                     
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-lg font-medium">Episodes</h4>
-                      <div className="flex gap-2">
+                    {/* Visual Video Search & Selection */}
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-lg font-medium">Select Episodes from Video Library</h4>
+                      </div>
+                      <VideoSearchSelector
+                        availableVideos={availableVideos.map(v => ({
+                          id: v.id,
+                          title: v.title,
+                          video_url: v.video_url,
+                          poster_url: v.poster_url,
+                        }))}
+                        selectedVideos={season.episodes.map((ep, idx) => {
+                          const matchedVideo = availableVideos.find(v => v.video_url === ep.videoUrl);
+                          return {
+                            id: matchedVideo?.id || `episode-${idx}`,
+                            title: matchedVideo?.title || ep.title,
+                            video_url: ep.videoUrl,
+                            poster_url: matchedVideo?.poster_url || ep.thumbnail || null,
+                            episodeNumber: ep.number,
+                            episodeTitle: ep.title,
+                            description: ep.description,
+                          };
+                        })}
+                        onSelectedVideosChange={(videos) => {
+                          const newSeasons = [...seasons];
+                          newSeasons[seasonIndex].episodes = videos.map((v, idx) => ({
+                            number: idx + 1,
+                            title: v.episodeTitle,
+                            description: v.description || "",
+                            duration: "",
+                            videoUrl: v.video_url || "",
+                            thumbnail: v.poster_url || "",
+                            vastAdUrl: ""
+                          }));
+                          setSeasons(newSeasons);
+                        }}
+                      />
+                    </div>
+
+                    {/* Manual Episode Entry Section */}
+                    <div className="border-t border-gray-700 pt-6 mt-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-lg font-medium">Or Add Episodes Manually</h4>
                         <Button 
                           onClick={() => {
                             const newSeasons = [...seasons];
@@ -977,7 +1019,7 @@ const EditContent = () => {
                           }}
                           variant="outline"
                         >
-                          <Plus className="mr-2" /> Add Episode
+                          <Plus className="mr-2" /> Add Episode Manually
                         </Button>
                       </div>
                     </div>
