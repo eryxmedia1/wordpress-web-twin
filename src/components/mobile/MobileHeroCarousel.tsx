@@ -115,8 +115,15 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
     [emblaApi]
   );
 
-  const toggleMyList = async (contentId: string, contentTitle: string) => {
+  const toggleMyList = async (e: React.MouseEvent, contentId: string, contentTitle: string) => {
+    // Prevent event bubbling to parent card
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("toggleMyList called:", { contentId, contentTitle, profileId: currentProfile?.id });
+    
     if (!currentProfile?.id) {
+      console.error("No profile selected - cannot add to My List");
       toast.error("Please select a profile first");
       return;
     }
@@ -124,34 +131,45 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
     setIsLoading((prev) => ({ ...prev, [contentId]: true }));
 
     const isInList = favorites.has(contentId);
+    console.log("Current state:", { isInList, favoritesCount: favorites.size });
 
     try {
       if (isInList) {
         // Remove from favorites
+        console.log("Removing from favorites...");
         const { error } = await supabase
           .from("favorites")
           .delete()
           .eq("profile_id", currentProfile.id)
           .eq("content_id", contentId);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase delete error:", error);
+          throw error;
+        }
 
         setFavorites((prev) => {
           const updated = new Set(prev);
           updated.delete(contentId);
           return updated;
         });
+        console.log("Successfully removed from My List");
         toast.success(`Removed "${contentTitle}" from My List`);
       } else {
         // Add to favorites
+        console.log("Adding to favorites...");
         const { error } = await supabase.from("favorites").insert({
           profile_id: currentProfile.id,
           content_id: contentId,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase insert error:", error);
+          throw error;
+        }
 
         setFavorites((prev) => new Set([...prev, contentId]));
+        console.log("Successfully added to My List");
         toast.success(`Added "${contentTitle}" to My List`);
       }
     } catch (error) {
@@ -228,14 +246,12 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
                         WATCH NOW
                       </Button>
                       <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleMyList(content.id, content.title);
-                        }}
+                        type="button"
+                        onClick={(e) => toggleMyList(e, content.id, content.title)}
                         variant="outline"
                         disabled={loading}
                         className={cn(
-                          "h-9 px-4 border-foreground/30 transition-all",
+                          "h-9 px-4 border-foreground/30 transition-all touch-manipulation",
                           isInList
                             ? "bg-primary/20 border-primary text-primary hover:bg-destructive/20 hover:border-destructive hover:text-destructive"
                             : "bg-foreground/10 hover:bg-foreground/20"
