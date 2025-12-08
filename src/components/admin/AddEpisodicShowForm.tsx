@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -64,33 +64,58 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fetchingMetadata, setFetchingMetadata] = useState<string | null>(null);
 
-  const addSeason = () => {
-    const nextSeasonNumber = Math.max(...seasons.map(s => s.seasonNumber)) + 1;
-    setSeasons([
-      ...seasons,
-      {
-        id: crypto.randomUUID(),
-        seasonNumber: nextSeasonNumber,
-        isOpen: true,
-        episodes: [
-          { id: crypto.randomUUID(), title: "", vimeoUrl: "", description: "", thumbnailUrl: "", duration: "" }
-        ]
-      }
-    ]);
-  };
+  // Memoized callbacks to prevent re-render loops
+  const handleGenresChange = useCallback((genres: string[]) => {
+    setSelectedGenres(genres);
+  }, []);
 
-  const removeSeason = (seasonId: string) => {
-    if (seasons.length > 1) {
-      setSeasons(seasons.filter(s => s.id !== seasonId));
-    }
-  };
+  const handleChannelsChange = useCallback((channels: string[]) => {
+    setSelectedChannels(channels);
+  }, []);
 
-  const toggleSeasonOpen = (seasonId: string) => {
-    setSeasons(seasons.map(s => s.id === seasonId ? { ...s, isOpen: !s.isOpen } : s));
-  };
+  const handlePlansChange = useCallback((plans: string[]) => {
+    setSelectedPlans(plans);
+  }, []);
 
-  const addEpisodeToSeason = (seasonId: string) => {
-    setSeasons(seasons.map(s => {
+  const handleTagsChange = useCallback((tags: string[]) => {
+    setSelectedTags(tags);
+  }, []);
+
+  const handleFeaturedChange = useCallback((checked: boolean) => {
+    setIsFeatured(checked);
+  }, []);
+
+  const handleZoeOriginalChange = useCallback((checked: boolean) => {
+    setIsZoeOriginal(checked);
+  }, []);
+
+  const addSeason = useCallback(() => {
+    setSeasons(prev => {
+      const nextSeasonNumber = Math.max(...prev.map(s => s.seasonNumber)) + 1;
+      return [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          seasonNumber: nextSeasonNumber,
+          isOpen: true,
+          episodes: [
+            { id: crypto.randomUUID(), title: "", vimeoUrl: "", description: "", thumbnailUrl: "", duration: "" }
+          ]
+        }
+      ];
+    });
+  }, []);
+
+  const removeSeason = useCallback((seasonId: string) => {
+    setSeasons(prev => prev.length > 1 ? prev.filter(s => s.id !== seasonId) : prev);
+  }, []);
+
+  const toggleSeasonOpen = useCallback((seasonId: string) => {
+    setSeasons(prev => prev.map(s => s.id === seasonId ? { ...s, isOpen: !s.isOpen } : s));
+  }, []);
+
+  const addEpisodeToSeason = useCallback((seasonId: string) => {
+    setSeasons(prev => prev.map(s => {
       if (s.id === seasonId) {
         return {
           ...s,
@@ -102,19 +127,19 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
       }
       return s;
     }));
-  };
+  }, []);
 
-  const removeEpisodeFromSeason = (seasonId: string, episodeId: string) => {
-    setSeasons(seasons.map(s => {
+  const removeEpisodeFromSeason = useCallback((seasonId: string, episodeId: string) => {
+    setSeasons(prev => prev.map(s => {
       if (s.id === seasonId && s.episodes.length > 1) {
         return { ...s, episodes: s.episodes.filter(ep => ep.id !== episodeId) };
       }
       return s;
     }));
-  };
+  }, []);
 
-  const updateEpisode = (seasonId: string, episodeId: string, field: keyof EpisodeEntry, value: string) => {
-    setSeasons(seasons.map(s => {
+  const updateEpisode = useCallback((seasonId: string, episodeId: string, field: keyof EpisodeEntry, value: string) => {
+    setSeasons(prev => prev.map(s => {
       if (s.id === seasonId) {
         return {
           ...s,
@@ -123,9 +148,9 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
       }
       return s;
     }));
-  };
+  }, []);
 
-  const fetchVimeoMetadata = async (seasonId: string, episodeId: string, url: string) => {
+  const fetchVimeoMetadata = useCallback(async (seasonId: string, episodeId: string, url: string) => {
     if (!url.includes('vimeo')) return;
     
     setFetchingMetadata(episodeId);
@@ -137,7 +162,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
       if (error) throw error;
 
       if (data) {
-        setSeasons(seasons.map(s => {
+        setSeasons(prev => prev.map(s => {
           if (s.id === seasonId) {
             return {
               ...s,
@@ -163,13 +188,13 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
     } finally {
       setFetchingMetadata(null);
     }
-  };
+  }, []);
 
-  const getTotalEpisodeCount = () => {
+  const totalEpisodeCount = useMemo(() => {
     return seasons.reduce((total, s) => {
       return total + s.episodes.filter(ep => ep.title.trim() && ep.vimeoUrl.trim()).length;
     }, 0);
-  };
+  }, [seasons]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,8 +204,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
       return;
     }
 
-    const totalEpisodes = getTotalEpisodeCount();
-    if (totalEpisodes === 0) {
+    if (totalEpisodeCount === 0) {
       toast.error("Please add at least one episode with title and URL");
       return;
     }
@@ -194,7 +218,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
         .insert({
           title,
           description,
-          type: 'tvshow' as const,
+          type: 'tvshow',
           poster_url: posterUrl || null,
           backdrop_url: backdropUrl || null,
           release_year: releaseYear ? parseInt(releaseYear) : null,
@@ -266,7 +290,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
         await supabase.from('content_tags').insert(tagInserts);
       }
 
-      toast.success(`"${title}" created with ${seasons.length} season(s) and ${totalEpisodes} episode(s)!`);
+      toast.success(`"${title}" created with ${seasons.length} season(s) and ${totalEpisodeCount} episode(s)!`);
       onClose();
     } catch (error) {
       console.error('Error creating episodic show:', error);
@@ -348,19 +372,27 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
 
           <div className="flex gap-6">
             <div className="flex items-center gap-2">
-              <Switch checked={isFeatured} onCheckedChange={setIsFeatured} />
-              <Label className="text-white">Featured</Label>
+              <Switch 
+                id="featured-switch"
+                checked={isFeatured} 
+                onCheckedChange={handleFeaturedChange} 
+              />
+              <Label htmlFor="featured-switch" className="text-white cursor-pointer">Featured</Label>
             </div>
             <div className="flex items-center gap-2">
-              <Switch checked={isZoeOriginal} onCheckedChange={setIsZoeOriginal} />
-              <Label className="text-white">Zoe Original</Label>
+              <Switch 
+                id="zoe-original-switch"
+                checked={isZoeOriginal} 
+                onCheckedChange={handleZoeOriginalChange} 
+              />
+              <Label htmlFor="zoe-original-switch" className="text-white cursor-pointer">Zoe Original</Label>
             </div>
           </div>
 
-          <GenreSelector selectedGenres={selectedGenres} onGenresChange={setSelectedGenres} />
-          <ChannelsSelector selectedChannels={selectedChannels} onChannelsChange={setSelectedChannels} />
-          <MembershipPlansSelector selectedPlans={selectedPlans} onSelectedPlansChange={setSelectedPlans} />
-          <TagsSelector selectedTagIds={selectedTags} onTagsChange={setSelectedTags} contentType="show" />
+          <GenreSelector selectedGenres={selectedGenres} onGenresChange={handleGenresChange} />
+          <ChannelsSelector selectedChannels={selectedChannels} onChannelsChange={handleChannelsChange} />
+          <MembershipPlansSelector selectedPlans={selectedPlans} onSelectedPlansChange={handlePlansChange} />
+          <TagsSelector selectedTagIds={selectedTags} onTagsChange={handleTagsChange} contentType="show" />
         </CardContent>
       </Card>
 
@@ -377,7 +409,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
             <Collapsible key={season.id} open={season.isOpen} onOpenChange={() => toggleSeasonOpen(season.id)}>
               <div className="border border-gray-600 rounded-lg overflow-hidden">
                 <CollapsibleTrigger asChild>
-                  <div className="flex items-center justify-between p-4 bg-gray-700 cursor-pointer hover:bg-gray-600">
+                  <div className="flex items-center justify-between p-4 bg-gray-700 cursor-pointer hover:bg-gray-650">
                     <div className="flex items-center gap-3">
                       {season.isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                       <span className="text-white font-medium">Season {season.seasonNumber}</span>
@@ -385,19 +417,17 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
                         ({season.episodes.filter(ep => ep.title && ep.vimeoUrl).length} episodes)
                       </span>
                     </div>
-                    <div className="flex gap-2">
-                      {seasons.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); removeSeason(season.id); }}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
+                    {seasons.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); removeSeason(season.id); }}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </CollapsibleTrigger>
                 
@@ -509,7 +539,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
               Creating Show...
             </>
           ) : (
-            `Create Show with ${seasons.length} Season(s) & ${getTotalEpisodeCount()} Episode(s)`
+            `Create Show with ${seasons.length} Season(s) & ${totalEpisodeCount} Episode(s)`
           )}
         </Button>
         <Button type="button" variant="outline" onClick={onClose}>
