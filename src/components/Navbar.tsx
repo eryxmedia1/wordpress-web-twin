@@ -187,8 +187,10 @@ const Navbar = () => {
         </DropdownMenu>
 
         <Link 
-          to="/browse/live" 
-          className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors"
+          to="/live" 
+          className={`px-4 py-2 text-sm font-semibold transition-colors hover:text-primary ${
+            location.pathname.startsWith('/live') ? 'text-foreground' : 'text-muted-foreground'
+          }`}
         >
           LIVE TV
         </Link>

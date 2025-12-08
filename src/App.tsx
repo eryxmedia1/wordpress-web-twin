@@ -67,6 +67,8 @@ const App = () => (
                   <Route path="/profile/:id" element={<UserProfile />} />
                   <Route path="/producers" element={<Producers />} />
                   <Route path="/producer/:id" element={<ProducerProfile />} />
+                  <Route path="/live" element={<LiveTV />} />
+                  <Route path="/live/:channelSlug" element={<LiveTV />} />
                 </Route>
               </Route>
               
@@ -84,6 +86,10 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/content/:id" element={<EditContent />} />
                 <Route path="/admin/content/new" element={<EditContent />} />
+                <Route path="/admin/livetv" element={<AdminLiveTV />} />
+                <Route path="/admin/livetv/channels" element={<AdminLiveTVChannels />} />
+                <Route path="/admin/livetv/playlists/:channelId" element={<AdminLiveTVPlaylists />} />
+                <Route path="/admin/livetv/ads" element={<AdminLiveTVAds />} />
               </Route>
               
               {/* Catch-all */}

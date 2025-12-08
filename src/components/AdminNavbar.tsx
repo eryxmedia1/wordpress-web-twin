@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, User, Film, Tv, Search, LogOut, Home, Tag, Crown, Trophy, ImageIcon, Users } from "lucide-react";
+import { ChevronDown, User, Film, Tv, Search, LogOut, Home, Tag, Crown, Trophy, ImageIcon, Users, Radio } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const AdminNavbar = () => {
@@ -119,6 +119,10 @@ const AdminNavbar = () => {
           <Link to="/admin/users" className="flex items-center gap-1 text-green-400 hover:text-green-300 transition">
             <Users className="h-4 w-4" />
             Users
+          </Link>
+          <Link to="/admin/livetv" className="flex items-center gap-1 text-red-400 hover:text-red-300 transition">
+            <Radio className="h-4 w-4" />
+            Live TV
           </Link>
         </nav>
       </div>
