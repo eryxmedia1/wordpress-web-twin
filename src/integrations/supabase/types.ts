@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      auth_backgrounds: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          is_active: boolean
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          is_active?: boolean
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           content_type: string

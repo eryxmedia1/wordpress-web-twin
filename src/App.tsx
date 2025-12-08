@@ -29,6 +29,7 @@ import Search from "./pages/Search";
 import Plans from "./pages/Plans";
 import AdminMembershipPlans from "./pages/AdminMembershipPlans";
 import AdminTop10 from "./pages/AdminTop10";
+import AdminAuthBackgrounds from "./pages/AdminAuthBackgrounds";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="/admin/tags" element={<AdminTags />} />
                 <Route path="/admin/plans" element={<AdminMembershipPlans />} />
                 <Route path="/admin/top10" element={<AdminTop10 />} />
+                <Route path="/admin/auth-backgrounds" element={<AdminAuthBackgrounds />} />
                 <Route path="/admin/content/:id" element={<EditContent />} />
                 <Route path="/admin/content/new" element={<EditContent />} />
               </Route>
