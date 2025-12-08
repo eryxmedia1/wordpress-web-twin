@@ -219,7 +219,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
         .insert({
           title,
           description,
-          type: 'tvshow',
+          type: 'show',
           poster_url: posterUrl || null,
           backdrop_url: backdropUrl || null,
           release_year: releaseYear ? parseInt(releaseYear) : null,
