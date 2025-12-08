@@ -156,11 +156,11 @@ serve(async (req) => {
         continue;
       }
 
-      // CRITICAL: Only use video_url - NEVER use trailer_url for Live TV
-      const videoUrl = video.video_url;
+      // Use video_url first, then fall back to trailer_url for Live TV
+      const videoUrl = video.video_url || item.video?.trailer_url;
       
       if (!videoUrl) {
-        console.log('Skipping item - no video_url:', video.title || item.id);
+        console.log('Skipping item - no video_url or trailer_url:', video.title || item.id);
         continue;
       }
 
