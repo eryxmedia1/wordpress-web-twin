@@ -32,6 +32,11 @@ import AdminMembershipPlans from "./pages/AdminMembershipPlans";
 import AdminTop10 from "./pages/AdminTop10";
 import AdminAuthBackgrounds from "./pages/AdminAuthBackgrounds";
 import AdminUsers from "./pages/AdminUsers";
+import LiveTV from "./pages/LiveTV";
+import AdminLiveTV from "./pages/AdminLiveTV";
+import AdminLiveTVChannels from "./pages/AdminLiveTVChannels";
+import AdminLiveTVPlaylists from "./pages/AdminLiveTVPlaylists";
+import AdminLiveTVAds from "./pages/AdminLiveTVAds";
 
 const queryClient = new QueryClient();
 
