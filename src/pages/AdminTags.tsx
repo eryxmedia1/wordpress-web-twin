@@ -57,10 +57,23 @@ const AdminTags = () => {
     
     if (error) {
       toast.error("Failed to load tags: " + error.message);
-    } else {
-      setTags(data || []);
+      setLoading(false);
+      return;
     }
     
+    // Fetch content counts for each tag
+    const tagsWithCounts = await Promise.all(
+      (data || []).map(async (tag) => {
+        const { count } = await supabase
+          .from('content_tags')
+          .select('*', { count: 'exact', head: true })
+          .eq('tag_id', tag.id);
+        
+        return { ...tag, content_count: count || 0 };
+      })
+    );
+    
+    setTags(tagsWithCounts as any);
     setLoading(false);
   }
 
@@ -325,10 +338,16 @@ const AdminTags = () => {
                             />
                           </td>
                           <td className="p-4">{tag.name}</td>
-                          <td className="p-4">{tag.description || "—"}</td>
-                          <td className="p-4">{tag.content_type || "—"}</td>
-                          <td className="p-4">{tag.slug}</td>
-                          <td className="p-4">0</td>
+                          <td className="p-4 text-muted-foreground max-w-xs truncate">
+                            {(tag as any).description || "—"}
+                          </td>
+                          <td className="p-4">{tag.content_type || "All"}</td>
+                          <td className="p-4 text-muted-foreground">{tag.slug}</td>
+                          <td className="p-4">
+                            <span className="px-2 py-1 bg-primary/20 text-primary rounded-full text-xs font-medium">
+                              {(tag as any).content_count || 0}
+                            </span>
+                          </td>
                         </tr>
                       ))
                     )}

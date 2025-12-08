@@ -59,22 +59,61 @@ const BecauseYouWatchedRow = ({ onMoreInfo }: BecauseYouWatchedRowProps) => {
 
       setWatchedTitle(watchedItem);
 
-      // Find similar content based on genre
+      // Get tags for the watched content
+      const { data: watchedTags } = await supabase
+        .from("content_tags")
+        .select("tag_id")
+        .eq("content_id", watchedItem.id);
+
+      const tagIds = (watchedTags || []).map(t => t.tag_id);
+
+      let similarContentIds = new Set<string>();
+
+      // Find content with matching tags
+      if (tagIds.length > 0) {
+        const { data: contentWithTags } = await supabase
+          .from("content_tags")
+          .select("content_id")
+          .in("tag_id", tagIds)
+          .neq("content_id", watchedItem.id);
+
+        if (contentWithTags) {
+          contentWithTags.forEach(ct => similarContentIds.add(ct.content_id));
+        }
+      }
+
+      // Build query for similar content
       let query = supabase
         .from("contents")
         .select("id, title, poster_url, release_year, genre")
         .neq("id", watchedItem.id)
         .limit(15);
 
-      if (watchedItem.genre) {
+      // Prioritize content with matching tags, then fall back to genre
+      if (similarContentIds.size > 0) {
+        query = query.in("id", Array.from(similarContentIds));
+      } else if (watchedItem.genre) {
         query = query.ilike("genre", `%${watchedItem.genre.split(",")[0].trim()}%`);
       }
 
       const { data: similarData } = await query;
 
-      if (similarData) {
+      if (similarData && similarData.length > 0) {
         setRecommendations(similarData);
+      } else if (watchedItem.genre) {
+        // Fallback to genre-based if no tag matches
+        const { data: genreData } = await supabase
+          .from("contents")
+          .select("id, title, poster_url, release_year, genre")
+          .neq("id", watchedItem.id)
+          .ilike("genre", `%${watchedItem.genre.split(",")[0].trim()}%`)
+          .limit(15);
+
+        if (genreData) {
+          setRecommendations(genreData);
+        }
       }
+
       setIsLoading(false);
     };
 

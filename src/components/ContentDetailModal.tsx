@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { X, Play, Plus, Check, ThumbsUp } from "lucide-react";
+import { X, Play, Plus, Check, ThumbsUp, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,9 +37,15 @@ interface ContentDetail {
   is_zoe_original: boolean | null;
 }
 
+interface ContentTag {
+  id: string;
+  name: string;
+}
+
 const ContentDetailModal = ({ contentId, isOpen, onClose }: ContentDetailModalProps) => {
   const { currentProfile } = useProfile();
   const [content, setContent] = useState<ContentDetail | null>(null);
+  const [tags, setTags] = useState<ContentTag[]>([]);
   const [isInList, setIsInList] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +65,19 @@ const ContentDetailModal = ({ contentId, isOpen, onClose }: ContentDetailModalPr
 
       if (contentData) {
         setContent(contentData as ContentDetail);
+      }
+
+      // Fetch content tags
+      const { data: contentTags } = await supabase
+        .from("content_tags")
+        .select("tag_id, tags(id, name)")
+        .eq("content_id", contentId);
+
+      if (contentTags) {
+        const tagList = contentTags
+          .map((ct: any) => ct.tags)
+          .filter(Boolean) as ContentTag[];
+        setTags(tagList);
       }
 
       // Check if in favorites
@@ -218,6 +237,21 @@ const ContentDetailModal = ({ contentId, isOpen, onClose }: ContentDetailModalPr
                 </span>
               )}
             </div>
+
+            {/* Tags Section */}
+            {tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Tag className="w-4 h-4 text-muted-foreground" />
+                {tags.map((tag) => (
+                  <span
+                    key={tag.id}
+                    className="px-3 py-1 bg-muted/50 text-muted-foreground rounded-full text-xs hover:bg-muted transition-colors"
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Description */}
             {content.description && (
