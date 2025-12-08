@@ -101,7 +101,7 @@ serve(async (req) => {
       .from('live_playlist_items')
       .select(`
         *,
-        video:contents(id, title, poster_url, video_url, duration),
+        video:contents(id, title, poster_url, video_url, trailer_url, duration),
         episode:episodes(id, title, thumbnail_url, video_url, duration),
         preroll_ad:ads!live_playlist_items_preroll_ad_id_fkey(id, name, video_url, duration_seconds),
         postroll_ad:ads!live_playlist_items_postroll_ad_id_fkey(id, name, video_url, duration_seconds)
