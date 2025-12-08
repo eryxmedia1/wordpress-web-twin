@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ContentLockBadge from "@/components/ContentLockBadge";
 
 interface ContentItem {
   id: string;
@@ -8,6 +9,7 @@ interface ContentItem {
   rating?: string;
   year?: string;
   progress?: number;
+  requiredPlans?: string[];
 }
 
 interface MobileContentRowProps {
@@ -16,6 +18,7 @@ interface MobileContentRowProps {
   onItemClick: (id: string) => void;
   seeAllLink?: string;
   showProgress?: boolean;
+  userPlan?: string;
 }
 
 const MobileContentRow = ({
@@ -24,6 +27,7 @@ const MobileContentRow = ({
   onItemClick,
   seeAllLink,
   showProgress = false,
+  userPlan = 'free',
 }: MobileContentRowProps) => {
   if (items.length === 0) return null;
 
@@ -50,6 +54,13 @@ const MobileContentRow = ({
           >
             {/* Poster Card */}
             <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-card">
+              {item.requiredPlans && (
+                <ContentLockBadge 
+                  requiredPlans={item.requiredPlans} 
+                  userPlan={userPlan} 
+                  size="sm" 
+                />
+              )}
               <img
                 src={item.posterUrl}
                 alt={item.title}

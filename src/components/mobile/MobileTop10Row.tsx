@@ -1,19 +1,22 @@
 import { ChevronRight } from "lucide-react";
+import ContentLockBadge from "@/components/ContentLockBadge";
 
 interface Top10Item {
   id: string;
   title: string;
   posterUrl: string;
   rank: number;
+  requiredPlans?: string[];
 }
 
 interface MobileTop10RowProps {
   title: string;
   items: Top10Item[];
   onItemClick: (id: string) => void;
+  userPlan?: string;
 }
 
-const MobileTop10Row = ({ title, items, onItemClick }: MobileTop10RowProps) => {
+const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: MobileTop10RowProps) => {
   if (items.length === 0) return null;
 
   return (
@@ -49,6 +52,13 @@ const MobileTop10Row = ({ title, items, onItemClick }: MobileTop10RowProps) => {
 
             {/* Poster Card */}
             <div className="relative ml-6 w-[90px] aspect-[2/3] rounded-lg overflow-hidden bg-card shadow-lg">
+              {item.requiredPlans && (
+                <ContentLockBadge 
+                  requiredPlans={item.requiredPlans} 
+                  userPlan={userPlan} 
+                  size="sm" 
+                />
+              )}
               <img
                 src={item.posterUrl}
                 alt={item.title}
