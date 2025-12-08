@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNavbar from "@/components/AdminNavbar";
@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, PlayCircle, GripVertical, Search, Clock, Tv, Radio, Film, List } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, PlayCircle, GripVertical, Search, Clock, Tv, Radio, Film, List, Settings } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -55,6 +55,7 @@ interface PlaylistItem {
   order_index: number;
   duration_seconds: number | null;
   episode_id: string | null;
+  midroll_breaks_json: number[] | null;
   video: {
     id: string;
     title: string;
@@ -101,19 +102,29 @@ interface Episode {
   };
 }
 
-function SortableItem({ item, onRemove }: { item: PlaylistItem; onRemove: () => void }) {
+// Sortable Item Component
+const SortableItem = memo(function SortableItem({ 
+  item, 
+  onRemove,
+  onConfigureMidrolls 
+}: { 
+  item: PlaylistItem; 
+  onRemove: () => void;
+  onConfigureMidrolls: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
-  // Determine display info based on whether it's an episode or content
   const isEpisode = !!item.episode_id && item.episode;
   const title = isEpisode 
     ? `${item.episode?.season?.content?.title}: S${item.episode?.season?.season_number}E${item.episode?.episode_number} - ${item.episode?.title}`
     : item.video?.title || 'Unknown';
   const thumbnail = isEpisode ? item.episode?.thumbnail_url : item.video?.poster_url;
-  const duration = item.duration_seconds 
-    ? `${Math.floor(item.duration_seconds / 60)}m ${item.duration_seconds % 60}s` 
+  const durationSecs = item.duration_seconds || 0;
+  const duration = durationSecs > 0
+    ? `${Math.floor(durationSecs / 60)}m ${durationSecs % 60}s` 
     : (isEpisode ? item.episode?.duration : item.video?.duration) || 'Unknown duration';
+  const midrollCount = item.midroll_breaks_json?.length || 0;
 
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
@@ -132,15 +143,28 @@ function SortableItem({ item, onRemove }: { item: PlaylistItem; onRemove: () => 
         <div className="flex items-center gap-2">
           <p className="font-medium text-foreground truncate">{title}</p>
           {isEpisode && <Badge variant="secondary" className="text-xs">Episode</Badge>}
+          {midrollCount > 0 && (
+            <Badge variant="outline" className="text-xs">
+              {midrollCount} ad break{midrollCount > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
         <p className="text-xs text-muted-foreground">{duration}</p>
       </div>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={onConfigureMidrolls}
+        title="Configure ad breaks"
+      >
+        <Settings className="h-4 w-4" />
+      </Button>
       <Button variant="ghost" size="icon" onClick={onRemove} className="text-destructive hover:text-destructive">
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
   );
-}
+});
 
 export default function AdminLiveTVPlaylists() {
   const { channelId } = useParams<{ channelId: string }>();
@@ -161,12 +185,18 @@ export default function AdminLiveTVPlaylists() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAddingEpisodes, setIsAddingEpisodes] = useState(false);
 
+  // Midroll configuration
+  const [midrollDialogOpen, setMidrollDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<PlaylistItem | null>(null);
+  const [midrollBreaks, setMidrollBreaks] = useState<number[]>([]);
+  const [newBreakMinutes, setNewBreakMinutes] = useState('');
+
   const [formData, setFormData] = useState({
     playlist_name: '',
     start_date: new Date().toISOString().split('T')[0],
     start_time: '08:00',
     loop_mode: 'continuous_loop',
-    is_active: true, // Default to active
+    is_active: true,
   });
 
   const sensors = useSensors(
@@ -201,7 +231,6 @@ export default function AdminLiveTVPlaylists() {
       setPlaylistItems([]);
       return;
     }
-    // Fetch items with both video (contents) and episode data
     const { data } = await supabase
       .from('live_playlist_items')
       .select(`
@@ -234,7 +263,6 @@ export default function AdminLiveTVPlaylists() {
     }
     setIsSearching(true);
     
-    // Search for all content
     const { data } = await supabase
       .from('contents')
       .select('id, title, poster_url, duration, type')
@@ -242,7 +270,6 @@ export default function AdminLiveTVPlaylists() {
       .limit(20);
     
     if (data) {
-      // Separate episodic shows (type = 'show') from movies/single videos
       const shows = data.filter(v => v.type === 'show');
       const others = data.filter(v => v.type !== 'show');
       setEpisodicShows(shows);
@@ -262,7 +289,7 @@ export default function AdminLiveTVPlaylists() {
       start_date: new Date().toISOString().split('T')[0],
       start_time: '08:00',
       loop_mode: 'continuous_loop',
-      is_active: true, // Default to active
+      is_active: true,
     });
     setEditingPlaylist(null);
   };
@@ -287,7 +314,6 @@ export default function AdminLiveTVPlaylists() {
     setIsSaving(true);
 
     try {
-      // If creating a new active playlist, deactivate others first
       if (!editingPlaylist && formData.is_active) {
         await supabase
           .from('live_channel_playlists')
@@ -296,7 +322,6 @@ export default function AdminLiveTVPlaylists() {
       }
 
       if (editingPlaylist) {
-        // If activating this playlist, deactivate others
         if (formData.is_active && !editingPlaylist.is_active) {
           await supabase
             .from('live_channel_playlists')
@@ -354,12 +379,10 @@ export default function AdminLiveTVPlaylists() {
 
   const handleActivatePlaylist = async (playlist: Playlist) => {
     try {
-      // Deactivate all other playlists for this channel
       await supabase
         .from('live_channel_playlists')
         .update({ is_active: false })
         .eq('channel_id', channelId);
-      // Activate this one
       await supabase
         .from('live_channel_playlists')
         .update({ is_active: true })
@@ -392,13 +415,11 @@ export default function AdminLiveTVPlaylists() {
     }
   };
 
-  // Add all episodes from an episodic show
   const handleAddEpisodicShow = async (show: Video) => {
     if (!selectedPlaylist) return;
     setIsAddingEpisodes(true);
     
     try {
-      // Fetch all seasons and episodes for this show
       const { data: seasons, error: seasonsError } = await supabase
         .from('seasons')
         .select('id, season_number')
@@ -412,7 +433,6 @@ export default function AdminLiveTVPlaylists() {
         return;
       }
 
-      // Fetch all episodes for all seasons
       const seasonIds = seasons.map(s => s.id);
       const { data: episodes, error: episodesError } = await supabase
         .from('episodes')
@@ -427,7 +447,6 @@ export default function AdminLiveTVPlaylists() {
         return;
       }
 
-      // Sort episodes by season and episode number
       const sortedEpisodes = episodes.sort((a, b) => {
         const seasonA = seasons.find(s => s.id === a.season_id)?.season_number || 0;
         const seasonB = seasons.find(s => s.id === b.season_id)?.season_number || 0;
@@ -435,11 +454,10 @@ export default function AdminLiveTVPlaylists() {
         return a.episode_number - b.episode_number;
       });
 
-      // Add each episode to the playlist
       let nextOrder = playlistItems.length + 1;
       const insertItems = sortedEpisodes.map((ep, index) => ({
         channel_playlist_id: selectedPlaylist.id,
-        video_id: show.id, // Keep reference to parent show
+        video_id: show.id,
         episode_id: ep.id,
         order_index: nextOrder + index,
         duration_seconds: parseDuration(ep.duration || '') || null,
@@ -482,7 +500,6 @@ export default function AdminLiveTVPlaylists() {
     const newItems = arrayMove(playlistItems, oldIndex, newIndex).map((item, idx) => ({ ...item, order_index: idx + 1 }));
     setPlaylistItems(newItems);
 
-    // Update order in database
     try {
       for (const item of newItems) {
         await supabase.from('live_playlist_items').update({ order_index: item.order_index }).eq('id', item.id);
@@ -490,6 +507,51 @@ export default function AdminLiveTVPlaylists() {
     } catch (error) {
       console.error('Failed to update order:', error);
       fetchPlaylistItems();
+    }
+  };
+
+  // Midroll configuration handlers
+  const openMidrollConfig = useCallback((item: PlaylistItem) => {
+    setEditingItem(item);
+    setMidrollBreaks(item.midroll_breaks_json || []);
+    setNewBreakMinutes('');
+    setMidrollDialogOpen(true);
+  }, []);
+
+  const addMidrollBreak = () => {
+    const minutes = parseInt(newBreakMinutes, 10);
+    if (isNaN(minutes) || minutes <= 0) {
+      toast.error('Enter a valid number of minutes');
+      return;
+    }
+    const seconds = minutes * 60;
+    if (midrollBreaks.includes(seconds)) {
+      toast.error('This break time already exists');
+      return;
+    }
+    setMidrollBreaks(prev => [...prev, seconds].sort((a, b) => a - b));
+    setNewBreakMinutes('');
+  };
+
+  const removeMidrollBreak = (seconds: number) => {
+    setMidrollBreaks(prev => prev.filter(b => b !== seconds));
+  };
+
+  const saveMidrollBreaks = async () => {
+    if (!editingItem) return;
+    
+    try {
+      const { error } = await supabase
+        .from('live_playlist_items')
+        .update({ midroll_breaks_json: midrollBreaks })
+        .eq('id', editingItem.id);
+      
+      if (error) throw error;
+      toast.success('Ad breaks saved');
+      setMidrollDialogOpen(false);
+      fetchPlaylistItems();
+    } catch (error: any) {
+      toast.error(error.message);
     }
   };
 
@@ -526,7 +588,7 @@ export default function AdminLiveTVPlaylists() {
     <div className="min-h-screen bg-background">
       <AdminNavbar />
       <main className="container mx-auto px-4 py-8 pb-24 pt-24">
-        {/* Header - always visible */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
           <Link to="/admin/livetv/channels">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
@@ -603,6 +665,7 @@ export default function AdminLiveTVPlaylists() {
                 <li>After creating, <strong>select the playlist</strong> from the left panel</li>
                 <li>Click <strong>"Add Video"</strong> button to search and add videos</li>
                 <li>For <strong>TV shows</strong>, click "Add All Episodes" to add every episode</li>
+                <li>Click the <strong>⚙️ gear icon</strong> on any item to configure midroll ad breaks</li>
                 <li>Drag and drop to reorder videos in the playlist</li>
               </ol>
             </CardContent>
@@ -679,7 +742,6 @@ export default function AdminLiveTVPlaylists() {
                             </div>
                           ) : (
                             <div className="p-2 space-y-2">
-                              {/* Episodic Shows Section */}
                               {episodicShows.length > 0 && (
                                 <div className="mb-3">
                                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2 flex items-center gap-1">
@@ -710,7 +772,6 @@ export default function AdminLiveTVPlaylists() {
                                 </div>
                               )}
 
-                              {/* Movies/Single Videos Section */}
                               {searchResults.length > 0 && (
                                 <div>
                                   {episodicShows.length > 0 && (
@@ -761,7 +822,12 @@ export default function AdminLiveTVPlaylists() {
                       <SortableContext items={playlistItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
                         <div className="space-y-2">
                           {playlistItems.map((item) => (
-                            <SortableItem key={item.id} item={item} onRemove={() => handleRemoveItem(item.id)} />
+                            <SortableItem 
+                              key={item.id} 
+                              item={item} 
+                              onRemove={() => handleRemoveItem(item.id)}
+                              onConfigureMidrolls={() => openMidrollConfig(item)}
+                            />
                           ))}
                         </div>
                       </SortableContext>
@@ -778,6 +844,75 @@ export default function AdminLiveTVPlaylists() {
           </div>
         </div>
       </main>
+
+      {/* Midroll Configuration Dialog */}
+      <Dialog open={midrollDialogOpen} onOpenChange={setMidrollDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configure Ad Breaks</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <p className="text-sm text-muted-foreground">
+              Set times (in minutes from start) when ads should play during this video.
+            </p>
+            
+            {editingItem && (
+              <div className="text-sm">
+                <span className="font-medium">Video: </span>
+                {editingItem.episode_id && editingItem.episode
+                  ? `S${editingItem.episode.season.season_number}E${editingItem.episode.episode_number}: ${editingItem.episode.title}`
+                  : editingItem.video?.title}
+                <br />
+                <span className="font-medium">Duration: </span>
+                {editingItem.duration_seconds 
+                  ? `${Math.floor(editingItem.duration_seconds / 60)} minutes`
+                  : 'Unknown'}
+              </div>
+            )}
+
+            {/* Add new break */}
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                placeholder="Minutes from start"
+                value={newBreakMinutes}
+                onChange={(e) => setNewBreakMinutes(e.target.value)}
+                min="1"
+              />
+              <Button onClick={addMidrollBreak} variant="secondary">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Break
+              </Button>
+            </div>
+
+            {/* Current breaks */}
+            <div className="space-y-2">
+              <Label>Scheduled Ad Breaks:</Label>
+              {midrollBreaks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No ad breaks configured</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {midrollBreaks.map((seconds) => (
+                    <Badge key={seconds} variant="secondary" className="flex items-center gap-1">
+                      {Math.floor(seconds / 60)} min
+                      <button
+                        onClick={() => removeMidrollBreak(seconds)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Button onClick={saveMidrollBreaks} className="w-full">
+              Save Ad Breaks
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

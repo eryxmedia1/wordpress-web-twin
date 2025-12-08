@@ -101,7 +101,7 @@ serve(async (req) => {
       .from('live_playlist_items')
       .select(`
         *,
-        video:contents(id, title, poster_url, video_url, trailer_url, duration),
+        video:contents(id, title, poster_url, video_url, duration),
         episode:episodes(id, title, thumbnail_url, video_url, duration),
         preroll_ad:ads!live_playlist_items_preroll_ad_id_fkey(id, name, video_url, duration_seconds),
         postroll_ad:ads!live_playlist_items_postroll_ad_id_fkey(id, name, video_url, duration_seconds)
@@ -121,6 +121,13 @@ serve(async (req) => {
       );
     }
 
+    // Fetch ads for midroll breaks
+    const { data: activeAds } = await supabase
+      .from('ads')
+      .select('*')
+      .eq('is_active', true)
+      .eq('ad_type', 'midroll');
+
     // Build segments array (shows + ads)
     const segments: Segment[] = [];
     
@@ -129,14 +136,18 @@ serve(async (req) => {
       const isEpisode = !!item.episode_id && item.episode;
       const video = isEpisode ? item.episode : item.video;
       
-      if (!video) continue;
+      if (!video) {
+        console.log('Skipping item - no video data:', item.id);
+        continue;
+      }
 
-      // Get video URL - for episodes use episode's video_url, for content use video_url or trailer_url
-      const videoUrl = isEpisode 
-        ? video.video_url 
-        : (video.video_url || video.trailer_url || '');
+      // CRITICAL: Only use video_url - NEVER use trailer_url for Live TV
+      const videoUrl = video.video_url;
       
-      if (!videoUrl) continue; // Skip items without a video URL
+      if (!videoUrl) {
+        console.log('Skipping item - no video_url (Live TV requires video_url, not trailer):', video.title || item.id);
+        continue;
+      }
 
       // Parse duration
       let videoDuration = item.duration_seconds;
@@ -157,11 +168,12 @@ serve(async (req) => {
 
       // Add midroll breaks if configured
       const midrolls: number[] = item.midroll_breaks_json || [];
-      if (midrolls.length > 0) {
+      if (midrolls.length > 0 && activeAds && activeAds.length > 0) {
         let lastBreak = 0;
         const sortedMidrolls = [...midrolls].sort((a, b) => a - b);
         
-        for (const breakAt of sortedMidrolls) {
+        for (let i = 0; i < sortedMidrolls.length; i++) {
+          const breakAt = sortedMidrolls[i];
           if (breakAt > lastBreak && breakAt < videoDuration) {
             // Show segment before midroll
             segments.push({
@@ -175,12 +187,13 @@ serve(async (req) => {
               startOffset: lastBreak,
             });
             
-            // Midroll ad (use default 30s)
+            // Pick a random ad from the active midroll ads
+            const randomAd = activeAds[Math.floor(Math.random() * activeAds.length)];
             segments.push({
               type: 'ad',
-              videoUrl: '', // Would pull from ad pool
-              title: 'Advertisement',
-              duration: 30,
+              videoUrl: randomAd.video_url,
+              title: randomAd.name,
+              duration: randomAd.duration_seconds || 30,
             });
             
             lastBreak = breakAt;
@@ -229,7 +242,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           type: 'idle', 
-          message: 'No valid segments',
+          message: 'No valid segments (all items missing video_url)',
           channel: { name: channel.name, logo: channel.logo_url, slug: channel.slug }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -239,18 +252,43 @@ serve(async (req) => {
     // Calculate total cycle duration
     const totalDuration = segments.reduce((sum, seg) => sum + seg.duration, 0);
 
-    // Get current time - use channel timezone for proper scheduling
-    const timezone = channel.timezone || 'America/New_York';
-    const nowUtc = new Date();
+    // Get current time in UTC
+    const nowUtc = Date.now();
     
-    // Parse playlist start datetime
-    const startDate = new Date(playlist.start_date);
-    const [hours, minutes] = playlist.start_time.split(':').map(Number);
-    const playlistStart = new Date(startDate);
-    playlistStart.setHours(hours, minutes, 0, 0);
+    // Parse playlist start datetime with proper timezone handling
+    // The start_time is stored as local time in the channel's timezone
+    const timezone = channel.timezone || 'America/New_York';
+    
+    // Create the playlist start time
+    // Parse start_date (YYYY-MM-DD) and start_time (HH:MM:SS or HH:MM)
+    const startDateStr = playlist.start_date;
+    const startTimeStr = playlist.start_time;
+    
+    // Build an ISO string and account for timezone offset
+    // For America/New_York, we need to calculate the offset
+    const tzOffsetHours = getTimezoneOffsetHours(timezone, new Date());
+    
+    // Parse the time
+    const [hours, minutes, seconds = 0] = startTimeStr.split(':').map(Number);
+    
+    // Create a date object in UTC that represents the local time
+    const playlistStartLocal = new Date(startDateStr);
+    playlistStartLocal.setUTCHours(hours - tzOffsetHours, minutes, seconds, 0);
+    
+    const playlistStartMs = playlistStartLocal.getTime();
 
     // Calculate elapsed seconds since playlist start
-    let elapsedSeconds = Math.floor((nowUtc.getTime() - playlistStart.getTime()) / 1000);
+    let elapsedSeconds = Math.floor((nowUtc - playlistStartMs) / 1000);
+
+    console.log('Timezone calculation:', {
+      timezone,
+      tzOffsetHours,
+      startDate: startDateStr,
+      startTime: startTimeStr,
+      playlistStartUTC: new Date(playlistStartMs).toISOString(),
+      nowUTC: new Date(nowUtc).toISOString(),
+      elapsedSeconds,
+    });
 
     // Handle loop mode
     if (playlist.loop_mode === 'continuous_loop') {
@@ -366,6 +404,36 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to get timezone offset in hours
+function getTimezoneOffsetHours(timezone: string, date: Date): number {
+  try {
+    // Create a formatter for the target timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour: 'numeric',
+      hour12: false,
+    });
+    
+    // Get the hour in the target timezone
+    const parts = formatter.formatToParts(date);
+    const localHour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+    
+    // Get UTC hour
+    const utcHour = date.getUTCHours();
+    
+    // Calculate offset (this is simplified, handles most cases)
+    let offset = localHour - utcHour;
+    if (offset > 12) offset -= 24;
+    if (offset < -12) offset += 24;
+    
+    return offset;
+  } catch (e) {
+    // Default to EST (-5) if timezone parsing fails
+    console.log('Failed to parse timezone, defaulting to EST:', timezone);
+    return -5;
+  }
+}
 
 // Helper function to parse duration string to seconds
 function parseDuration(duration: string): number {
