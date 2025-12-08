@@ -342,8 +342,9 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
 
                 {/* Expanded Hover Card */}
                 {isHovered && (
-                  <div
-                    className="absolute z-50 w-[280px] md:w-[320px] bg-card rounded-lg overflow-hidden shadow-2xl border border-border animate-scale-in"
+                  <Link
+                    to={`/watch/${item.content.id}`}
+                    className="absolute z-50 w-[280px] md:w-[320px] bg-card rounded-lg overflow-hidden shadow-2xl border border-border animate-scale-in block"
                     style={{
                       top: '-10px',
                       ...positionStyles,
@@ -472,7 +473,7 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                         </p>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 )}
               </div>
             );

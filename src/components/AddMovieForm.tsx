@@ -50,6 +50,7 @@ type FormData = {
   isNewRelease: boolean;
   featured: boolean;
   isZoeOriginal: boolean;
+  isComingSoon: boolean;
   topRank: string;
   maturityRating: string;
   creator: string;
@@ -106,6 +107,7 @@ const AddMovieForm = () => {
       isNewRelease: false,
       featured: false,
       isZoeOriginal: false,
+      isComingSoon: false,
       topRank: "",
       maturityRating: "PG-13",
       creator: "",
@@ -201,6 +203,7 @@ const AddMovieForm = () => {
           logo_url: data.logoUrl || null,
           featured: data.featured,
           is_zoe_original: data.isZoeOriginal,
+          is_coming_soon: data.isComingSoon,
           top_rank: data.topRank ? parseInt(data.topRank) : null,
           maturity_rating: data.maturityRating,
           creator: data.creator || null,
@@ -473,6 +476,22 @@ const AddMovieForm = () => {
                                 />
                               </FormControl>
                               <FormLabel className="m-0">Zoe Original</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="isComingSoon"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange} 
+                                />
+                              </FormControl>
+                              <FormLabel className="m-0">Coming Soon</FormLabel>
                             </FormItem>
                           )}
                         />
