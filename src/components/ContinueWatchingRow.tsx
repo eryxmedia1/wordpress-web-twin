@@ -299,8 +299,12 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                 onMouseEnter={() => handleMouseEnter(item.id)}
                 onMouseLeave={handleMouseLeave}
               >
-                {/* Base Card - Always clickable */}
-                <Link to={`/watch/${item.content.id}`} className="block relative z-10">
+                {/* Base Card - Always clickable with keyboard support */}
+                <Link 
+                  to={`/watch/${item.content.id}`} 
+                  className="block relative z-10 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background rounded-lg"
+                  aria-label={`Resume watching ${item.content.title}${episodeInfo ? ` ${episodeInfo}` : ''}`}
+                >
                   <div className="relative rounded-lg overflow-hidden cursor-pointer group">
                     <img
                       src={item.content.poster_url || "/placeholder.svg"}
@@ -342,35 +346,38 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
 
                 {/* Expanded Hover Card */}
                 {isHovered && (
-                  <Link
-                    to={`/watch/${item.content.id}`}
-                    className="absolute z-50 w-[280px] md:w-[320px] bg-card rounded-lg overflow-hidden shadow-2xl border border-border animate-scale-in block"
+                  <div
+                    className="absolute z-50 w-[280px] md:w-[320px] bg-card rounded-lg overflow-hidden shadow-2xl border border-border animate-scale-in"
                     style={{
                       top: '-10px',
                       ...positionStyles,
                     }}
                   >
-
-                    {/* Video/Image Preview with ReactPlayer */}
-                    <div className="relative aspect-video bg-black">
+                    {/* Clickable Video/Image Preview Area - navigates to watch */}
+                    <Link 
+                      to={`/watch/${item.content.id}`}
+                      className="block relative aspect-video bg-black cursor-pointer"
+                    >
                       {videoUrl ? (
-                        <ReactPlayer
-                          url={videoUrl}
-                          playing
-                          muted
-                          loop
-                          playsinline
-                          width="100%"
-                          height="100%"
-                          config={{
-                            vimeo: {
-                              playerOptions: {
-                                background: true,
-                                quality: '720p',
+                        <div className="pointer-events-none w-full h-full">
+                          <ReactPlayer
+                            url={videoUrl}
+                            playing
+                            muted
+                            loop
+                            playsinline
+                            width="100%"
+                            height="100%"
+                            config={{
+                              vimeo: {
+                                playerOptions: {
+                                  background: true,
+                                  quality: '720p',
+                                }
                               }
-                            }
-                          }}
-                        />
+                            }}
+                          />
+                        </div>
                       ) : (
                         <img
                           src={item.content.poster_url || "/placeholder.svg"}
@@ -386,7 +393,14 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                           style={{ width: `${item.progress_percent}%` }}
                         />
                       </div>
-                    </div>
+
+                      {/* Play overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity">
+                        <div className="bg-primary/80 rounded-full p-3">
+                          <Play className="w-8 h-8 text-primary-foreground fill-current" />
+                        </div>
+                      </div>
+                    </Link>
 
                     {/* Content Info */}
                     <div className="p-4 space-y-3">
@@ -473,7 +487,7 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                         </p>
                       )}
                     </div>
-                  </Link>
+                  </div>
                 )}
               </div>
             );

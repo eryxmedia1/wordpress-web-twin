@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight, Play } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -37,6 +38,7 @@ interface MobileContinueWatchingRowProps {
 
 const MobileContinueWatchingRow = ({ onItemClick }: MobileContinueWatchingRowProps) => {
   const { currentProfile } = useProfile();
+  const navigate = useNavigate();
   const [items, setItems] = useState<WatchHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -98,12 +100,28 @@ const MobileContinueWatchingRow = ({ onItemClick }: MobileContinueWatchingRowPro
 
   if (isLoading || items.length === 0) return null;
 
+  // Handle card click - navigate to watch page
+  const handleCardClick = (contentId: string) => {
+    navigate(`/watch/${contentId}`);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent, contentId: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleCardClick(contentId);
+    }
+  };
+
   return (
     <div className="py-3">
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-3">
         <h2 className="text-lg font-bold text-foreground">Keep Watching</h2>
-        <button className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <button 
+          onClick={() => navigate('/search?filter=continue')}
+          className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+        >
           See All
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -125,10 +143,12 @@ const MobileContinueWatchingRow = ({ onItemClick }: MobileContinueWatchingRowPro
           const watchedDate = formatWatchedDate(item.last_watched_at);
 
           return (
-            <div
+            <button
               key={item.id}
-              onClick={() => onItemClick(content.id)}
-              className="flex-shrink-0 w-[280px] cursor-pointer group"
+              onClick={() => handleCardClick(content.id)}
+              onKeyDown={(e) => handleKeyDown(e, content.id)}
+              className="flex-shrink-0 w-[280px] cursor-pointer group text-left touch-manipulation focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background rounded-xl"
+              aria-label={`Resume watching ${content.title}${isShow ? ` Season ${seasonNum} Episode ${episodeNum}` : ''}`}
             >
               {/* Landscape Card */}
               <div className="relative aspect-video rounded-xl overflow-hidden bg-card">
@@ -150,11 +170,18 @@ const MobileContinueWatchingRow = ({ onItemClick }: MobileContinueWatchingRowPro
                 )}
 
                 {/* Progress Bar at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/50">
+                <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-muted/50">
                   <div
                     className="h-full bg-primary transition-all"
                     style={{ width: `${item.progress_percent}%` }}
                   />
+                </div>
+
+                {/* Play Icon Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
+                  <div className="bg-primary rounded-full p-3">
+                    <Play className="w-6 h-6 text-primary-foreground fill-current" />
+                  </div>
                 </div>
               </div>
 
@@ -179,7 +206,7 @@ const MobileContinueWatchingRow = ({ onItemClick }: MobileContinueWatchingRowPro
                   {content.title}
                 </p>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
