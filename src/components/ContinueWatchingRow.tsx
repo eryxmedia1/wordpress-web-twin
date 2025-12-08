@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
-import { Play, Plus, ThumbsUp, Info, Check } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Play, Plus, ThumbsUp, Info, Check, ChevronRight } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,7 @@ interface WatchHistoryItem {
 
 interface ContinueWatchingRowProps {
   onMoreInfo: (contentId: string) => void;
+  seeAllLink?: string;
 }
 
 // Parse duration string (e.g., "1h 45m", "45 min", "2h") to minutes
@@ -69,7 +70,8 @@ const formatRemainingTime = (minutes: number): string => {
   return `${hours}h ${mins}m remaining`;
 };
 
-const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
+const ContinueWatchingRow = ({ onMoreInfo, seeAllLink = "/category/continue-watching" }: ContinueWatchingRowProps) => {
+  const navigate = useNavigate();
   const { currentProfile } = useProfile();
   const [items, setItems] = useState<WatchHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -264,9 +266,17 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="text-xl md:text-2xl font-bold text-foreground">
-        Continue Watching for {currentProfile?.name}
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl md:text-2xl font-bold text-foreground">
+          Continue Watching for {currentProfile?.name}
+        </h2>
+        <button
+          onClick={() => navigate(seeAllLink)}
+          className="flex items-center text-sm text-secondary hover:text-secondary/80 transition-colors"
+        >
+          See All <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
 
       <ScrollArea className="w-full">
         <div className="flex gap-4 pb-4">
