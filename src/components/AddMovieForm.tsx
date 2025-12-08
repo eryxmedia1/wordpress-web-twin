@@ -10,6 +10,7 @@ import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
 import { MembershipPlansSelector } from "@/components/admin/MembershipPlansSelector";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { SubtitlesSelector } from "@/components/admin/SubtitlesSelector";
+import { GenreSelector } from "@/components/admin/GenreSelector";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,6 +89,7 @@ const AddMovieForm = () => {
   const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -192,7 +194,7 @@ const AddMovieForm = () => {
           title: data.title,
           description: data.description,
           type: "movie",
-          genre: data.category,
+          genre: selectedGenres.length > 0 ? selectedGenres.join(", ") : data.category,
           release_year: parseInt(data.releaseYear),
           rating: data.rating,
           duration: data.duration,
@@ -310,6 +312,12 @@ const AddMovieForm = () => {
                       )}
                     />
                     
+                    {/* Genre Multi-Select */}
+                    <GenreSelector
+                      selectedGenres={selectedGenres}
+                      onGenresChange={setSelectedGenres}
+                    />
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
@@ -327,6 +335,7 @@ const AddMovieForm = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent className="bg-gray-800 border-gray-700">
+                                <SelectItem value="educational">Educational</SelectItem>
                                 {categories.map(category => (
                                   <SelectItem key={category.id} value={category.id}>
                                     {category.name}
