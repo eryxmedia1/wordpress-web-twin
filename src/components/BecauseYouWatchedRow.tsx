@@ -23,6 +23,16 @@ interface BecauseYouWatchedRowProps {
   onMoreInfo: (contentId: string) => void;
 }
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 const BecauseYouWatchedRow = ({ onMoreInfo }: BecauseYouWatchedRowProps) => {
   const { currentProfile } = useProfile();
   const [watchedTitle, setWatchedTitle] = useState<WatchedContent | null>(null);
@@ -99,7 +109,7 @@ const BecauseYouWatchedRow = ({ onMoreInfo }: BecauseYouWatchedRowProps) => {
       const { data: similarData } = await query;
 
       if (similarData && similarData.length > 0) {
-        setRecommendations(similarData);
+        setRecommendations(shuffleArray(similarData));
       } else if (watchedItem.genre) {
         // Fallback to genre-based if no tag matches
         const { data: genreData } = await supabase
@@ -110,7 +120,7 @@ const BecauseYouWatchedRow = ({ onMoreInfo }: BecauseYouWatchedRowProps) => {
           .limit(15);
 
         if (genreData) {
-          setRecommendations(genreData);
+          setRecommendations(shuffleArray(genreData));
         }
       }
 

@@ -7,6 +7,16 @@ interface NextToWatchRowProps {
   onMoreInfo: (contentId: string) => void;
 }
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 const NextToWatchRow = ({ onMoreInfo }: NextToWatchRowProps) => {
   const { currentProfile } = useProfile();
   const [contents, setContents] = useState<any[]>([]);
@@ -59,9 +69,9 @@ const NextToWatchRow = ({ onMoreInfo }: NextToWatchRowProps) => {
       const { data, error } = await query;
 
       if (!error && data) {
-        // Filter out already watched content
+        // Filter out already watched content and randomize
         const filtered = data.filter(item => !watchedIds.has(item.id));
-        setContents(filtered.slice(0, 15));
+        setContents(shuffleArray(filtered.slice(0, 15)));
       }
       setIsLoading(false);
     };
