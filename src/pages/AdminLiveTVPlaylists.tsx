@@ -377,7 +377,7 @@ export default function AdminLiveTVPlaylists() {
   return (
     <div className="min-h-screen bg-background">
       <AdminNavbar />
-      <main className="container mx-auto px-4 py-8 pb-24">
+      <main className="container mx-auto px-4 py-8 pb-24 pt-24">
         {/* Header - always visible */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
           <Link to="/admin/livetv/channels">
