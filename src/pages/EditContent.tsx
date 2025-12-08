@@ -492,6 +492,42 @@ const EditContent = () => {
               .eq('id', existingSeason.id);
           }
         }
+        
+        // Auto-populate poster/backdrop/trailer from first episode if missing or invalid
+        if (contentId && seasons.length > 0 && seasons[0].episodes.length > 0) {
+          const firstEpisode = seasons[0].episodes[0];
+          
+          // Fetch current content to check trailer_url
+          const { data: currentContent } = await supabase
+            .from('contents')
+            .select('trailer_url, poster_url')
+            .eq('id', contentId)
+            .single();
+          
+          const updates: Record<string, string> = {};
+          
+          // Check if poster_url is empty or contains a Vimeo video URL instead of an image
+          const isInvalidPosterUrl = !currentContent?.poster_url || 
+            currentContent.poster_url.includes('vimeo.com') || 
+            currentContent.poster_url.includes('player.vimeo.com');
+          
+          if (isInvalidPosterUrl && firstEpisode.thumbnail) {
+            updates.poster_url = firstEpisode.thumbnail;
+            updates.backdrop_url = firstEpisode.thumbnail;
+          }
+          
+          // Set trailer to first episode video if not set
+          if (!currentContent?.trailer_url && firstEpisode.videoUrl) {
+            updates.trailer_url = firstEpisode.videoUrl;
+          }
+          
+          if (Object.keys(updates).length > 0) {
+            await supabase
+              .from('contents')
+              .update(updates)
+              .eq('id', contentId);
+          }
+        }
       }
       
       // Save content tags
