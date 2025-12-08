@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Film, Plus, Trash, Video, ChevronUp, ChevronDown } from "lucide-react";
+import { Film, Plus, Trash, Video, ChevronUp, ChevronDown, Star, Upload } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
@@ -71,6 +71,8 @@ const EditContent = () => {
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [bulkImportUrls, setBulkImportUrls] = useState("");
   
   // For TV shows
   const [seasons, setSeasons] = useState<Season[]>([{ 
@@ -210,6 +212,7 @@ const EditContent = () => {
       midrollConfig
     });
     setSelectedChannels(content.channels || []);
+    setIsFeatured((content as any).featured || false);
     
     // Fetch associated tags and membership plans
     await Promise.all([
@@ -336,7 +339,7 @@ const EditContent = () => {
             vast_ad_postroll: contentDetails.vastAdUrl.postroll,
             channels: selectedChannels,
             trailer_url: null,
-            featured: false,
+            featured: isFeatured,
             midroll_config: contentDetails.midrollConfig
           })
           .select()
@@ -370,7 +373,8 @@ const EditContent = () => {
             vast_ad_midroll: contentDetails.vastAdUrl.midroll,
             vast_ad_postroll: contentDetails.vastAdUrl.postroll,
             channels: selectedChannels,
-            midroll_config: contentDetails.midrollConfig
+            midroll_config: contentDetails.midrollConfig,
+            featured: isFeatured
           })
           .eq('id', contentId as string) as { error: any };
           
@@ -709,6 +713,24 @@ const EditContent = () => {
             />
           </div>
           
+          {/* Featured Content Toggle */}
+          <div className="border border-amber-600/50 rounded-md p-6 bg-amber-900/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Star className={`w-6 h-6 ${isFeatured ? 'text-amber-500 fill-amber-500' : 'text-gray-400'}`} />
+                <div>
+                  <Label htmlFor="featured" className="text-base font-medium">Featured on Home Page Slider</Label>
+                  <p className="text-sm text-muted-foreground">Display this content in the hero carousel at the top of the home page</p>
+                </div>
+              </div>
+              <Switch
+                id="featured"
+                checked={isFeatured}
+                onCheckedChange={setIsFeatured}
+              />
+            </div>
+          </div>
+          
           <div>
             <Label htmlFor="videoUrl" className="mb-2 block">Video URL</Label>
             <Input 
@@ -924,23 +946,70 @@ const EditContent = () => {
                     
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="text-lg font-medium">Episodes</h4>
-                      <Button 
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => {
+                            const newSeasons = [...seasons];
+                            newSeasons[seasonIndex].episodes.push({
+                              number: newSeasons[seasonIndex].episodes.length + 1,
+                              title: `Episode ${newSeasons[seasonIndex].episodes.length + 1}`,
+                              description: "",
+                              duration: "",
+                              videoUrl: "",
+                              thumbnail: "",
+                              vastAdUrl: ""
+                            });
+                            setSeasons(newSeasons);
+                          }}
+                          variant="outline"
+                        >
+                          <Plus className="mr-2" /> Add Episode
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Bulk Import Section */}
+                    <div className="border border-gray-600 rounded-lg p-4 mb-4 bg-gray-900/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Upload className="w-4 h-4 text-amber-500" />
+                        <Label className="text-sm font-medium">Bulk Import Episodes</Label>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-2">Paste one video URL per line to create multiple episodes at once</p>
+                      <Textarea
+                        value={bulkImportUrls}
+                        onChange={(e) => setBulkImportUrls(e.target.value)}
+                        placeholder="https://vimeo.com/123456789&#10;https://vimeo.com/987654321&#10;https://example.com/video.mp4"
+                        className="bg-gray-800 border-gray-700 min-h-[80px] text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
                         onClick={() => {
+                          const urls = bulkImportUrls.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+                          if (urls.length === 0) {
+                            toast.error("Please enter at least one video URL");
+                            return;
+                          }
                           const newSeasons = [...seasons];
-                          newSeasons[seasonIndex].episodes.push({
-                            number: newSeasons[seasonIndex].episodes.length + 1,
-                            title: `Episode ${newSeasons[seasonIndex].episodes.length + 1}`,
-                            description: "",
-                            duration: "",
-                            videoUrl: "",
-                            thumbnail: "",
-                            vastAdUrl: ""
+                          const startNumber = newSeasons[seasonIndex].episodes.length + 1;
+                          urls.forEach((url, idx) => {
+                            newSeasons[seasonIndex].episodes.push({
+                              number: startNumber + idx,
+                              title: `Episode ${startNumber + idx}`,
+                              description: "",
+                              duration: "",
+                              videoUrl: url,
+                              thumbnail: "",
+                              vastAdUrl: ""
+                            });
                           });
                           setSeasons(newSeasons);
+                          setBulkImportUrls("");
+                          toast.success(`Added ${urls.length} episodes`);
                         }}
-                        variant="outline"
                       >
-                        <Plus className="mr-2" /> Add Episode
+                        <Upload className="w-3 h-3 mr-1" /> Import {bulkImportUrls.split('\n').filter(u => u.trim()).length || 0} URLs
                       </Button>
                     </div>
                     
@@ -1053,31 +1122,56 @@ const EditContent = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <Label className="mb-1 block">Select Video from Library</Label>
-                              <Select
-                                value={episode.videoUrl || ""}
-                                onValueChange={(value) => {
-                                  const newSeasons = [...seasons];
-                                  const selectedVideo = availableVideos.find(v => v.video_url === value);
-                                  newSeasons[seasonIndex].episodes[episodeIndex].videoUrl = value;
-                                  // Auto-fill thumbnail if available
-                                  if (selectedVideo?.poster_url && !episode.thumbnail) {
-                                    newSeasons[seasonIndex].episodes[episodeIndex].thumbnail = selectedVideo.poster_url;
-                                  }
-                                  setSeasons(newSeasons);
-                                }}
-                              >
-                                <SelectTrigger className="bg-gray-900 border-gray-800">
-                                  <SelectValue placeholder="Select a video..." />
-                                </SelectTrigger>
-                                <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
-                                  <SelectItem value="">-- None --</SelectItem>
-                                  {availableVideos.map((video) => (
-                                    <SelectItem key={video.id} value={video.video_url || ""}>
-                                      {video.title}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <div className="flex gap-2 items-start">
+                                {/* Thumbnail preview */}
+                                {episode.videoUrl && (() => {
+                                  const selectedVideo = availableVideos.find(v => v.video_url === episode.videoUrl);
+                                  return selectedVideo?.poster_url ? (
+                                    <img 
+                                      src={selectedVideo.poster_url} 
+                                      alt="Video thumbnail" 
+                                      className="w-16 h-10 object-cover rounded border border-gray-700"
+                                    />
+                                  ) : null;
+                                })()}
+                                <div className="flex-1">
+                                  <Select
+                                    value={episode.videoUrl || "__none__"}
+                                    onValueChange={(value) => {
+                                      const newSeasons = [...seasons];
+                                      const actualValue = value === "__none__" ? "" : value;
+                                      const selectedVideo = availableVideos.find(v => v.video_url === actualValue);
+                                      newSeasons[seasonIndex].episodes[episodeIndex].videoUrl = actualValue;
+                                      // Auto-fill thumbnail if available
+                                      if (selectedVideo?.poster_url && !episode.thumbnail) {
+                                        newSeasons[seasonIndex].episodes[episodeIndex].thumbnail = selectedVideo.poster_url;
+                                      }
+                                      setSeasons(newSeasons);
+                                    }}
+                                  >
+                                    <SelectTrigger className="bg-gray-900 border-gray-800">
+                                      <SelectValue placeholder="Select a video..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
+                                      <SelectItem value="__none__">-- None --</SelectItem>
+                                      {availableVideos.filter(v => v.video_url).map((video) => (
+                                        <SelectItem key={video.id} value={video.video_url!}>
+                                          <div className="flex items-center gap-2">
+                                            {video.poster_url && (
+                                              <img 
+                                                src={video.poster_url} 
+                                                alt="" 
+                                                className="w-8 h-5 object-cover rounded"
+                                              />
+                                            )}
+                                            <span>{video.title}</span>
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
                               <p className="text-xs text-gray-500 mt-1">Or enter URL manually below</p>
                               <Input 
                                 value={episode.videoUrl}
