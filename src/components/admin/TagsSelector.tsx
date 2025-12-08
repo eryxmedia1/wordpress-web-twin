@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ interface TagsSelectorProps {
   contentType?: "movie" | "show" | "all";
 }
 
-export const TagsSelector = ({ selectedTagIds, onTagsChange, contentType = "all" }: TagsSelectorProps) => {
+export const TagsSelector = memo(({ selectedTagIds, onTagsChange, contentType = "all" }: TagsSelectorProps) => {
   const [tags, setTags] = useState<DbTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,15 +52,15 @@ export const TagsSelector = ({ selectedTagIds, onTagsChange, contentType = "all"
     }
   };
 
-  const toggleTag = (tagId: string) => {
+  const toggleTag = useCallback((tagId: string) => {
     if (selectedTagIds.includes(tagId)) {
       onTagsChange(selectedTagIds.filter(id => id !== tagId));
     } else {
       onTagsChange([...selectedTagIds, tagId]);
     }
-  };
+  }, [selectedTagIds, onTagsChange]);
 
-  const handleCreateTags = async () => {
+  const handleCreateTags = useCallback(async () => {
     if (!newTagName.trim()) return;
 
     setCreating(true);
@@ -114,7 +114,7 @@ export const TagsSelector = ({ selectedTagIds, onTagsChange, contentType = "all"
       }
 
       if (createdTags.length > 0) {
-        setTags([...tags, ...createdTags]);
+        setTags(prevTags => [...prevTags, ...createdTags]);
       }
       
       if (newTagIds.length > 0) {
@@ -135,7 +135,7 @@ export const TagsSelector = ({ selectedTagIds, onTagsChange, contentType = "all"
     } finally {
       setCreating(false);
     }
-  };
+  }, [newTagName, tags, selectedTagIds, onTagsChange, contentType]);
 
   const filteredTags = tags.filter(tag => {
     const matchesSearch = tag.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -230,7 +230,6 @@ export const TagsSelector = ({ selectedTagIds, onTagsChange, contentType = "all"
                   ? "bg-primary/20 border border-primary/50" 
                   : "bg-muted/50 hover:bg-muted border border-transparent"
               }`}
-              onClick={() => toggleTag(tag.id)}
             >
               <Checkbox
                 id={`tag-${tag.id}`}
@@ -240,6 +239,10 @@ export const TagsSelector = ({ selectedTagIds, onTagsChange, contentType = "all"
               <Label
                 htmlFor={`tag-${tag.id}`}
                 className="cursor-pointer text-sm font-medium truncate"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleTag(tag.id);
+                }}
               >
                 {tag.name}
               </Label>
@@ -255,6 +258,8 @@ export const TagsSelector = ({ selectedTagIds, onTagsChange, contentType = "all"
       )}
     </div>
   );
-};
+});
+
+TagsSelector.displayName = "TagsSelector";
 
 export default TagsSelector;
