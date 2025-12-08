@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import ContentLockBadge from "@/components/ContentLockBadge";
 
@@ -29,7 +30,15 @@ const MobileContentRow = ({
   showProgress = false,
   userPlan = 'free',
 }: MobileContentRowProps) => {
+  const navigate = useNavigate();
+  
   if (items.length === 0) return null;
+
+  const handleSeeAll = () => {
+    if (seeAllLink) {
+      navigate(seeAllLink);
+    }
+  };
 
   return (
     <div className="py-2">
@@ -37,7 +46,10 @@ const MobileContentRow = ({
       <div className="flex items-center justify-between px-4 mb-3">
         <h2 className="text-base font-semibold text-foreground">{title}</h2>
         {seeAllLink && (
-          <button className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors">
+          <button 
+            onClick={handleSeeAll}
+            className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+          >
             See All
             <ChevronRight className="w-4 h-4" />
           </button>

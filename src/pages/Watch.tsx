@@ -5,22 +5,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import ReactPlayer from "react-player";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/context/ProfileContext";
 import { useMembershipAccess } from "@/hooks/useMembershipAccess";
 import { UpgradeGate } from "@/components/UpgradeGate";
-
-interface Review {
-  id: string;
-  name: string;
-  avatar: string;
-  date: string;
-  rating: number;
-  text: string;
-}
 
 interface ContentData {
   id: string;
@@ -42,17 +31,6 @@ interface ContentData {
   vast_ad_postroll: string | null;
 }
 
-const sampleReviews: Review[] = [
-  {
-    id: "1",
-    name: "Jane Doe",
-    avatar: "https://randomuser.me/api/portraits/women/12.jpg",
-    date: "September 20, 2024",
-    rating: 5,
-    text: "Amazing content! The production quality is top-notch and the storytelling is captivating. Highly recommend watching this."
-  }
-];
-
 const Watch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -64,11 +42,8 @@ const Watch = () => {
   const [showUpgradeGate, setShowUpgradeGate] = useState(false);
   const [content, setContent] = useState<ContentData | null>(null);
   const [recommendedContent, setRecommendedContent] = useState<ContentData[]>([]);
-  const [reviewText, setReviewText] = useState("");
-  const [reviewName, setReviewName] = useState("");
-  const [reviewEmail, setReviewEmail] = useState("");
-  const [reviewRating, setReviewRating] = useState(0);
-  const [reviews, setReviews] = useState<Review[]>(sampleReviews);
+  const [userRating, setUserRating] = useState(0);
+  const [isSavingRating, setIsSavingRating] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [adBreakCount, setAdBreakCount] = useState(0);
   
@@ -100,7 +75,7 @@ const Watch = () => {
 
       setContent(contentData as ContentData);
 
-      // Fetch existing watch progress if user is logged in
+      // Fetch existing watch progress and user rating if logged in
       if (currentProfile?.id) {
         const { data: watchHistory } = await supabase
           .from("watch_history")
@@ -112,6 +87,18 @@ const Watch = () => {
         if (watchHistory) {
           setProgress(watchHistory.progress_percent || 0);
           lastSavedProgress.current = watchHistory.progress_percent || 0;
+        }
+
+        // Fetch user's rating for this content
+        const { data: likeData } = await supabase
+          .from("likes")
+          .select("rating")
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", id)
+          .single();
+        
+        if (likeData?.rating) {
+          setUserRating(likeData.rating);
         }
       }
 
@@ -212,33 +199,54 @@ const Watch = () => {
   // Get ad configuration based on user's plan
   const adConfig = getAdConfig();
 
-  const handleSubmitReview = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (reviewText && reviewName && reviewRating > 0) {
-      const newReview: Review = {
-        id: Date.now().toString(),
-        name: reviewName,
-        avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-        date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-        rating: reviewRating,
-        text: reviewText
-      };
-      
-      setReviews([newReview, ...reviews]);
-      setReviewText("");
-      setReviewName("");
-      setReviewEmail("");
-      setReviewRating(0);
-      
-      toast.success("Your review has been submitted!");
-    } else {
-      toast.error("Please fill in all required fields");
+  // Handle star rating click - save to database
+  const handleStarClick = async (rating: number) => {
+    if (!currentProfile?.id || !id) {
+      toast.error("Please select a profile to rate content");
+      return;
     }
-  };
-  
-  const handleStarClick = (rating: number) => {
-    setReviewRating(rating);
+
+    setIsSavingRating(true);
+    setUserRating(rating);
+
+    try {
+      // Check if user already has a rating
+      const { data: existing } = await supabase
+        .from("likes")
+        .select("id")
+        .eq("profile_id", currentProfile.id)
+        .eq("content_id", id)
+        .single();
+
+      if (existing) {
+        // Update existing rating
+        const { error } = await supabase
+          .from("likes")
+          .update({ rating })
+          .eq("id", existing.id);
+        
+        if (error) throw error;
+      } else {
+        // Insert new rating
+        const { error } = await supabase
+          .from("likes")
+          .insert({
+            profile_id: currentProfile.id,
+            content_id: id,
+            rating
+          });
+        
+        if (error) throw error;
+      }
+
+      toast.success(`You rated this ${rating} star${rating > 1 ? 's' : ''}`);
+    } catch (error) {
+      console.error("Error saving rating:", error);
+      toast.error("Failed to save rating");
+      setUserRating(0);
+    } finally {
+      setIsSavingRating(false);
+    }
   };
 
   // Format time for display
@@ -301,7 +309,10 @@ const Watch = () => {
                 onPause={() => setIsPlaying(false)}
                 onProgress={handleProgress}
                 onDuration={handleDuration}
-                onReady={() => console.log("Player ready")}
+                onReady={() => {
+                  console.log("Player ready");
+                  setIsPlaying(true);
+                }}
                 onError={(e) => console.error("Player error:", e)}
                 onBuffer={() => console.log("Buffering...")}
                 onBufferEnd={() => console.log("Buffering complete")}
@@ -313,13 +324,17 @@ const Watch = () => {
                       playsinline: true,
                       autoplay: true,
                       muted: false,
+                      controls: true,
+                      quality: 'auto',
                     }
                   },
                   file: {
                     attributes: {
                       playsInline: true,
                       crossOrigin: "anonymous",
-                    }
+                      autoPlay: true,
+                    },
+                    forceVideo: true,
                   }
                 }}
               />
@@ -401,14 +416,28 @@ const Watch = () => {
           <div className="container mx-auto px-4 md:px-6 mt-6">
             <h1 className="text-4xl font-bold mb-4">{content.title}</h1>
             
+            {/* User Rating Section */}
             <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm text-muted-foreground mr-2">Rate this:</span>
               {[1, 2, 3, 4, 5].map(star => (
-                <Star 
+                <button
                   key={star}
-                  className={`h-4 w-4 ${star <= (parseFloat(content.rating || "0") / 2) ? "fill-primary text-primary" : "text-muted-foreground"}`}
-                />
+                  onClick={() => handleStarClick(star)}
+                  disabled={isSavingRating}
+                  className="focus:outline-none touch-manipulation transition-transform hover:scale-110 disabled:opacity-50"
+                >
+                  <Star 
+                    className={`h-6 w-6 transition-colors ${
+                      star <= userRating 
+                        ? "fill-primary text-primary" 
+                        : "text-muted-foreground hover:text-primary/50"
+                    }`}
+                  />
+                </button>
               ))}
-              <span className="ml-2 text-sm">{content.rating || "N/A"}</span>
+              {userRating > 0 && (
+                <span className="ml-2 text-sm text-primary">Your rating: {userRating}/5</span>
+              )}
             </div>
             
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-6">
@@ -540,96 +569,7 @@ const Watch = () => {
               </div>
             )}
             
-            {/* Reviews section */}
-            <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4">Add a review</h2>
-              <p className="text-sm text-muted-foreground mb-4">Your email address will not be published. Required fields are marked *</p>
-              
-              <form onSubmit={handleSubmitReview} className="space-y-4">
-                <div>
-                  <div className="text-sm mb-2">Your rating</div>
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <button
-                        key={star}
-                        type="button"
-                        className="focus:outline-none"
-                        onClick={() => handleStarClick(star)}
-                      >
-                        <Star 
-                          className={`h-5 w-5 ${star <= reviewRating ? "fill-primary text-primary" : "text-muted-foreground"}`}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="text-sm mb-2">Your review *</div>
-                  <Textarea 
-                    value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
-                    className="h-32 bg-muted border-border text-foreground"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm mb-2">Name *</div>
-                    <Input 
-                      value={reviewName}
-                      onChange={(e) => setReviewName(e.target.value)}
-                      className="bg-muted border-border text-foreground"
-                    />
-                  </div>
-                  <div>
-                    <div className="text-sm mb-2">Email *</div>
-                    <Input 
-                      value={reviewEmail}
-                      onChange={(e) => setReviewEmail(e.target.value)}
-                      type="email"
-                      className="bg-muted border-border text-foreground"
-                    />
-                  </div>
-                </div>
-                
-                <Button type="submit" className="bg-primary hover:bg-primary/90">Submit</Button>
-              </form>
-            </div>
-            
-            {/* Display reviews */}
-            {reviews.length > 0 && (
-              <div className="mb-12">
-                {reviews.map(review => (
-                  <Card key={review.id} className="bg-card border-border mb-4 p-4">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="h-12 w-12 rounded-full overflow-hidden">
-                        <img 
-                          src={review.avatar} 
-                          alt={review.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div>
-                        <div className="font-medium">{review.name}</div>
-                        <div className="text-xs text-muted-foreground">{review.date}</div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex mb-3">
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <Star 
-                          key={star}
-                          className={`h-4 w-4 ${star <= review.rating ? "fill-primary text-primary" : "text-muted-foreground"}`}
-                        />
-                      ))}
-                    </div>
-                    
-                    <p className="text-muted-foreground">{review.text}</p>
-                  </Card>
-                ))}
-              </div>
-            )}
+            {/* End of content */}
           </div>
         </div>
       )}
