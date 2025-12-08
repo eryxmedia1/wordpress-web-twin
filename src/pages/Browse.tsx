@@ -14,9 +14,6 @@ import BrowseFooter from "@/components/BrowseFooter";
 import ContentDetailModal from "@/components/ContentDetailModal";
 import GenresList from "@/components/GenresList";
 import PromoBanner from "@/components/PromoBanner";
-import CategoryCircles from "@/components/CategoryCircles";
-import ExclusiveVideos from "@/components/ExclusiveVideos";
-import TopNews from "@/components/TopNews";
 import BecauseYouWatchedRow from "@/components/BecauseYouWatchedRow";
 import NewOnZoeRow from "@/components/NewOnZoeRow";
 import WeThinkYoullLoveRow from "@/components/WeThinkYoullLoveRow";
@@ -183,23 +180,6 @@ const Browse = () => {
       genre: item.genre || undefined,
     }));
 
-  // Sample data for components
-  const newsItems = [
-    { id: "1", title: "New Season Coming", excerpt: "Get ready...", imageUrl: "/placeholder.svg", date: "Dec 5, 2025", category: "News" },
-    { id: "2", title: "Interview with Director", excerpt: "Behind the scenes...", imageUrl: "/placeholder.svg", date: "Dec 4, 2025", category: "Interview" },
-  ];
-
-  const categories = [
-    { id: "reality", name: "Reality", imageUrl: "/placeholder.svg", color: "#d4af37" },
-    { id: "drama", name: "Drama", imageUrl: "/placeholder.svg", color: "#d4af37" },
-    { id: "comedy", name: "Comedy", imageUrl: "/placeholder.svg", color: "#d4af37" },
-    { id: "action", name: "Action", imageUrl: "/placeholder.svg", color: "#d4af37" },
-  ];
-
-  const exclusiveVideos = [
-    { id: "1", title: "Behind the Scenes", description: "Exclusive look...", thumbnailUrl: "/placeholder.svg", duration: "5:30" },
-    { id: "2", title: "Cast Interviews", description: "Meet the stars...", thumbnailUrl: "/placeholder.svg", duration: "8:45" },
-  ];
 
   if (isLoading) {
     return (
@@ -386,9 +366,6 @@ const Browse = () => {
             />
           ))}
 
-          {/* Category Circles */}
-          <CategoryCircles title="TV Show Categories" categories={categories} />
-
           {/* Movies */}
           {movies.length > 0 && (
             <ContentRow
@@ -399,11 +376,6 @@ const Browse = () => {
             />
           )}
 
-          {/* Exclusive Videos */}
-          <ExclusiveVideos title="Exclusive Videos" videos={exclusiveVideos} />
-
-          {/* Top News */}
-          <TopNews title="Top News" news={newsItems} />
         </main>
 
         <BrowseFooter />
