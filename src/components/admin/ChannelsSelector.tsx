@@ -1,4 +1,3 @@
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 const CHANNELS = [
@@ -35,25 +34,32 @@ export const ChannelsSelector = ({ selectedChannels, onChannelsChange }: Channel
         Select which channels/networks this content belongs to
       </p>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
-        {CHANNELS.map((channel) => (
-          <div
-            key={channel}
-            className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-            onClick={() => toggleChannel(channel)}
-          >
-            <Checkbox
-              id={`channel-${channel}`}
-              checked={selectedChannels.includes(channel)}
-              onCheckedChange={() => toggleChannel(channel)}
-            />
-            <Label
-              htmlFor={`channel-${channel}`}
-              className="cursor-pointer text-sm font-medium"
+        {CHANNELS.map((channel) => {
+          const isSelected = selectedChannels.includes(channel);
+          return (
+            <div
+              key={channel}
+              className={`flex items-center space-x-2 p-3 rounded-lg transition-colors cursor-pointer ${
+                isSelected ? 'bg-primary/20 border border-primary' : 'bg-muted/50 hover:bg-muted'
+              }`}
+              onClick={() => toggleChannel(channel)}
             >
-              {channel}
-            </Label>
-          </div>
-        ))}
+              <input
+                type="checkbox"
+                id={`channel-${channel}`}
+                checked={isSelected}
+                onChange={() => {}} // Handled by div onClick
+                className="rounded bg-gray-700 border-gray-600 pointer-events-none"
+              />
+              <Label
+                htmlFor={`channel-${channel}`}
+                className="cursor-pointer text-sm font-medium pointer-events-none"
+              >
+                {channel}
+              </Label>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
