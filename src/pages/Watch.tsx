@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Star, Info, Play } from "lucide-react";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Star, Info, Play, Plus, Check, ThumbsUp, ListVideo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { useProfile } from "@/context/ProfileContext";
 import { useMembershipAccess } from "@/hooks/useMembershipAccess";
 import { UpgradeGate } from "@/components/UpgradeGate";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 interface ContentData {
   id: string;
@@ -31,10 +32,29 @@ interface ContentData {
   vast_ad_preroll: string | null;
   vast_ad_midroll: string | null;
   vast_ad_postroll: string | null;
+  type?: string;
+}
+
+interface EpisodeData {
+  id: string;
+  title: string;
+  description: string | null;
+  thumbnail_url: string | null;
+  video_url: string | null;
+  duration: string | null;
+  episode_number: number;
+  season_id: string;
+}
+
+interface UserPlaylist {
+  id: string;
+  name: string;
 }
 
 const Watch = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const episodeId = searchParams.get('episode');
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { currentProfile } = useProfile();
@@ -44,11 +64,18 @@ const Watch = () => {
   const [showVideo, setShowVideo] = useState(false);
   const [showUpgradeGate, setShowUpgradeGate] = useState(false);
   const [content, setContent] = useState<ContentData | null>(null);
+  const [episode, setEpisode] = useState<EpisodeData | null>(null);
   const [recommendedContent, setRecommendedContent] = useState<ContentData[]>([]);
   const [userRating, setUserRating] = useState(0);
   const [isSavingRating, setIsSavingRating] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [adBreakCount, setAdBreakCount] = useState(0);
+  
+  // My List and Playlist state
+  const [isInList, setIsInList] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [userPlaylists, setUserPlaylists] = useState<UserPlaylist[]>([]);
+  const [playlistsWithContent, setPlaylistsWithContent] = useState<Set<string>>(new Set());
   
   // Progress tracking state
   const [progress, setProgress] = useState(0);
@@ -59,17 +86,20 @@ const Watch = () => {
   const hasInitialSeek = useRef(false);
   const [playerReady, setPlayerReady] = useState(false);
 
-  // Reset seek flag when navigating to new content
+  // Reset seek flag when navigating to new content or episode
   useEffect(() => {
     hasInitialSeek.current = false;
     setPlayerReady(false);
-  }, [id]);
+    setShowVideo(false);
+    setIsPlaying(false);
+  }, [id, episodeId]);
 
   useEffect(() => {
     const fetchContent = async () => {
       if (!id) return;
 
       setIsLoading(true);
+      setEpisode(null);
       
       // Fetch main content
       const { data: contentData, error } = await supabase
@@ -87,18 +117,42 @@ const Watch = () => {
 
       setContent(contentData as ContentData);
 
+      // If there's an episode ID, fetch the episode data
+      if (episodeId) {
+        const { data: episodeData, error: episodeError } = await supabase
+          .from("episodes")
+          .select("*")
+          .eq("id", episodeId)
+          .single();
+        
+        if (episodeData) {
+          setEpisode(episodeData as EpisodeData);
+        } else {
+          console.error("Episode not found:", episodeError);
+        }
+      }
+
       // Fetch existing watch progress and user rating if logged in
       if (currentProfile?.id) {
-        const { data: watchHistory } = await supabase
+        // Get progress for this specific content/episode combination
+        const progressQuery = supabase
           .from("watch_history")
           .select("progress_percent")
           .eq("profile_id", currentProfile.id)
-          .eq("content_id", id)
-          .single();
+          .eq("content_id", id);
+        
+        if (episodeId) {
+          progressQuery.eq("episode_id", episodeId);
+        }
+        
+        const { data: watchHistory } = await progressQuery.single();
         
         if (watchHistory) {
           setProgress(watchHistory.progress_percent || 0);
           lastSavedProgress.current = watchHistory.progress_percent || 0;
+        } else {
+          setProgress(0);
+          lastSavedProgress.current = 0;
         }
 
         // Fetch user's rating for this content
@@ -111,6 +165,38 @@ const Watch = () => {
         
         if (likeData?.rating) {
           setUserRating(likeData.rating);
+        }
+
+        // Check if content is in My List
+        const { data: favData } = await supabase
+          .from("favorites")
+          .select("id")
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", id)
+          .maybeSingle();
+        
+        setIsInList(!!favData);
+
+        // Check if liked
+        setIsLiked(!!likeData);
+
+        // Fetch user playlists
+        const { data: playlists } = await supabase
+          .from("user_playlists")
+          .select("id, name")
+          .eq("profile_id", currentProfile.id);
+        
+        setUserPlaylists(playlists || []);
+
+        // Check which playlists already have this content
+        if (playlists && playlists.length > 0) {
+          const { data: playlistItems } = await supabase
+            .from("user_playlist_items")
+            .select("playlist_id")
+            .eq("content_id", id)
+            .in("playlist_id", playlists.map(p => p.id));
+          
+          setPlaylistsWithContent(new Set(playlistItems?.map(pi => pi.playlist_id) || []));
         }
       }
 
@@ -129,7 +215,7 @@ const Watch = () => {
     };
 
     fetchContent();
-  }, [id, navigate, currentProfile?.id]);
+  }, [id, episodeId, navigate, currentProfile?.id]);
 
   // Seek to saved progress when player is ready and progress is loaded
   useEffect(() => {
@@ -157,12 +243,20 @@ const Watch = () => {
     
     lastSavedProgress.current = progressPercent;
     
-    const { data: existing } = await supabase
+    // Build query to find existing watch history
+    let existingQuery = supabase
       .from("watch_history")
       .select("id")
       .eq("profile_id", currentProfile.id)
-      .eq("content_id", id)
-      .single();
+      .eq("content_id", id);
+    
+    if (episodeId) {
+      existingQuery = existingQuery.eq("episode_id", episodeId);
+    } else {
+      existingQuery = existingQuery.is("episode_id", null);
+    }
+    
+    const { data: existing } = await existingQuery.single();
 
     if (existing) {
       await supabase
@@ -178,11 +272,12 @@ const Watch = () => {
         .insert({
           profile_id: currentProfile.id,
           content_id: id,
+          episode_id: episodeId || null,
           progress_percent: Math.round(progressPercent),
           last_watched_at: new Date().toISOString()
         });
     }
-  }, [currentProfile?.id, id]);
+  }, [currentProfile?.id, id, episodeId]);
 
   // Handle video progress updates
   const handleProgress = useCallback((state: { played: number; playedSeconds: number }) => {
@@ -305,9 +400,85 @@ const Watch = () => {
     );
   }
 
-  const videoUrl = content.video_url || content.trailer_url;
+  // Use episode video if available, otherwise fall back to content video/trailer
+  const videoUrl = episode?.video_url || content.video_url || content.trailer_url;
+  const displayTitle = episode ? `${content.title} - ${episode.title}` : content.title;
+  const displayThumbnail = episode?.thumbnail_url || content.backdrop_url || content.poster_url;
   const categories = content.genre?.split(",").map(g => g.trim()) || [];
   const currentTime = (progress / 100) * duration;
+
+  // Toggle My List
+  const toggleMyList = async () => {
+    if (!currentProfile?.id || !id) return;
+
+    if (isInList) {
+      await supabase
+        .from("favorites")
+        .delete()
+        .eq("profile_id", currentProfile.id)
+        .eq("content_id", id);
+      setIsInList(false);
+      toast.success("Removed from My List");
+    } else {
+      await supabase
+        .from("favorites")
+        .insert({ profile_id: currentProfile.id, content_id: id });
+      setIsInList(true);
+      toast.success("Added to My List");
+    }
+  };
+
+  // Toggle Like
+  const toggleLike = async () => {
+    if (!currentProfile?.id || !id) return;
+
+    if (isLiked) {
+      await supabase
+        .from("likes")
+        .delete()
+        .eq("profile_id", currentProfile.id)
+        .eq("content_id", id);
+      setIsLiked(false);
+    } else {
+      await supabase
+        .from("likes")
+        .insert({ profile_id: currentProfile.id, content_id: id, rating: 1 });
+      setIsLiked(true);
+    }
+  };
+
+  // Add to playlist
+  const addToPlaylist = async (playlistId: string) => {
+    if (!id) return;
+
+    const isInPlaylist = playlistsWithContent.has(playlistId);
+    
+    if (isInPlaylist) {
+      const { error } = await supabase
+        .from("user_playlist_items")
+        .delete()
+        .eq("playlist_id", playlistId)
+        .eq("content_id", id);
+      
+      if (!error) {
+        setPlaylistsWithContent(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(playlistId);
+          return newSet;
+        });
+        toast.success("Removed from playlist");
+      }
+    } else {
+      const { error } = await supabase
+        .from("user_playlist_items")
+        .insert({ playlist_id: playlistId, content_id: id });
+      
+      if (!error) {
+        setPlaylistsWithContent(prev => new Set(prev).add(playlistId));
+        toast.success("Added to playlist");
+      }
+    }
+  };
   
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -370,6 +541,12 @@ const Watch = () => {
                       muted: false,
                       controls: true,
                       quality: 'auto',
+                      preload: true,
+                      byline: false,
+                      portrait: false,
+                      title: false,
+                      speed: true,
+                      dnt: true,
                     }
                   },
                   file: {
@@ -377,6 +554,7 @@ const Watch = () => {
                       playsInline: true,
                       crossOrigin: "anonymous",
                       autoPlay: true,
+                      preload: "auto",
                     },
                     forceVideo: true,
                   }
@@ -422,8 +600,8 @@ const Watch = () => {
           {/* Hero section */}
           <div className="relative h-[500px] w-full">
             <img 
-              src={content.backdrop_url || content.poster_url || "/placeholder.svg"}
-              alt={content.title}
+              src={displayThumbnail || "/placeholder.svg"}
+              alt={displayTitle}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
@@ -463,9 +641,95 @@ const Watch = () => {
             )}
           </div>
           
-          {/* Movie info */}
+          {/* Movie/Episode info */}
           <div className="container mx-auto px-4 md:px-6 mt-6">
-            <h1 className="text-4xl font-bold mb-4">{content.title}</h1>
+            {/* Episode indicator */}
+            {episode && (
+              <div className="mb-2">
+                <span className="text-primary font-medium">Episode {episode.episode_number}</span>
+                <span className="text-muted-foreground mx-2">•</span>
+                <Link to={`/watch/${id}`} className="text-muted-foreground hover:text-foreground transition-colors">
+                  {content.title}
+                </Link>
+              </div>
+            )}
+            
+            <h1 className="text-4xl font-bold mb-4">{episode ? episode.title : content.title}</h1>
+            
+            {/* Action Buttons Row */}
+            <div className="flex items-center gap-3 mb-6">
+              <Button onClick={playVideo} className="bg-primary hover:bg-primary/90 gap-2">
+                <Play className="w-5 h-5 fill-current" />
+                Play
+              </Button>
+              
+              <button
+                onClick={toggleMyList}
+                className="p-3 rounded-full border-2 border-muted-foreground/50 text-foreground hover:border-foreground transition-colors"
+                title={isInList ? "Remove from My List" : "Add to My List"}
+              >
+                {isInList ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+              </button>
+
+              <button
+                onClick={toggleLike}
+                className={`p-3 rounded-full border-2 transition-colors ${
+                  isLiked 
+                    ? "border-primary bg-primary/20 text-primary" 
+                    : "border-muted-foreground/50 text-foreground hover:border-foreground"
+                }`}
+                title="Like"
+              >
+                <ThumbsUp className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
+              </button>
+
+              {/* Add to Playlist Button */}
+              {userPlan !== 'free' && userPlaylists.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="p-3 rounded-full border-2 border-muted-foreground/50 text-foreground hover:border-foreground transition-colors"
+                      title="Add to Playlist"
+                    >
+                      <ListVideo className="w-5 h-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-card border-border">
+                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                      Add to Playlist
+                    </div>
+                    <DropdownMenuSeparator />
+                    {userPlaylists.map(playlist => (
+                      <DropdownMenuItem
+                        key={playlist.id}
+                        onClick={() => addToPlaylist(playlist.id)}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          {playlistsWithContent.has(playlist.id) ? (
+                            <Check className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Plus className="w-4 h-4" />
+                          )}
+                          <span>{playlist.name}</span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              
+              {userPlan === 'free' && (
+                <Link to="/plans?upgrade=standard">
+                  <button
+                    className="p-3 rounded-full border-2 border-muted-foreground/50 text-foreground hover:border-foreground transition-colors"
+                    title="Upgrade to create playlists"
+                  >
+                    <ListVideo className="w-5 h-5" />
+                  </button>
+                </Link>
+              )}
+            </div>
             
             {/* User Rating Section */}
             <div className="flex items-center gap-2 mb-3">
@@ -493,10 +757,10 @@ const Watch = () => {
             
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-6">
               {content.release_year && <span>{content.release_year}</span>}
-              {content.duration && (
+              {(episode?.duration || content.duration) && (
                 <>
                   <span>•</span>
-                  <span>{content.duration}</span>
+                  <span>{episode?.duration || content.duration}</span>
                 </>
               )}
               {categories.length > 0 && (
@@ -518,7 +782,7 @@ const Watch = () => {
             </div>
             
             <p className="text-muted-foreground mb-8">
-              {content.description || "No description available."}
+              {episode?.description || content.description || "No description available."}
             </p>
             
             {(content.cast_members || content.creator) && (

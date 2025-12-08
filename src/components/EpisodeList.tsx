@@ -17,6 +17,7 @@ interface Episode {
   description: string | null;
   duration: string | null;
   thumbnail_url: string | null;
+  video_url: string | null;
 }
 
 interface EpisodeListProps {
@@ -53,7 +54,7 @@ const EpisodeList = ({ contentId }: EpisodeListProps) => {
     const fetchEpisodes = async () => {
       const { data } = await supabase
         .from("episodes")
-        .select("id, episode_number, title, description, duration, thumbnail_url")
+        .select("id, episode_number, title, description, duration, thumbnail_url, video_url")
         .eq("season_id", selectedSeason)
         .order("episode_number", { ascending: true });
 
@@ -92,7 +93,9 @@ const EpisodeList = ({ contentId }: EpisodeListProps) => {
           <Link
             key={episode.id}
             to={`/watch/${contentId}?episode=${episode.id}`}
-            className="flex gap-4 p-3 rounded-lg hover:bg-accent/50 transition-colors group"
+            className={`flex gap-4 p-3 rounded-lg hover:bg-accent/50 transition-colors group ${
+              !episode.video_url ? 'opacity-60' : ''
+            }`}
           >
             {/* Thumbnail */}
             <div className="relative flex-shrink-0 w-32 aspect-video rounded overflow-hidden">
@@ -110,6 +113,11 @@ const EpisodeList = ({ contentId }: EpisodeListProps) => {
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <Play className="w-8 h-8 text-white fill-current" />
               </div>
+              {!episode.video_url && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <span className="text-xs text-white/80">No video</span>
+                </div>
+              )}
             </div>
 
             {/* Episode Info */}
