@@ -93,7 +93,7 @@ const Signup = () => {
     setIsLoading(true);
     
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}/profiles`;
       
       const { data, error } = await supabase.auth.signUp({
         email,
