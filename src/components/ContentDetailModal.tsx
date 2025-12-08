@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { X, Play, Plus, Check, ThumbsUp, Tag } from "lucide-react";
+import { X, Play, Plus, Check, ThumbsUp, Tag, ListVideo, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import EpisodeList from "./EpisodeList";
 import MoreLikeThis from "./MoreLikeThis";
 
@@ -42,6 +44,11 @@ interface ContentTag {
   name: string;
 }
 
+interface UserPlaylist {
+  id: string;
+  name: string;
+}
+
 const ContentDetailModal = ({ contentId, isOpen, onClose }: ContentDetailModalProps) => {
   const { currentProfile } = useProfile();
   const [content, setContent] = useState<ContentDetail | null>(null);
@@ -49,6 +56,9 @@ const ContentDetailModal = ({ contentId, isOpen, onClose }: ContentDetailModalPr
   const [isInList, setIsInList] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userPlaylists, setUserPlaylists] = useState<UserPlaylist[]>([]);
+  const [playlistsWithContent, setPlaylistsWithContent] = useState<Set<string>>(new Set());
+  const [userPlan, setUserPlan] = useState("free");
 
   useEffect(() => {
     if (!contentId || !isOpen) return;
@@ -80,26 +90,55 @@ const ContentDetailModal = ({ contentId, isOpen, onClose }: ContentDetailModalPr
         setTags(tagList);
       }
 
-      // Check if in favorites
+      // Check if in favorites and liked
       if (currentProfile?.id) {
-        const { data: favData } = await supabase
-          .from("favorites")
-          .select("id")
-          .eq("profile_id", currentProfile.id)
-          .eq("content_id", contentId)
-          .maybeSingle();
+        const [favResult, likeResult] = await Promise.all([
+          supabase
+            .from("favorites")
+            .select("id")
+            .eq("profile_id", currentProfile.id)
+            .eq("content_id", contentId)
+            .maybeSingle(),
+          supabase
+            .from("likes")
+            .select("id")
+            .eq("profile_id", currentProfile.id)
+            .eq("content_id", contentId)
+            .maybeSingle()
+        ]);
 
-        setIsInList(!!favData);
+        setIsInList(!!favResult.data);
+        setIsLiked(!!likeResult.data);
 
-        // Check if liked
-        const { data: likeData } = await supabase
-          .from("likes")
-          .select("id")
-          .eq("profile_id", currentProfile.id)
-          .eq("content_id", contentId)
-          .maybeSingle();
+        // Fetch user playlists
+        const { data: playlists } = await supabase
+          .from("user_playlists")
+          .select("id, name")
+          .eq("profile_id", currentProfile.id);
+        
+        setUserPlaylists(playlists || []);
 
-        setIsLiked(!!likeData);
+        // Check which playlists already have this content
+        if (playlists && playlists.length > 0) {
+          const { data: playlistItems } = await supabase
+            .from("user_playlist_items")
+            .select("playlist_id")
+            .eq("content_id", contentId)
+            .in("playlist_id", playlists.map(p => p.id));
+          
+          setPlaylistsWithContent(new Set(playlistItems?.map(pi => pi.playlist_id) || []));
+        }
+
+        // Get user plan
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("subscription_tier")
+            .eq("id", user.id)
+            .single();
+          setUserPlan(profile?.subscription_tier || "free");
+        }
       }
 
       setIsLoading(false);
@@ -141,6 +180,40 @@ const ContentDetailModal = ({ contentId, isOpen, onClose }: ContentDetailModalPr
         .from("likes")
         .insert({ profile_id: currentProfile.id, content_id: contentId, rating: 1 });
       setIsLiked(true);
+    }
+  };
+
+  const addToPlaylist = async (playlistId: string) => {
+    if (!contentId) return;
+
+    const isInPlaylist = playlistsWithContent.has(playlistId);
+    
+    if (isInPlaylist) {
+      // Remove from playlist
+      const { error } = await supabase
+        .from("user_playlist_items")
+        .delete()
+        .eq("playlist_id", playlistId)
+        .eq("content_id", contentId);
+      
+      if (!error) {
+        setPlaylistsWithContent(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(playlistId);
+          return newSet;
+        });
+        toast.success("Removed from playlist");
+      }
+    } else {
+      // Add to playlist
+      const { error } = await supabase
+        .from("user_playlist_items")
+        .insert({ playlist_id: playlistId, content_id: contentId });
+      
+      if (!error) {
+        setPlaylistsWithContent(prev => new Set(prev).add(playlistId));
+        toast.success("Added to playlist");
+      }
     }
   };
 
@@ -215,6 +288,53 @@ const ContentDetailModal = ({ contentId, isOpen, onClose }: ContentDetailModalPr
                 >
                   <ThumbsUp className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
                 </button>
+
+                {/* Add to Playlist Button */}
+                {userPlan !== 'free' && userPlaylists.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="p-3 rounded-full border-2 border-muted-foreground/50 text-foreground hover:border-foreground transition-colors"
+                        title="Add to Playlist"
+                      >
+                        <ListVideo className="w-5 h-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-card border-border">
+                      <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                        Add to Playlist
+                      </div>
+                      <DropdownMenuSeparator />
+                      {userPlaylists.map(playlist => (
+                        <DropdownMenuItem
+                          key={playlist.id}
+                          onClick={() => addToPlaylist(playlist.id)}
+                          className="cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            {playlistsWithContent.has(playlist.id) ? (
+                              <Check className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Plus className="w-4 h-4" />
+                            )}
+                            <span>{playlist.name}</span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                
+                {userPlan === 'free' && (
+                  <Link to="/plans?upgrade=standard">
+                    <button
+                      className="p-3 rounded-full border-2 border-muted-foreground/50 text-foreground hover:border-foreground transition-colors"
+                      title="Upgrade to create playlists"
+                    >
+                      <ListVideo className="w-5 h-5" />
+                    </button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
