@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Play, Plus, Check, ThumbsUp, Info } from "lucide-react";
 import ContentLockBadge from "@/components/ContentLockBadge";
@@ -34,18 +34,46 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const expandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Fetch initial favorites and likes state
+  useEffect(() => {
+    if (!currentProfile?.id || items.length === 0) return;
+
+    const fetchUserData = async () => {
+      const contentIds = items.map(i => i.id);
+      
+      const { data: favorites } = await supabase
+        .from("favorites")
+        .select("content_id")
+        .eq("profile_id", currentProfile.id)
+        .in("content_id", contentIds);
+
+      if (favorites) {
+        setMyListItems(new Set(favorites.map(f => f.content_id)));
+      }
+
+      const { data: likes } = await supabase
+        .from("likes")
+        .select("content_id")
+        .eq("profile_id", currentProfile.id)
+        .in("content_id", contentIds);
+
+      if (likes) {
+        setLikedItems(new Set(likes.map(l => l.content_id)));
+      }
+    };
+
+    fetchUserData();
+  }, [currentProfile?.id, items]);
+
   const handleVideoError = (id: string) => {
     setVideoErrors(prev => new Set(prev).add(id));
   };
 
   const handleItemTap = (id: string) => {
     if (expandedId === id) {
-      // If already expanded, navigate to watch
       navigate(`/watch/${id}`);
     } else {
-      // Expand this item
       setExpandedId(id);
-      // Auto-collapse after 8 seconds
       if (expandTimeoutRef.current) {
         clearTimeout(expandTimeoutRef.current);
       }
@@ -73,26 +101,36 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
     }
 
     const isInList = myListItems.has(contentId);
+    const contentTitle = items.find(i => i.id === contentId)?.title || "Item";
 
-    if (isInList) {
-      await supabase
-        .from("favorites")
-        .delete()
-        .eq("profile_id", currentProfile.id)
-        .eq("content_id", contentId);
-      setMyListItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(contentId);
-        return newSet;
-      });
-      toast.success("Removed from My List");
-    } else {
-      await supabase.from("favorites").insert({
-        profile_id: currentProfile.id,
-        content_id: contentId,
-      });
-      setMyListItems(prev => new Set(prev).add(contentId));
-      toast.success("Added to My List");
+    try {
+      if (isInList) {
+        const { error } = await supabase
+          .from("favorites")
+          .delete()
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", contentId);
+        
+        if (error) throw error;
+        setMyListItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(contentId);
+          return newSet;
+        });
+        toast.success(`Removed "${contentTitle}" from My List`);
+      } else {
+        const { error } = await supabase.from("favorites").insert({
+          profile_id: currentProfile.id,
+          content_id: contentId,
+        });
+        
+        if (error) throw error;
+        setMyListItems(prev => new Set(prev).add(contentId));
+        toast.success(`Added "${contentTitle}" to My List`);
+      }
+    } catch (error) {
+      console.error("Error updating My List:", error);
+      toast.error("Failed to update My List");
     }
   };
 
@@ -105,25 +143,33 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
 
     const isLiked = likedItems.has(contentId);
 
-    if (isLiked) {
-      await supabase
-        .from("likes")
-        .delete()
-        .eq("profile_id", currentProfile.id)
-        .eq("content_id", contentId);
-      setLikedItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(contentId);
-        return newSet;
-      });
-      toast.success("Removed like");
-    } else {
-      await supabase.from("likes").insert({
-        profile_id: currentProfile.id,
-        content_id: contentId,
-      });
-      setLikedItems(prev => new Set(prev).add(contentId));
-      toast.success("Liked!");
+    try {
+      if (isLiked) {
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", contentId);
+        
+        if (error) throw error;
+        setLikedItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(contentId);
+          return newSet;
+        });
+      } else {
+        const { error } = await supabase.from("likes").insert({
+          profile_id: currentProfile.id,
+          content_id: contentId,
+        });
+        
+        if (error) throw error;
+        setLikedItems(prev => new Set(prev).add(contentId));
+        toast.success("Liked!");
+      }
+    } catch (error) {
+      console.error("Error updating likes:", error);
+      toast.error("Failed to update likes");
     }
   };
 
@@ -131,7 +177,6 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
 
   return (
     <div className="py-2">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 mb-3">
         <h2 className="text-base font-semibold text-foreground">{title}</h2>
         <button className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -140,7 +185,6 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
         </button>
       </div>
 
-      {/* Horizontal Scroll */}
       <div className="flex gap-4 overflow-x-auto scrollbar-hide px-4">
         {items.map((item) => {
           const isExpanded = expandedId === item.id;
@@ -158,7 +202,6 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
                 isExpanded ? 'z-20' : ''
               }`}
             >
-              {/* Large Rank Number */}
               <div className="absolute -left-3 bottom-0 z-10 pointer-events-none">
                 <span
                   className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-foreground/80 to-foreground/20"
@@ -170,7 +213,6 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
                 </span>
               </div>
 
-              {/* Poster Card */}
               <div 
                 className={`relative ml-6 rounded-lg overflow-hidden bg-card shadow-lg transition-all duration-300 ${
                   isExpanded 
@@ -212,12 +254,10 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
                   />
                 )}
 
-                {/* Gradient overlay when expanded */}
                 {isExpanded && (
                   <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent pointer-events-none" />
                 )}
 
-                {/* Action buttons when expanded */}
                 {isExpanded && (
                   <div className="absolute bottom-0 left-0 right-0 p-2 space-y-2">
                     <div className="flex items-center justify-center gap-2">
@@ -231,7 +271,7 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
                       <Button
                         size="icon"
                         variant="outline"
-                        className="h-7 w-7 rounded-full border-muted-foreground/50 bg-background/50"
+                        className={`h-7 w-7 rounded-full border-muted-foreground/50 bg-background/50 ${isInList ? 'border-primary text-primary' : ''}`}
                         onClick={(e) => toggleMyList(e, item.id)}
                       >
                         {isInList ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
@@ -239,7 +279,7 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
                       <Button
                         size="icon"
                         variant="outline"
-                        className={`h-7 w-7 rounded-full border-muted-foreground/50 bg-background/50 ${isLiked ? 'text-primary' : ''}`}
+                        className={`h-7 w-7 rounded-full border-muted-foreground/50 bg-background/50 ${isLiked ? 'text-primary border-primary' : ''}`}
                         onClick={(e) => toggleLike(e, item.id)}
                       >
                         <ThumbsUp className={`h-3 w-3 ${isLiked ? 'fill-current' : ''}`} />

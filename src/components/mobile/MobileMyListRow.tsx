@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ChevronRight } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,35 +24,60 @@ const MobileMyListRow = ({ onItemClick }: MobileMyListRowProps) => {
   const [items, setItems] = useState<FavoriteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchMyList = async () => {
-      if (!currentProfile?.id) return;
+  const fetchMyList = useCallback(async () => {
+    if (!currentProfile?.id) return;
 
-      const { data, error } = await supabase
-        .from("favorites")
-        .select(`
+    const { data, error } = await supabase
+      .from("favorites")
+      .select(`
+        id,
+        content_id,
+        contents (
           id,
-          content_id,
-          contents (
-            id,
-            title,
-            poster_url,
-            rating,
-            release_year
-          )
-        `)
-        .eq("profile_id", currentProfile.id)
-        .order("created_at", { ascending: false })
-        .limit(15);
+          title,
+          poster_url,
+          rating,
+          release_year
+        )
+      `)
+      .eq("profile_id", currentProfile.id)
+      .order("created_at", { ascending: false })
+      .limit(15);
 
-      if (!error && data) {
-        setItems(data as unknown as FavoriteItem[]);
-      }
-      setIsLoading(false);
-    };
-
-    fetchMyList();
+    if (!error && data) {
+      setItems(data as unknown as FavoriteItem[]);
+    }
+    setIsLoading(false);
   }, [currentProfile?.id]);
+
+  useEffect(() => {
+    fetchMyList();
+  }, [fetchMyList]);
+
+  // Real-time subscription for favorites changes
+  useEffect(() => {
+    if (!currentProfile?.id) return;
+
+    const channel = supabase
+      .channel('mobile-my-list-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'favorites',
+          filter: `profile_id=eq.${currentProfile.id}`
+        },
+        () => {
+          fetchMyList();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentProfile?.id, fetchMyList]);
 
   if (isLoading || items.length === 0) return null;
 
