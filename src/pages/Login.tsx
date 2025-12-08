@@ -190,43 +190,15 @@ const Login = () => {
               <a href="#" className="text-sm hover:underline">Need help?</a>
             </div>
             
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setUseOtp(!useOtp)}
-                className="text-[#b3b3b3] text-sm hover:underline"
-              >
-                {useOtp ? "Use password to sign in" : "Use a verification code instead"}
-              </button>
-            </div>
           </form>
           
-          <div className="mt-16">
-            <p className="text-[#737373]">
-              New to Zoe RatedTV? <Link to="/signup" className="text-white hover:underline">Sign up now</Link>.
-            </p>
-            
-            <p className="text-[#737373] text-xs mt-4">
-              This page is protected by Google reCAPTCHA to ensure you're not a bot.
-            </p>
+          <div className="mt-8 text-center">
+            <Link to="/signup" className="text-primary hover:underline font-medium">
+              Sign up now
+            </Link>
           </div>
         </div>
       </div>
-      
-      <footer className="bg-black/75 py-8 px-4 text-[#737373] border-t border-[#333]">
-        <div className="max-w-6xl mx-auto">
-          <p className="mb-6">Questions? Call 1-800-555-5555</p>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <a href="#" className="hover:underline">FAQ</a>
-            <a href="#" className="hover:underline">Help Center</a>
-            <a href="#" className="hover:underline">Terms of Use</a>
-            <a href="#" className="hover:underline">Privacy</a>
-          </div>
-          
-          <p className="mt-8 text-sm">Zoe RatedTV Is Our Reality</p>
-        </div>
-      </footer>
     </div>
   );
 };
