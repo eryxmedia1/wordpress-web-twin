@@ -7,6 +7,16 @@ interface WeThinkYoullLoveRowProps {
   onMoreInfo: (contentId: string) => void;
 }
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 const WeThinkYoullLoveRow = ({ onMoreInfo }: WeThinkYoullLoveRowProps) => {
   const { currentProfile } = useProfile();
   const [contents, setContents] = useState<any[]>([]);
@@ -130,10 +140,10 @@ const WeThinkYoullLoveRow = ({ onMoreInfo }: WeThinkYoullLoveRowProps) => {
         const filtered = data.filter(item => !interactedContentIds.has(item.id));
         
         if (filtered.length > 0) {
-          setContents(filtered);
+          setContents(shuffleArray(filtered));
         } else if (data.length > 0) {
           // If all filtered out, show some anyway
-          setContents(data.slice(0, 10));
+          setContents(shuffleArray(data.slice(0, 10)));
         } else {
           // Fallback to newest content
           const { data: fallbackData } = await supabase
@@ -144,7 +154,7 @@ const WeThinkYoullLoveRow = ({ onMoreInfo }: WeThinkYoullLoveRowProps) => {
           
           if (fallbackData) {
             const fallbackFiltered = fallbackData.filter(item => !interactedContentIds.has(item.id));
-            setContents(fallbackFiltered.length > 0 ? fallbackFiltered : fallbackData.slice(0, 10));
+            setContents(shuffleArray(fallbackFiltered.length > 0 ? fallbackFiltered : fallbackData.slice(0, 10)));
           }
         }
       }

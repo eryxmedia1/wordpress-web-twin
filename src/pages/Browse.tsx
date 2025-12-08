@@ -51,6 +51,16 @@ interface Content {
   created_at?: string;
 }
 
+// Fisher-Yates shuffle algorithm for randomizing content order
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 // Channel names for network rows - ordered after TV Series
 const CHANNELS = [
   "Boss Mogul TV",
@@ -99,7 +109,7 @@ const Browse = () => {
         .limit(20);
 
       if (moviesData) {
-        setMovies(moviesData as Content[]);
+        setMovies(shuffleArray(moviesData as Content[]));
       }
 
       // Fetch TV shows
@@ -111,7 +121,7 @@ const Browse = () => {
         .limit(20);
 
       if (showsData) {
-        setTvShows(showsData as Content[]);
+        setTvShows(shuffleArray(showsData as Content[]));
       }
 
       // Fetch Zoe Originals
@@ -123,7 +133,7 @@ const Browse = () => {
         .limit(20);
 
       if (originalsData) {
-        setZoeOriginals(originalsData as Content[]);
+        setZoeOriginals(shuffleArray(originalsData as Content[]));
       }
 
       // Fetch Top 10
@@ -233,6 +243,15 @@ const Browse = () => {
             onItemClick={handleMoreInfo}
           />
 
+          {/* Top 10 with large numbers - Above New on Zoe RatedTV */}
+          {top10.length > 0 && (
+            <MobileTop10Row
+              title="Top 10 on Zoe RatedTV"
+              items={mapToTop10(top10)}
+              onItemClick={handleMoreInfo}
+            />
+          )}
+
           {/* New on Zoe RatedTV */}
           <MobileContentRow
             title="New on Zoe RatedTV"
@@ -241,15 +260,6 @@ const Browse = () => {
             ).slice(0, 10))}
             onItemClick={handleMoreInfo}
           />
-
-          {/* Top 10 with large numbers */}
-          {top10.length > 0 && (
-            <MobileTop10Row
-              title="Top 10 on Zoe RatedTV"
-              items={mapToTop10(top10)}
-              onItemClick={handleMoreInfo}
-            />
-          )}
 
           {/* Movies */}
           {movies.length > 0 && (
@@ -328,13 +338,10 @@ const Browse = () => {
           {/* We Think You'll Love These */}
           <WeThinkYoullLoveRow onMoreInfo={handleMoreInfo} />
 
-          {/* New on Zoe RatedTV */}
-          <NewOnZoeRow onMoreInfo={handleMoreInfo} />
-
           {/* Next To Watch */}
           <NextToWatchRow onMoreInfo={handleMoreInfo} />
 
-          {/* Top 10 Shows on Zoe RatedTV - Large numbers behind posters */}
+          {/* Top 10 Shows on Zoe RatedTV - Large numbers behind posters (Above New on Zoe) */}
           {top10.length > 0 && (
             <Top10Row
               title="Top 10 on Zoe RatedTV Today"
@@ -342,6 +349,9 @@ const Browse = () => {
               onMoreInfo={handleMoreInfo}
             />
           )}
+
+          {/* New on Zoe RatedTV */}
+          <NewOnZoeRow onMoreInfo={handleMoreInfo} />
 
           {/* Only on Zoe RatedTV */}
           {zoeOriginals.length > 0 && (
