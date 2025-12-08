@@ -17,6 +17,7 @@ import Watch from "./pages/Watch";
 import Admin from "./pages/Admin";
 import AdminMovies from "./pages/AdminMovies";
 import AdminTvShows from "./pages/AdminTvShows";
+import AdminTags from "./pages/AdminTags";
 import EditContent from "./pages/EditContent";
 import UserProfile from "./pages/UserProfile";
 import Producers from "./pages/Producers";
@@ -68,6 +69,7 @@ const App = () => (
                 <Route path="/admin/movies/:section" element={<AdminMovies />} />
                 <Route path="/admin/tvshows" element={<AdminTvShows />} />
                 <Route path="/admin/tvshows/:section" element={<AdminTvShows />} />
+                <Route path="/admin/tags" element={<AdminTags />} />
                 <Route path="/admin/content/:id" element={<EditContent />} />
                 <Route path="/admin/content/new" element={<EditContent />} />
               </Route>
