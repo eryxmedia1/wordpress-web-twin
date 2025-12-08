@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
+import MobileBottomNav from "@/components/mobile/MobileBottomNav";
 import ReactPlayer from "react-player";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/context/ProfileContext";
 import { useMembershipAccess } from "@/hooks/useMembershipAccess";
 import { UpgradeGate } from "@/components/UpgradeGate";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ContentData {
   id: string;
@@ -34,6 +36,7 @@ interface ContentData {
 const Watch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { currentProfile } = useProfile();
   const { userPlan, contentPlans, hasAccess, loading: accessLoading, getAdConfig } = useMembershipAccess(id);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -621,6 +624,9 @@ const Watch = () => {
           </div>
         </div>
       )}
+      
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <MobileBottomNav />}
     </div>
   );
 };
