@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      ads: {
+        Row: {
+          ad_type: string
+          created_at: string | null
+          duration_seconds: number
+          id: string
+          is_active: boolean | null
+          name: string
+          video_url: string
+        }
+        Insert: {
+          ad_type: string
+          created_at?: string | null
+          duration_seconds: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          video_url: string
+        }
+        Update: {
+          ad_type?: string
+          created_at?: string | null
+          duration_seconds?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
       auth_backgrounds: {
         Row: {
           created_at: string
@@ -366,6 +396,189 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_ad_breaks: {
+        Row: {
+          ad_pod_length_seconds: number
+          channel_playlist_id: string
+          created_at: string | null
+          id: string
+          interval_minutes: number
+          is_active: boolean | null
+        }
+        Insert: {
+          ad_pod_length_seconds?: number
+          channel_playlist_id: string
+          created_at?: string | null
+          id?: string
+          interval_minutes?: number
+          is_active?: boolean | null
+        }
+        Update: {
+          ad_pod_length_seconds?: number
+          channel_playlist_id?: string
+          created_at?: string | null
+          id?: string
+          interval_minutes?: number
+          is_active?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_ad_breaks_channel_playlist_id_fkey"
+            columns: ["channel_playlist_id"]
+            isOneToOne: false
+            referencedRelation: "live_channel_playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_channel_playlists: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          loop_mode: string
+          playlist_name: string
+          start_date: string
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          loop_mode?: string
+          playlist_name: string
+          start_date: string
+          start_time?: string
+          updated_at?: string | null
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          loop_mode?: string
+          playlist_name?: string
+          start_date?: string
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_channel_playlists_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_channels: {
+        Row: {
+          created_at: string | null
+          default_ad_interval_minutes: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          slug: string
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_ad_interval_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          slug: string
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_ad_interval_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          slug?: string
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      live_playlist_items: {
+        Row: {
+          channel_playlist_id: string
+          created_at: string | null
+          duration_seconds: number | null
+          id: string
+          midroll_breaks_json: Json | null
+          order_index: number
+          postroll_ad_id: string | null
+          preroll_ad_id: string | null
+          video_id: string
+        }
+        Insert: {
+          channel_playlist_id: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          midroll_breaks_json?: Json | null
+          order_index: number
+          postroll_ad_id?: string | null
+          preroll_ad_id?: string | null
+          video_id: string
+        }
+        Update: {
+          channel_playlist_id?: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          midroll_breaks_json?: Json | null
+          order_index?: number
+          postroll_ad_id?: string | null
+          preroll_ad_id?: string | null
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_playlist_items_channel_playlist_id_fkey"
+            columns: ["channel_playlist_id"]
+            isOneToOne: false
+            referencedRelation: "live_channel_playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_playlist_items_postroll_ad_id_fkey"
+            columns: ["postroll_ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_playlist_items_preroll_ad_id_fkey"
+            columns: ["preroll_ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_playlist_items_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
             referencedColumns: ["id"]
           },
         ]

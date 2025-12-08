@@ -2,3 +2,6 @@ project_id = "hbddjtvslojxkkcrpcoo"
 
 [functions.vimeo-metadata]
 verify_jwt = false
+
+[functions.get-live-segment]
+verify_jwt = false
