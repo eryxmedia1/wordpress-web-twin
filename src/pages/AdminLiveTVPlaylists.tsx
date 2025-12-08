@@ -48,6 +48,8 @@ interface Playlist {
   start_time: string;
   loop_mode: string;
   is_active: boolean;
+  ad_breaks_per_hour: number | null;
+  ad_break_duration_seconds: number | null;
 }
 
 interface PlaylistItem {
@@ -197,6 +199,8 @@ export default function AdminLiveTVPlaylists() {
     start_time: '08:00',
     loop_mode: 'continuous_loop',
     is_active: true,
+    ad_breaks_per_hour: 2,
+    ad_break_duration_seconds: 30,
   });
 
   const sensors = useSensors(
@@ -290,6 +294,8 @@ export default function AdminLiveTVPlaylists() {
       start_time: '08:00',
       loop_mode: 'continuous_loop',
       is_active: true,
+      ad_breaks_per_hour: 2,
+      ad_break_duration_seconds: 30,
     });
     setEditingPlaylist(null);
   };
@@ -302,6 +308,8 @@ export default function AdminLiveTVPlaylists() {
       start_time: playlist.start_time,
       loop_mode: playlist.loop_mode,
       is_active: playlist.is_active,
+      ad_breaks_per_hour: playlist.ad_breaks_per_hour || 2,
+      ad_break_duration_seconds: playlist.ad_break_duration_seconds || 30,
     });
     setIsDialogOpen(true);
   };
@@ -337,6 +345,8 @@ export default function AdminLiveTVPlaylists() {
             start_time: formData.start_time,
             loop_mode: formData.loop_mode,
             is_active: formData.is_active,
+            ad_breaks_per_hour: formData.ad_breaks_per_hour,
+            ad_break_duration_seconds: formData.ad_break_duration_seconds,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingPlaylist.id);
@@ -350,6 +360,8 @@ export default function AdminLiveTVPlaylists() {
           start_time: formData.start_time,
           loop_mode: formData.loop_mode,
           is_active: formData.is_active,
+          ad_breaks_per_hour: formData.ad_breaks_per_hour,
+          ad_break_duration_seconds: formData.ad_break_duration_seconds,
         });
         if (error) throw error;
         toast.success('Playlist created');
@@ -637,6 +649,37 @@ export default function AdminLiveTVPlaylists() {
                     </SelectContent>
                   </Select>
                 </div>
+                {/* Ad Breaks Configuration */}
+                <div className="border-t pt-4 mt-2">
+                  <Label className="text-sm font-semibold text-foreground mb-3 block">Ad Breaks Settings</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs">Ad Breaks Per Hour</Label>
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        max="10"
+                        value={formData.ad_breaks_per_hour} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, ad_breaks_per_hour: parseInt(e.target.value) || 0 }))} 
+                        placeholder="2"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">How many ad breaks per hour</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Ad Duration (seconds)</Label>
+                      <Input 
+                        type="number" 
+                        min="10" 
+                        max="120"
+                        value={formData.ad_break_duration_seconds} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, ad_break_duration_seconds: parseInt(e.target.value) || 30 }))} 
+                        placeholder="30"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Duration of each ad break</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <Label>Activate Immediately</Label>
                   <Switch 

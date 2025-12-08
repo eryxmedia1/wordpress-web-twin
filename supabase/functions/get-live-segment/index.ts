@@ -121,15 +121,30 @@ serve(async (req) => {
       );
     }
 
-    // Fetch ads for midroll breaks
+    // Fetch active ads for midroll breaks
     const { data: activeAds } = await supabase
       .from('ads')
       .select('*')
       .eq('is_active', true)
       .eq('ad_type', 'midroll');
 
-    // Build segments array (shows + ads)
+    // Get hourly ad breaks settings from playlist
+    const adBreaksPerHour = playlist.ad_breaks_per_hour || 2;
+    const adBreakDurationSeconds = playlist.ad_break_duration_seconds || 30;
+    
+    // Calculate ad break interval in seconds
+    const adBreakIntervalSeconds = adBreaksPerHour > 0 ? Math.floor(3600 / adBreaksPerHour) : 0;
+
+    console.log('Ad break config:', { 
+      adBreaksPerHour, 
+      adBreakDurationSeconds, 
+      adBreakIntervalSeconds 
+    });
+
+    // Build segments array (shows + ads) with hourly ad breaks
     const segments: Segment[] = [];
+    let totalElapsedBeforeAds = 0; // Track cumulative time without ads
+    let lastAdBreakTime = 0; // Track when last ad break was inserted
     
     for (const item of items) {
       // Determine if this is an episode or a content item
@@ -145,7 +160,7 @@ serve(async (req) => {
       const videoUrl = video.video_url;
       
       if (!videoUrl) {
-        console.log('Skipping item - no video_url (Live TV requires video_url, not trailer):', video.title || item.id);
+        console.log('Skipping item - no video_url:', video.title || item.id);
         continue;
       }
 
@@ -166,55 +181,61 @@ serve(async (req) => {
         });
       }
 
-      // Add midroll breaks if configured
-      const midrolls: number[] = item.midroll_breaks_json || [];
-      if (midrolls.length > 0 && activeAds && activeAds.length > 0) {
-        let lastBreak = 0;
-        const sortedMidrolls = [...midrolls].sort((a, b) => a - b);
+      // Check if we need to insert hourly ad breaks during this video
+      if (adBreakIntervalSeconds > 0 && activeAds && activeAds.length > 0) {
+        let videoPlayedSoFar = 0;
         
-        for (let i = 0; i < sortedMidrolls.length; i++) {
-          const breakAt = sortedMidrolls[i];
-          if (breakAt > lastBreak && breakAt < videoDuration) {
-            // Show segment before midroll
-            segments.push({
-              type: 'show',
-              videoUrl,
-              videoId: item.video?.id,
-              episodeId: item.episode_id,
-              title: video.title,
-              thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
-              duration: breakAt - lastBreak,
-              startOffset: lastBreak,
-            });
+        while (videoPlayedSoFar < videoDuration) {
+          const timeToNextAdBreak = adBreakIntervalSeconds - ((totalElapsedBeforeAds + videoPlayedSoFar) % adBreakIntervalSeconds);
+          
+          if (timeToNextAdBreak <= (videoDuration - videoPlayedSoFar) && timeToNextAdBreak < adBreakIntervalSeconds) {
+            // Add show segment up to ad break
+            if (timeToNextAdBreak > 0) {
+              segments.push({
+                type: 'show',
+                videoUrl,
+                videoId: item.video?.id,
+                episodeId: item.episode_id,
+                title: video.title,
+                thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
+                duration: timeToNextAdBreak,
+                startOffset: videoPlayedSoFar,
+              });
+              videoPlayedSoFar += timeToNextAdBreak;
+            }
             
-            // Pick a random ad from the active midroll ads
+            // Insert ad break
             const randomAd = activeAds[Math.floor(Math.random() * activeAds.length)];
             segments.push({
               type: 'ad',
               videoUrl: randomAd.video_url,
               title: randomAd.name,
-              duration: randomAd.duration_seconds || 30,
+              duration: adBreakDurationSeconds,
             });
             
-            lastBreak = breakAt;
+            lastAdBreakTime = totalElapsedBeforeAds + videoPlayedSoFar;
+          } else {
+            // Add remaining video as one segment
+            const remaining = videoDuration - videoPlayedSoFar;
+            if (remaining > 0) {
+              segments.push({
+                type: 'show',
+                videoUrl,
+                videoId: item.video?.id,
+                episodeId: item.episode_id,
+                title: video.title,
+                thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
+                duration: remaining,
+                startOffset: videoPlayedSoFar,
+              });
+            }
+            videoPlayedSoFar = videoDuration;
           }
         }
         
-        // Remaining show segment after last midroll
-        if (lastBreak < videoDuration) {
-          segments.push({
-            type: 'show',
-            videoUrl,
-            videoId: item.video?.id,
-            episodeId: item.episode_id,
-            title: video.title,
-            thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
-            duration: videoDuration - lastBreak,
-            startOffset: lastBreak,
-          });
-        }
+        totalElapsedBeforeAds += videoDuration;
       } else {
-        // No midrolls, add whole show as one segment
+        // No hourly ads configured, add whole show as one segment
         segments.push({
           type: 'show',
           videoUrl,
@@ -225,6 +246,7 @@ serve(async (req) => {
           duration: videoDuration,
           startOffset: 0,
         });
+        totalElapsedBeforeAds += videoDuration;
       }
 
       // Add postroll if exists
@@ -256,22 +278,13 @@ serve(async (req) => {
     const nowUtc = Date.now();
     
     // Parse playlist start datetime with proper timezone handling
-    // The start_time is stored as local time in the channel's timezone
     const timezone = channel.timezone || 'America/New_York';
-    
-    // Create the playlist start time
-    // Parse start_date (YYYY-MM-DD) and start_time (HH:MM:SS or HH:MM)
     const startDateStr = playlist.start_date;
     const startTimeStr = playlist.start_time;
     
-    // Build an ISO string and account for timezone offset
-    // For America/New_York, we need to calculate the offset
     const tzOffsetHours = getTimezoneOffsetHours(timezone, new Date());
-    
-    // Parse the time
     const [hours, minutes, seconds = 0] = startTimeStr.split(':').map(Number);
     
-    // Create a date object in UTC that represents the local time
     const playlistStartLocal = new Date(startDateStr);
     playlistStartLocal.setUTCHours(hours - tzOffsetHours, minutes, seconds, 0);
     
@@ -293,13 +306,11 @@ serve(async (req) => {
     // Handle loop mode
     if (playlist.loop_mode === 'continuous_loop') {
       if (elapsedSeconds < 0) {
-        // Playlist hasn't started yet, show first item
         elapsedSeconds = 0;
       } else {
         elapsedSeconds = elapsedSeconds % totalDuration;
       }
     } else {
-      // end_then_idle mode
       if (elapsedSeconds < 0 || elapsedSeconds >= totalDuration) {
         return new Response(
           JSON.stringify({ 
@@ -328,11 +339,11 @@ serve(async (req) => {
 
     const currentSegment = segments[currentIndex];
 
-    // Build up next list (next 3 items)
+    // Build up next list (next 3 shows, skip ads)
     const upNext: Array<{ title: string; thumbnail: string | null; startsIn: number }> = [];
     let timeUntilNext = currentSegment.duration - offsetInSegment;
     
-    for (let i = currentIndex + 1; i < Math.min(currentIndex + 4, segments.length); i++) {
+    for (let i = currentIndex + 1; i < segments.length && upNext.length < 3; i++) {
       const seg = segments[i];
       if (seg.type === 'show') {
         upNext.push({
@@ -346,7 +357,7 @@ serve(async (req) => {
 
     // If loop mode and we need more items, wrap around
     if (playlist.loop_mode === 'continuous_loop' && upNext.length < 3) {
-      for (let i = 0; i < Math.min(3 - upNext.length, segments.length); i++) {
+      for (let i = 0; i < segments.length && upNext.length < 3; i++) {
         const seg = segments[i];
         if (seg.type === 'show') {
           upNext.push({
@@ -359,7 +370,7 @@ serve(async (req) => {
       }
     }
 
-    // Calculate actual video offset (for shows with midroll splits)
+    // Calculate actual video offset (for shows with splits)
     let actualVideoOffset = offsetInSegment;
     if (currentSegment.startOffset !== undefined) {
       actualVideoOffset = currentSegment.startOffset + offsetInSegment;
@@ -389,6 +400,7 @@ serve(async (req) => {
       offset: actualVideoOffset,
       elapsed: elapsedSeconds,
       totalDuration,
+      adBreaksPerHour,
     });
 
     return new Response(
@@ -408,28 +420,22 @@ serve(async (req) => {
 // Helper function to get timezone offset in hours
 function getTimezoneOffsetHours(timezone: string, date: Date): number {
   try {
-    // Create a formatter for the target timezone
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
       hour: 'numeric',
       hour12: false,
     });
     
-    // Get the hour in the target timezone
     const parts = formatter.formatToParts(date);
     const localHour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
-    
-    // Get UTC hour
     const utcHour = date.getUTCHours();
     
-    // Calculate offset (this is simplified, handles most cases)
     let offset = localHour - utcHour;
     if (offset > 12) offset -= 24;
     if (offset < -12) offset += 24;
     
     return offset;
   } catch (e) {
-    // Default to EST (-5) if timezone parsing fails
     console.log('Failed to parse timezone, defaulting to EST:', timezone);
     return -5;
   }
@@ -439,42 +445,35 @@ function getTimezoneOffsetHours(timezone: string, date: Date): number {
 function parseDuration(duration: string): number {
   if (!duration) return 0;
   
-  // If it's already a number (seconds)
   if (/^\d+$/.test(duration)) {
     return parseInt(duration, 10);
   }
   
   let totalSeconds = 0;
   
-  // Match hours
   const hourMatch = duration.match(/(\d+)\s*h/i);
   if (hourMatch) {
     totalSeconds += parseInt(hourMatch[1], 10) * 3600;
   }
   
-  // Match minutes
   const minMatch = duration.match(/(\d+)\s*m/i);
   if (minMatch) {
     totalSeconds += parseInt(minMatch[1], 10) * 60;
   }
   
-  // Match seconds
   const secMatch = duration.match(/(\d+)\s*s/i);
   if (secMatch) {
     totalSeconds += parseInt(secMatch[1], 10);
   }
   
-  // Match MM:SS or HH:MM:SS format
   const colonMatch = duration.match(/^(\d+):(\d+)(?::(\d+))?$/);
   if (colonMatch) {
     if (colonMatch[3]) {
-      // HH:MM:SS
       totalSeconds = parseInt(colonMatch[1], 10) * 3600 + parseInt(colonMatch[2], 10) * 60 + parseInt(colonMatch[3], 10);
     } else {
-      // MM:SS
       totalSeconds = parseInt(colonMatch[1], 10) * 60 + parseInt(colonMatch[2], 10);
     }
   }
   
-  return totalSeconds || 1800; // Default 30 min if parsing fails
+  return totalSeconds || 1800;
 }
