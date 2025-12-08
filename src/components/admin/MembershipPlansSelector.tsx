@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Crown, Star, Users } from "lucide-react";
@@ -16,12 +16,11 @@ interface MembershipPlansSelectorProps {
   onSelectedPlansChange: (plans: string[]) => void;
 }
 
-export const MembershipPlansSelector = ({
+export const MembershipPlansSelector = memo(({
   selectedPlans,
   onSelectedPlansChange,
 }: MembershipPlansSelectorProps) => {
   const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -31,27 +30,26 @@ export const MembershipPlansSelector = ({
         .order("sort_order");
       if (data) {
         setMembershipPlans(data);
-        setLoaded(true);
       }
     };
     fetchPlans();
   }, []);
 
-  const togglePlan = (planId: string) => {
+  const togglePlan = useCallback((planId: string) => {
     if (selectedPlans.includes(planId)) {
       onSelectedPlansChange(selectedPlans.filter(id => id !== planId));
     } else {
       onSelectedPlansChange([...selectedPlans, planId]);
     }
-  };
+  }, [selectedPlans, onSelectedPlansChange]);
 
-  const selectAllPlans = () => {
+  const selectAllPlans = useCallback(() => {
     onSelectedPlansChange(membershipPlans.map(p => p.id));
-  };
+  }, [membershipPlans, onSelectedPlansChange]);
 
-  const selectNonePlans = () => {
+  const selectNonePlans = useCallback(() => {
     onSelectedPlansChange([]);
-  };
+  }, [onSelectedPlansChange]);
 
   const getPlanIcon = (slug: string) => {
     switch (slug) {
@@ -99,45 +97,48 @@ export const MembershipPlansSelector = ({
           Content will only be accessible to users on the selected plan(s). 
           Leave all unchecked to make content available to everyone.
         </p>
-        {membershipPlans.map((plan) => (
-          <div 
-            key={plan.id} 
-            className={`flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer ${
-              selectedPlans.includes(plan.id) 
-                ? plan.slug === 'premium' 
-                  ? 'bg-amber-500/10 border border-amber-500/30' 
+        {membershipPlans.map((plan) => {
+          const isSelected = selectedPlans.includes(plan.id);
+          return (
+            <div 
+              key={plan.id} 
+              className={`flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer ${
+                isSelected 
+                  ? plan.slug === 'premium' 
+                    ? 'bg-amber-500/10 border border-amber-500/30' 
+                    : plan.slug === 'standard'
+                    ? 'bg-primary/10 border border-primary/30'
+                    : 'bg-muted/30 border border-muted'
+                  : 'bg-gray-900/50 border border-transparent hover:bg-gray-900'
+              }`}
+              onClick={() => togglePlan(plan.id)}
+            >
+              <Checkbox
+                id={`plan-${plan.id}`}
+                checked={isSelected}
+                onCheckedChange={() => togglePlan(plan.id)}
+              />
+              <div className="flex items-center gap-2 flex-1">
+                {getPlanIcon(plan.slug)}
+                <label 
+                  htmlFor={`plan-${plan.id}`} 
+                  className="text-sm text-white cursor-pointer font-medium"
+                >
+                  {plan.name}
+                </label>
+              </div>
+              <span className={`text-xs font-medium ${
+                plan.slug === 'premium' 
+                  ? 'text-amber-500' 
                   : plan.slug === 'standard'
-                  ? 'bg-primary/10 border border-primary/30'
-                  : 'bg-muted/30 border border-muted'
-                : 'bg-gray-900/50 border border-transparent hover:bg-gray-900'
-            }`}
-            onClick={() => togglePlan(plan.id)}
-          >
-            <Checkbox
-              id={`plan-${plan.id}`}
-              checked={selectedPlans.includes(plan.id)}
-              onCheckedChange={() => togglePlan(plan.id)}
-            />
-            <div className="flex items-center gap-2 flex-1">
-              {getPlanIcon(plan.slug)}
-              <label 
-                htmlFor={`plan-${plan.id}`} 
-                className="text-sm text-white cursor-pointer font-medium"
-              >
-                {plan.name}
-              </label>
+                  ? 'text-primary'
+                  : 'text-muted-foreground'
+              }`}>
+                {formatPrice(plan.price)}
+              </span>
             </div>
-            <span className={`text-xs font-medium ${
-              plan.slug === 'premium' 
-                ? 'text-amber-500' 
-                : plan.slug === 'standard'
-                ? 'text-primary'
-                : 'text-muted-foreground'
-            }`}>
-              {formatPrice(plan.price)}
-            </span>
-          </div>
-        ))}
+          );
+        })}
         
         {selectedPlans.length === 0 && (
           <p className="text-xs text-amber-500/80 mt-2">
@@ -147,4 +148,6 @@ export const MembershipPlansSelector = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+MembershipPlansSelector.displayName = 'MembershipPlansSelector';
