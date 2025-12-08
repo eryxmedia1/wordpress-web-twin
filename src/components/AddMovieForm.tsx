@@ -56,6 +56,13 @@ type FormData = {
   maturityRating: string;
   creator: string;
   tags: string[];
+  vastAdPreroll: string;
+  vastAdMidroll: string;
+  vastAdPostroll: string;
+  midrollCount: number;
+  midrollStartMinutes: number;
+  midrollInterval: number;
+  postrollCount: number;
 }
 
 const MATURITY_RATINGS = [
@@ -113,7 +120,14 @@ const AddMovieForm = () => {
       topRank: "",
       maturityRating: "PG-13",
       creator: "",
-      tags: []
+      tags: [],
+      vastAdPreroll: "",
+      vastAdMidroll: "",
+      vastAdPostroll: "",
+      midrollCount: 1,
+      midrollStartMinutes: 5,
+      midrollInterval: 10,
+      postrollCount: 1,
     }
   });
   
@@ -213,9 +227,16 @@ const AddMovieForm = () => {
           audio_languages: selectedAudioLanguages.length > 0 ? selectedAudioLanguages : null,
           subtitle_languages: selectedSubtitleLanguages.length > 0 ? selectedSubtitleLanguages : null,
           channels: selectedChannels.length > 0 ? selectedChannels : [],
-          vast_ad_preroll: null,
-          vast_ad_midroll: null,
-          vast_ad_postroll: null
+          vast_ad_preroll: data.vastAdPreroll || null,
+          vast_ad_midroll: data.vastAdMidroll || null,
+          vast_ad_postroll: data.vastAdPostroll || null,
+          midroll_config: {
+            enabled: !!data.vastAdMidroll,
+            count: data.midrollCount || 1,
+            startAfterMinutes: data.midrollStartMinutes || 5,
+            intervalMinutes: data.midrollInterval || 10,
+            postrollCount: data.postrollCount || 1,
+          },
         } as any)
         .select()
         .single();
@@ -707,6 +728,167 @@ const AddMovieForm = () => {
                         </FormItem>
                       )}
                     />
+
+                    {/* VAST Ad Configuration */}
+                    <div className="border border-gray-700 rounded-lg p-4 space-y-4">
+                      <h3 className="font-medium text-white">VAST Ad Configuration</h3>
+                      
+                      <FormField
+                        control={form.control}
+                        name="vastAdPreroll"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Pre-roll Ad URL</FormLabel>
+                            <FormControl>
+                              <Input 
+                                className="bg-gray-900 border-gray-700"
+                                placeholder="https://example.com/ads/preroll.xml" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="p-3 bg-gray-800/50 rounded-lg space-y-3">
+                        <FormField
+                          control={form.control}
+                          name="vastAdMidroll"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Mid-roll Ad URL</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  className="bg-gray-900 border-gray-700"
+                                  placeholder="https://servedby.aqua-adserver.com/..." 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-2 text-xs"
+                                onClick={() => form.setValue("vastAdMidroll", "https://servedby.aqua-adserver.com/fc.php?script=apVideo:vast2&zoneid=12154")}
+                              >
+                                Use Default Midroll URL
+                              </Button>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="midrollCount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Number of Mid-rolls</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number"
+                                    min={0}
+                                    max={10}
+                                    className="bg-gray-900 border-gray-700"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-gray-400">How many mid-roll ads to play</p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="midrollStartMinutes"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Start After (minutes)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number"
+                                    min={1}
+                                    max={60}
+                                    className="bg-gray-900 border-gray-700"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-gray-400">When to show first mid-roll</p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="midrollInterval"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Interval Between Mid-rolls (minutes)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number"
+                                  min={1}
+                                  max={30}
+                                  className="bg-gray-900 border-gray-700"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 10)}
+                                />
+                              </FormControl>
+                              <p className="text-xs text-gray-400">Minutes between each mid-roll ad</p>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="p-3 bg-gray-800/50 rounded-lg space-y-3">
+                        <FormField
+                          control={form.control}
+                          name="vastAdPostroll"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Post-roll Ad URL</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  className="bg-gray-900 border-gray-700"
+                                  placeholder="https://example.com/ads/postroll.xml" 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="postrollCount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Number of Post-rolls</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number"
+                                  min={0}
+                                  max={5}
+                                  className="bg-gray-900 border-gray-700"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                />
+                              </FormControl>
+                              <p className="text-xs text-gray-400">How many post-roll ads to play at the end</p>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
 

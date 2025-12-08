@@ -112,6 +112,10 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
       vastAdPreroll: "",
       vastAdMidroll: "",
       vastAdPostroll: "",
+      midrollCount: 1,
+      midrollStartMinutes: 5,
+      midrollInterval: 10,
+      postrollCount: 1,
     }
   });
 
@@ -224,7 +228,14 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           duration: data.duration || null,
           vast_ad_preroll: data.vastAdPreroll || null,
           vast_ad_midroll: data.vastAdMidroll || null,
-          vast_ad_postroll: data.vastAdPostroll || null
+          vast_ad_postroll: data.vastAdPostroll || null,
+          midroll_config: {
+            enabled: !!data.vastAdMidroll,
+            count: data.midrollCount || 1,
+            startAfterMinutes: data.midrollStartMinutes || 5,
+            intervalMinutes: data.midrollInterval || 10,
+            postrollCount: data.postrollCount || 1,
+          },
         })
         .select()
         .single();
@@ -519,9 +530,9 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               </div>
 
               <div className="border border-gray-600 rounded-md p-4">
-                <h3 className="font-medium text-white">VAST Ad URLs (Optional)</h3>
+                <h3 className="font-medium text-white mb-3">VAST Ad Configuration</h3>
                 
-                <div className="space-y-4 mt-3">
+                <div className="space-y-4">
                   <div>
                     <Label className="text-white">Pre-roll Ad URL</Label>
                     <Input
@@ -532,33 +543,89 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                     />
                   </div>
 
-                  <div>
-                    <Label className="text-white">Mid-roll Ad URL</Label>
-                    <Input
-                      type="url"
-                      {...register("vastAdMidroll")}
-                      className="mt-1 bg-gray-700 border-gray-600 text-white"
-                      placeholder={DEFAULT_MIDROLL_URL}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 text-xs"
-                      onClick={() => setValue("vastAdMidroll", DEFAULT_MIDROLL_URL)}
-                    >
-                      Use Default Midroll URL
-                    </Button>
+                  <div className="space-y-3 p-3 bg-gray-700/50 rounded-lg">
+                    <div>
+                      <Label className="text-white">Mid-roll Ad URL</Label>
+                      <Input
+                        type="url"
+                        {...register("vastAdMidroll")}
+                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                        placeholder={DEFAULT_MIDROLL_URL}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 text-xs"
+                        onClick={() => setValue("vastAdMidroll", DEFAULT_MIDROLL_URL)}
+                      >
+                        Use Default Midroll URL
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-white">Number of Mid-rolls</Label>
+                        <Input
+                          type="number"
+                          {...register("midrollCount")}
+                          min="0"
+                          max="10"
+                          className="mt-1 bg-gray-700 border-gray-600 text-white"
+                          placeholder="1"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">How many mid-roll ads to play</p>
+                      </div>
+                      <div>
+                        <Label className="text-white">Start After (minutes)</Label>
+                        <Input
+                          type="number"
+                          {...register("midrollStartMinutes")}
+                          min="1"
+                          max="60"
+                          className="mt-1 bg-gray-700 border-gray-600 text-white"
+                          placeholder="5"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">When to show first mid-roll</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-white">Interval Between Mid-rolls (minutes)</Label>
+                      <Input
+                        type="number"
+                        {...register("midrollInterval")}
+                        min="1"
+                        max="30"
+                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                        placeholder="10"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Minutes between each mid-roll ad</p>
+                    </div>
                   </div>
 
-                  <div>
-                    <Label className="text-white">Post-roll Ad URL</Label>
-                    <Input
-                      type="url"
-                      {...register("vastAdPostroll")}
-                      className="mt-1 bg-gray-700 border-gray-600 text-white"
-                      placeholder="https://example.com/ads/postroll.xml"
-                    />
+                  <div className="space-y-3 p-3 bg-gray-700/50 rounded-lg">
+                    <div>
+                      <Label className="text-white">Post-roll Ad URL</Label>
+                      <Input
+                        type="url"
+                        {...register("vastAdPostroll")}
+                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                        placeholder="https://example.com/ads/postroll.xml"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-white">Number of Post-rolls</Label>
+                      <Input
+                        type="number"
+                        {...register("postrollCount")}
+                        min="0"
+                        max="5"
+                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                        placeholder="1"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">How many post-roll ads to play at the end</p>
+                    </div>
                   </div>
                 </div>
               </div>
