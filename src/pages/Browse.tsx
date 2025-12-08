@@ -24,6 +24,10 @@ import ChannelRow from "@/components/ChannelRow";
 import MobileLayout from "@/components/mobile/MobileLayout";
 import MobileHeroCarousel from "@/components/mobile/MobileHeroCarousel";
 import MobileContentRow from "@/components/mobile/MobileContentRow";
+import MobileContinueWatchingRow from "@/components/mobile/MobileContinueWatchingRow";
+import MobileMyListRow from "@/components/mobile/MobileMyListRow";
+import MobileTop10Row from "@/components/mobile/MobileTop10Row";
+import MobileChannelRow from "@/components/mobile/MobileChannelRow";
 
 interface Content {
   id: string;
@@ -42,6 +46,7 @@ interface Content {
   is_zoe_original: boolean | null;
   top_rank: number | null;
   maturity_rating: string | null;
+  created_at?: string;
 }
 
 // Channel names for network rows
@@ -202,12 +207,43 @@ const Browse = () => {
         />
 
         {/* Mobile Content Rows */}
-        <div className="space-y-4 pb-4">
+        <div className="space-y-2 pb-4">
+          {/* Continue Watching */}
+          <MobileContinueWatchingRow onItemClick={handleMoreInfo} />
+
+          {/* My List */}
+          <MobileMyListRow onItemClick={handleMoreInfo} />
+
           {/* Zoe Originals */}
           {zoeOriginals.length > 0 && (
             <MobileContentRow
               title="Only on Zoe RatedTV"
               items={mapToContentRow(zoeOriginals)}
+              onItemClick={handleMoreInfo}
+            />
+          )}
+
+          {/* We Think You'll Love */}
+          <MobileContentRow
+            title="We Think You'll Love These"
+            items={mapToContentRow([...movies, ...tvShows].slice(0, 10))}
+            onItemClick={handleMoreInfo}
+          />
+
+          {/* New on Zoe RatedTV */}
+          <MobileContentRow
+            title="New on Zoe RatedTV"
+            items={mapToContentRow([...movies, ...tvShows].sort((a, b) => 
+              new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+            ).slice(0, 10))}
+            onItemClick={handleMoreInfo}
+          />
+
+          {/* Top 10 with large numbers */}
+          {top10.length > 0 && (
+            <MobileTop10Row
+              title="Top 10 on Zoe RatedTV"
+              items={mapToTop10(top10)}
               onItemClick={handleMoreInfo}
             />
           )}
@@ -232,29 +268,11 @@ const Browse = () => {
             />
           )}
 
-          {/* Top 10 */}
-          {top10.length > 0 && (
-            <MobileContentRow
-              title="Top 10 on Zoe RatedTV"
-              items={mapToTop10(top10).map(item => ({
-                id: item.id,
-                title: `${item.rank}. ${item.title}`,
-                posterUrl: item.posterUrl,
-              }))}
-              onItemClick={handleMoreInfo}
-            />
-          )}
-
-          {/* Network Rows */}
-          {CHANNELS.slice(0, 3).map((channel) => (
-            <MobileContentRow
+          {/* Network / Channel Rows */}
+          {CHANNELS.map((channel) => (
+            <MobileChannelRow
               key={channel}
-              title={channel}
-              items={movies.slice(0, 5).map(m => ({
-                id: m.id,
-                title: m.title,
-                posterUrl: m.poster_url || "/placeholder.svg"
-              }))}
+              channelName={channel}
               onItemClick={handleMoreInfo}
             />
           ))}
