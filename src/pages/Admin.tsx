@@ -3,24 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Film, Tv, Plus, Search, Trash } from "lucide-react";
+import { Film, Tv, Plus, Search } from "lucide-react";
 import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate } from "react-router-dom";
-import { supabase, DbContent, DbProfile } from "@/integrations/supabase/client";
+import { supabase, DbContent } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import AdminContentCard from "@/components/admin/AdminContentCard";
 
-interface Content {
-  id: string;
-  title: string;
-  type: 'movie' | 'show';
-  duration?: string;
-  seasons?: number;
-}
+type ContentWithSeasons = DbContent & { seasons?: number };
 
 const Admin = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [contents, setContents] = useState<Content[]>([]);
+  const [contents, setContents] = useState<ContentWithSeasons[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
@@ -37,14 +32,11 @@ const Admin = () => {
       const { data, error } = await supabase
         .from('contents')
         .select(`
-          id, 
-          title, 
-          type,
-          duration,
+          *,
           seasons:seasons(count)
         `)
         .order('created_at', { ascending: false }) as { 
-          data: (DbContent & { seasons: { count: number } })[] | null; 
+          data: (DbContent & { seasons: { count: number }[] })[] | null; 
           error: any; 
         };
       
@@ -53,12 +45,9 @@ const Admin = () => {
       }
 
       // Transform data to include season counts
-      const transformedData = (data || []).map(item => ({
-        id: item.id,
-        title: item.title,
-        type: item.type,
-        duration: item.duration,
-        seasons: item.seasons?.count || 0
+      const transformedData: ContentWithSeasons[] = (data || []).map(item => ({
+        ...item,
+        seasons: Array.isArray(item.seasons) && item.seasons[0] ? item.seasons[0].count : 0
       }));
       
       setContents(transformedData);
@@ -177,40 +166,12 @@ const Admin = () => {
             ) : filteredContents.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredContents.map(content => (
-                  <Card key={content.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-xl font-medium">{content.title}</h3>
-                          <div className="flex items-center mt-2 text-gray-400">
-                            {content.type === "movie" ? (
-                              <><Film className="w-4 h-4 mr-1" /> Movie · {content.duration}</>
-                            ) : (
-                              <><Tv className="w-4 h-4 mr-1" /> TV Show · {content.seasons} Season{content.seasons !== 1 ? 's' : ''}</>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="text-white"
-                            onClick={() => handleEditContent(content.id)}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="text-red-500 hover:text-red-400"
-                            onClick={() => handleDeleteContent(content.id)}
-                          >
-                            <Trash className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <AdminContentCard
+                    key={content.id}
+                    content={content}
+                    onEdit={handleEditContent}
+                    onDelete={handleDeleteContent}
+                  />
                 ))}
               </div>
             ) : (
@@ -226,36 +187,12 @@ const Admin = () => {
                 {filteredContents
                   .filter(content => content.type === "movie")
                   .map(content => (
-                    <Card key={content.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-xl font-medium">{content.title}</h3>
-                            <div className="flex items-center mt-2 text-gray-400">
-                              <Film className="w-4 h-4 mr-1" /> Movie · {content.duration}
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-white"
-                              onClick={() => handleEditContent(content.id)}
-                            >
-                              Edit
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-red-500 hover:text-red-400"
-                              onClick={() => handleDeleteContent(content.id)}
-                            >
-                              <Trash className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <AdminContentCard
+                      key={content.id}
+                      content={content}
+                      onEdit={handleEditContent}
+                      onDelete={handleDeleteContent}
+                    />
                   ))}
               </div>
             )}
@@ -269,36 +206,12 @@ const Admin = () => {
                 {filteredContents
                   .filter(content => content.type === "show")
                   .map(content => (
-                    <Card key={content.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-xl font-medium">{content.title}</h3>
-                            <div className="flex items-center mt-2 text-gray-400">
-                              <Tv className="w-4 h-4 mr-1" /> TV Show · {content.seasons} Season{content.seasons !== 1 ? 's' : ''}
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-white"
-                              onClick={() => handleEditContent(content.id)}
-                            >
-                              Edit
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-red-500 hover:text-red-400"
-                              onClick={() => handleDeleteContent(content.id)}
-                            >
-                              <Trash className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <AdminContentCard
+                      key={content.id}
+                      content={content}
+                      onEdit={handleEditContent}
+                      onDelete={handleDeleteContent}
+                    />
                   ))}
               </div>
             )}
