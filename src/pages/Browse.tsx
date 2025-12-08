@@ -28,6 +28,7 @@ import MobileContinueWatchingRow from "@/components/mobile/MobileContinueWatchin
 import MobileMyListRow from "@/components/mobile/MobileMyListRow";
 import MobileTop10Row from "@/components/mobile/MobileTop10Row";
 import MobileChannelRow from "@/components/mobile/MobileChannelRow";
+import MobileContentDetailModal from "@/components/mobile/MobileContentDetailModal";
 
 interface Content {
   id: string;
@@ -278,8 +279,8 @@ const Browse = () => {
           ))}
         </div>
 
-        {/* Content Detail Modal */}
-        <ContentDetailModal
+        {/* Mobile Content Detail Modal */}
+        <MobileContentDetailModal
           contentId={selectedContentId}
           isOpen={!!selectedContentId}
           onClose={() => setSelectedContentId(null)}

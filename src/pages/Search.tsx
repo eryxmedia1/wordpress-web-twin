@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search as SearchIcon, Play, Info, X } from "lucide-react";
 import ContentDetailModal from "@/components/ContentDetailModal";
+import MobileSearchPage from "@/components/mobile/MobileSearchPage";
+import MobileContentDetailModal from "@/components/mobile/MobileContentDetailModal";
 
 interface Content {
   id: string;
@@ -31,6 +34,7 @@ const contentTypes = [
 ];
 
 const Search = () => {
+  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
   const [searchTerm, setSearchTerm] = useState(query);
@@ -108,6 +112,21 @@ const Search = () => {
 
   const displayContent = query ? results : trendingContent;
 
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <>
+        <MobileSearchPage onItemClick={(id) => setSelectedContentId(id)} />
+        <MobileContentDetailModal
+          contentId={selectedContentId}
+          isOpen={!!selectedContentId}
+          onClose={() => setSelectedContentId(null)}
+        />
+      </>
+    );
+  }
+
+  // Desktop layout
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
