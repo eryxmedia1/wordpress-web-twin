@@ -10,7 +10,10 @@ const CHANNELS = [
   "More Networks",
   "Boss Mogul TV",
   "Caught On Camera",
-  "Cap Village Media"
+  "Cap Village Media",
+  "Funny Videos",
+  "Dramatic Videos",
+  "Podcast Universe"
 ];
 
 interface ChannelsSelectorProps {
