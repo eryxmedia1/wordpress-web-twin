@@ -349,6 +349,7 @@ export type Database = {
           description: string | null
           features: string[] | null
           id: string
+          included_channels: string[] | null
           name: string
           price: number | null
           slug: string
@@ -359,6 +360,7 @@ export type Database = {
           description?: string | null
           features?: string[] | null
           id?: string
+          included_channels?: string[] | null
           name: string
           price?: number | null
           slug: string
@@ -369,6 +371,7 @@ export type Database = {
           description?: string | null
           features?: string[] | null
           id?: string
+          included_channels?: string[] | null
           name?: string
           price?: number | null
           slug?: string
@@ -531,6 +534,83 @@ export type Database = {
         }
         Relationships: []
       }
+      user_playlist_items: {
+        Row: {
+          added_at: string | null
+          content_id: string
+          id: string
+          playlist_id: string
+          sort_order: number | null
+        }
+        Insert: {
+          added_at?: string | null
+          content_id: string
+          id?: string
+          playlist_id: string
+          sort_order?: number | null
+        }
+        Update: {
+          added_at?: string | null
+          content_id?: string
+          id?: string
+          playlist_id?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_playlist_items_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_playlist_items_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "user_playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_playlists: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          profile_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          profile_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          profile_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_playlists_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_profiles: {
         Row: {
           account_id: string
@@ -540,6 +620,7 @@ export type Database = {
           id: string
           is_kids: boolean | null
           name: string
+          preferred_genres: string[] | null
           updated_at: string | null
         }
         Insert: {
@@ -550,6 +631,7 @@ export type Database = {
           id?: string
           is_kids?: boolean | null
           name: string
+          preferred_genres?: string[] | null
           updated_at?: string | null
         }
         Update: {
@@ -560,6 +642,7 @@ export type Database = {
           id?: string
           is_kids?: boolean | null
           name?: string
+          preferred_genres?: string[] | null
           updated_at?: string | null
         }
         Relationships: []

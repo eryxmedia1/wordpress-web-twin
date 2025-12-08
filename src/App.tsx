@@ -27,6 +27,7 @@ import RequireProfile from "./components/RequireProfile";
 import RequireAdmin from "./components/RequireAdmin";
 import Search from "./pages/Search";
 import Plans from "./pages/Plans";
+import AdminMembershipPlans from "./pages/AdminMembershipPlans";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ const App = () => (
                 <Route path="/admin/tvshows" element={<AdminTvShows />} />
                 <Route path="/admin/tvshows/:section" element={<AdminTvShows />} />
                 <Route path="/admin/tags" element={<AdminTags />} />
+                <Route path="/admin/plans" element={<AdminMembershipPlans />} />
                 <Route path="/admin/content/:id" element={<EditContent />} />
                 <Route path="/admin/content/new" element={<EditContent />} />
               </Route>
