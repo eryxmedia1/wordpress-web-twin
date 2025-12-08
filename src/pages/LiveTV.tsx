@@ -56,10 +56,12 @@ export default function LiveTV() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isPlayerReady, setIsPlayerReady] = useState(false);
-  const [pendingSeek, setPendingSeek] = useState<number | null>(null);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const playerRef = useRef<ReactPlayer>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const targetOffsetRef = useRef<number>(0);
 
   // Fetch all channels
   useEffect(() => {
@@ -91,11 +93,10 @@ export default function LiveTV() {
   }, [channelSlug]);
 
   // Fetch current segment for selected channel
-  const fetchLiveSegment = useCallback(async () => {
+  const fetchLiveSegment = useCallback(async (isInitialLoad = false) => {
     if (!selectedChannel) return;
 
     try {
-      // Use query params approach to pass channel slug
       const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/get-live-segment?channel=${selectedChannel.slug}`;
       const session = await supabase.auth.getSession();
       
@@ -110,25 +111,21 @@ export default function LiveTV() {
         const data = await res.json();
         setLiveSegment(data);
         
-        // Set pending seek - will be applied when player is ready
-        if (data.offsetSeconds) {
-          setPendingSeek(data.offsetSeconds);
-          // If player is already ready, seek immediately
-          if (isPlayerReady && playerRef.current) {
-            playerRef.current.seekTo(data.offsetSeconds, 'seconds');
-            setIsPlaying(true);
-          }
-        } else {
-          // No offset needed, can play immediately when ready
-          if (isPlayerReady) {
-            setIsPlaying(true);
-          }
+        if (isInitialLoad && data.videoUrl && data.offsetSeconds > 0) {
+          // Store target offset for seeking
+          targetOffsetRef.current = data.offsetSeconds;
+          // Show countdown while we prepare to seek
+          setCountdown(3);
+          setIsSeeking(true);
+        } else if (isInitialLoad && data.videoUrl) {
+          // No offset needed, can start immediately
+          setIsSeeking(false);
+          setIsPlaying(true);
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
         console.log('Live segment response:', res.status, errorData);
         
-        // If it's an idle response, still set it
         if (errorData.type === 'idle') {
           setLiveSegment(errorData);
         }
@@ -136,24 +133,54 @@ export default function LiveTV() {
     } catch (error) {
       console.error('Error fetching live segment:', error);
     }
-  }, [selectedChannel, isPlayerReady]);
+  }, [selectedChannel]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown === null || countdown <= 0) return;
+    
+    const timer = setTimeout(() => {
+      setCountdown(prev => (prev !== null && prev > 1) ? prev - 1 : null);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  // When countdown finishes, trigger the seek
+  useEffect(() => {
+    if (countdown === 0 || countdown === null) {
+      if (isSeeking && playerRef.current && targetOffsetRef.current > 0) {
+        // Perform the seek
+        playerRef.current.seekTo(targetOffsetRef.current, 'seconds');
+        // Wait a brief moment then start playing
+        seekTimeoutRef.current = setTimeout(() => {
+          setIsSeeking(false);
+          setIsPlaying(true);
+        }, 300);
+      }
+    }
+  }, [countdown, isSeeking]);
 
   useEffect(() => {
     if (selectedChannel) {
       // Reset player state when switching channels
-      setIsPlayerReady(false);
       setIsPlaying(false);
-      setPendingSeek(null);
+      setIsSeeking(false);
+      setCountdown(null);
+      targetOffsetRef.current = 0;
       
-      fetchLiveSegment();
+      fetchLiveSegment(true);
       
       // Poll every 30 seconds to stay in sync
-      pollIntervalRef.current = setInterval(fetchLiveSegment, 30000);
+      pollIntervalRef.current = setInterval(() => fetchLiveSegment(false), 30000);
     }
 
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
+      }
+      if (seekTimeoutRef.current) {
+        clearTimeout(seekTimeoutRef.current);
       }
     };
   }, [selectedChannel, fetchLiveSegment]);
@@ -161,33 +188,29 @@ export default function LiveTV() {
   const handleChannelSelect = (channel: Channel) => {
     setSelectedChannel(channel);
     setLiveSegment(null);
-    setIsPlayerReady(false);
     setIsPlaying(false);
-    setPendingSeek(null);
+    setIsSeeking(false);
+    setCountdown(null);
+    targetOffsetRef.current = 0;
     navigate(`/live/${channel.slug}`, { replace: true });
   };
 
   const handleVideoEnd = () => {
     // When video ends, immediately fetch next segment
-    fetchLiveSegment();
+    fetchLiveSegment(true);
   };
 
-  // Handle player ready - seek to correct position then start playing
+  // Handle player ready
   const handlePlayerReady = () => {
-    setIsPlayerReady(true);
-    
-    if (pendingSeek !== null && playerRef.current) {
-      // Seek to the correct position
-      playerRef.current.seekTo(pendingSeek, 'seconds');
-      // Start playing after seek
-      setIsPlaying(true);
-      setPendingSeek(null);
-    } else if (liveSegment?.offsetSeconds && playerRef.current) {
-      // Fallback - use offset from segment
-      playerRef.current.seekTo(liveSegment.offsetSeconds, 'seconds');
-      setIsPlaying(true);
-    } else {
-      // No seeking needed, just play
+    if (isSeeking && countdown === null && targetOffsetRef.current > 0) {
+      // Player is ready and countdown finished, perform seek
+      playerRef.current?.seekTo(targetOffsetRef.current, 'seconds');
+      setTimeout(() => {
+        setIsSeeking(false);
+        setIsPlaying(true);
+      }, 300);
+    } else if (!isSeeking && liveSegment?.videoUrl) {
+      // No seeking needed, start playing
       setIsPlaying(true);
     }
   };
@@ -283,10 +306,23 @@ export default function LiveTV() {
                 {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
               </Button>
 
-              {/* Loading overlay until player is ready and seeked */}
-              {liveSegment?.videoUrl && !isPlaying && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              {/* Countdown/Loading Overlay */}
+              {(isSeeking || (!isPlaying && liveSegment?.videoUrl)) && (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black">
+                  {countdown !== null && countdown > 0 ? (
+                    <>
+                      <div className="text-6xl font-bold text-primary mb-4">{countdown}</div>
+                      <p className="text-lg text-white">Joining live stream...</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {liveSegment?.nowPlaying?.title}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                      <p className="text-white">Syncing to live position...</p>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -304,7 +340,7 @@ export default function LiveTV() {
                     vimeo: {
                       playerOptions: {
                         background: true,
-                        autoplay: false, // We control playback via onReady
+                        autoplay: false,
                         quality: 'auto',
                       },
                     },
