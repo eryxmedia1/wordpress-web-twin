@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,10 +18,12 @@ interface FavoriteItem {
 
 interface MobileMyListRowProps {
   onItemClick: (id: string) => void;
+  seeAllLink?: string;
 }
 
-const MobileMyListRow = ({ onItemClick }: MobileMyListRowProps) => {
+const MobileMyListRow = ({ onItemClick, seeAllLink }: MobileMyListRowProps) => {
   const { currentProfile } = useProfile();
+  const navigate = useNavigate();
   const [items, setItems] = useState<FavoriteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -79,6 +82,12 @@ const MobileMyListRow = ({ onItemClick }: MobileMyListRowProps) => {
     };
   }, [currentProfile?.id, fetchMyList]);
 
+  const handleSeeAll = () => {
+    if (seeAllLink) {
+      navigate(seeAllLink);
+    }
+  };
+
   if (isLoading || items.length === 0) return null;
 
   return (
@@ -86,10 +95,15 @@ const MobileMyListRow = ({ onItemClick }: MobileMyListRowProps) => {
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-3">
         <h2 className="text-base font-semibold text-foreground">My List</h2>
-        <button className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors">
-          See All
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        {seeAllLink && (
+          <button 
+            onClick={handleSeeAll}
+            className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+          >
+            See All
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Horizontal Scroll */}
