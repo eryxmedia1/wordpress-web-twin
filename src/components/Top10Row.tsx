@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ContentLockBadge } from "@/components/ContentLockBadge";
@@ -34,6 +34,37 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
   const [myListItems, setMyListItems] = useState<Set<string>>(new Set());
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch initial favorites and likes state
+  useEffect(() => {
+    if (!currentProfile?.id || items.length === 0) return;
+
+    const fetchUserData = async () => {
+      const contentIds = items.map(i => i.id);
+      
+      const { data: favorites } = await supabase
+        .from("favorites")
+        .select("content_id")
+        .eq("profile_id", currentProfile.id)
+        .in("content_id", contentIds);
+
+      if (favorites) {
+        setMyListItems(new Set(favorites.map(f => f.content_id)));
+      }
+
+      const { data: likes } = await supabase
+        .from("likes")
+        .select("content_id")
+        .eq("profile_id", currentProfile.id)
+        .in("content_id", contentIds);
+
+      if (likes) {
+        setLikedItems(new Set(likes.map(l => l.content_id)));
+      }
+    };
+
+    fetchUserData();
+  }, [currentProfile?.id, items]);
 
   const handleMouseEnter = (id: string) => {
     hoverTimeoutRef.current = setTimeout(() => {
@@ -75,26 +106,36 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
     }
 
     const isInList = myListItems.has(contentId);
+    const contentTitle = items.find(i => i.id === contentId)?.title || "Item";
 
-    if (isInList) {
-      await supabase
-        .from("favorites")
-        .delete()
-        .eq("profile_id", currentProfile.id)
-        .eq("content_id", contentId);
-      setMyListItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(contentId);
-        return newSet;
-      });
-      toast.success("Removed from My List");
-    } else {
-      await supabase.from("favorites").insert({
-        profile_id: currentProfile.id,
-        content_id: contentId,
-      });
-      setMyListItems(prev => new Set(prev).add(contentId));
-      toast.success("Added to My List");
+    try {
+      if (isInList) {
+        const { error } = await supabase
+          .from("favorites")
+          .delete()
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", contentId);
+        
+        if (error) throw error;
+        setMyListItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(contentId);
+          return newSet;
+        });
+        toast.success(`Removed "${contentTitle}" from My List`);
+      } else {
+        const { error } = await supabase.from("favorites").insert({
+          profile_id: currentProfile.id,
+          content_id: contentId,
+        });
+        
+        if (error) throw error;
+        setMyListItems(prev => new Set(prev).add(contentId));
+        toast.success(`Added "${contentTitle}" to My List`);
+      }
+    } catch (error) {
+      console.error("Error updating My List:", error);
+      toast.error("Failed to update My List");
     }
   };
 
@@ -108,25 +149,33 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
 
     const isLiked = likedItems.has(contentId);
 
-    if (isLiked) {
-      await supabase
-        .from("likes")
-        .delete()
-        .eq("profile_id", currentProfile.id)
-        .eq("content_id", contentId);
-      setLikedItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(contentId);
-        return newSet;
-      });
-      toast.success("Removed like");
-    } else {
-      await supabase.from("likes").insert({
-        profile_id: currentProfile.id,
-        content_id: contentId,
-      });
-      setLikedItems(prev => new Set(prev).add(contentId));
-      toast.success("Liked!");
+    try {
+      if (isLiked) {
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", contentId);
+        
+        if (error) throw error;
+        setLikedItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(contentId);
+          return newSet;
+        });
+      } else {
+        const { error } = await supabase.from("likes").insert({
+          profile_id: currentProfile.id,
+          content_id: contentId,
+        });
+        
+        if (error) throw error;
+        setLikedItems(prev => new Set(prev).add(contentId));
+        toast.success("Liked!");
+      }
+    } catch (error) {
+      console.error("Error updating likes:", error);
+      toast.error("Failed to update likes");
     }
   };
 
@@ -154,7 +203,7 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                 onMouseEnter={() => handleMouseEnter(item.id)}
                 onMouseLeave={handleMouseLeave}
               >
-                {/* Large Rank Number - Behind the poster */}
+                {/* Large Rank Number */}
                 <div className="absolute left-0 bottom-0 z-0 select-none pointer-events-none">
                   <span 
                     className="text-[140px] md:text-[180px] font-black leading-none"
@@ -169,7 +218,7 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                   </span>
                 </div>
                 
-                {/* Poster - In front of the number */}
+                {/* Poster */}
                 <div 
                   className={`relative ml-12 md:ml-16 rounded-lg overflow-hidden bg-card z-10 shadow-xl transition-all duration-300 ease-out ${
                     isHovered 
@@ -205,13 +254,10 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                     )}
                   </Link>
                   
-                  {/* Gradient overlay on hover */}
                   <div className={`absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent transition-opacity pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
                   
-                  {/* Action buttons and title on hover */}
                   {isHovered && (
                     <div className="absolute bottom-0 left-0 right-0 p-3 space-y-2">
-                      {/* Action Buttons */}
                       <div className="flex items-center gap-2">
                         <Button
                           size="icon"
@@ -223,7 +269,7 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                         <Button
                           size="icon"
                           variant="outline"
-                          className="h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80"
+                          className={`h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isInList ? 'border-primary text-primary' : ''}`}
                           onClick={(e) => toggleMyList(e, item.id)}
                         >
                           {isInList ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -231,7 +277,7 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                         <Button
                           size="icon"
                           variant="outline"
-                          className={`h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isLiked ? 'text-primary' : ''}`}
+                          className={`h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isLiked ? 'text-primary border-primary' : ''}`}
                           onClick={(e) => toggleLike(e, item.id)}
                         >
                           <ThumbsUp className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
@@ -251,7 +297,6 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                     </div>
                   )}
                   
-                  {/* Lock Badge for restricted content */}
                   {item.requiredPlans && item.requiredPlans.length > 0 && (
                     <ContentLockBadge 
                       requiredPlans={item.requiredPlans} 

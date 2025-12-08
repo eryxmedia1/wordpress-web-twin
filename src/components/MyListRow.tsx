@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Play, Info } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -27,31 +27,58 @@ const MyListRow = ({ onMoreInfo }: MyListRowProps) => {
   const [items, setItems] = useState<FavoriteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchFavorites = useCallback(async () => {
+    if (!currentProfile?.id) return;
+
+    const { data, error } = await supabase
+      .from("favorites")
+      .select(`
+        id,
+        content_id,
+        content:contents(id, title, poster_url, type, release_year, genre)
+      `)
+      .eq("profile_id", currentProfile.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (!error && data) {
+      setItems(data.filter(item => item.content) as unknown as FavoriteItem[]);
+    }
+    setIsLoading(false);
+  }, [currentProfile?.id]);
+
+  useEffect(() => {
+    fetchFavorites();
+  }, [fetchFavorites]);
+
+  // Real-time subscription for favorites changes
   useEffect(() => {
     if (!currentProfile?.id) return;
 
-    const fetchFavorites = async () => {
-      const { data, error } = await supabase
-        .from("favorites")
-        .select(`
-          id,
-          content_id,
-          content:contents(id, title, poster_url, type, release_year, genre)
-        `)
-        .eq("profile_id", currentProfile.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
+    const channel = supabase
+      .channel('my-list-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'favorites',
+          filter: `profile_id=eq.${currentProfile.id}`
+        },
+        () => {
+          // Refetch on any change
+          fetchFavorites();
+        }
+      )
+      .subscribe();
 
-      if (!error && data) {
-        setItems(data.filter(item => item.content) as unknown as FavoriteItem[]);
-      }
-      setIsLoading(false);
+    return () => {
+      supabase.removeChannel(channel);
     };
+  }, [currentProfile?.id, fetchFavorites]);
 
-    fetchFavorites();
-  }, [currentProfile?.id]);
-
-  if (isLoading || items.length === 0) return null;
+  if (isLoading) return null;
+  if (items.length === 0) return null;
 
   return (
     <section className="space-y-4">

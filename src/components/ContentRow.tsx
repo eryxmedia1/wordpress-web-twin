@@ -6,6 +6,7 @@ import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import ReactPlayer from "react-player";
 import { ContentLockBadge } from "@/components/ContentLockBadge";
+import { toast } from "sonner";
 
 interface Content {
   id: string;
@@ -37,9 +38,45 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
   const [canScrollRight, setCanScrollRight] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { currentProfile } = useProfile();
+
+  // Fetch initial favorites and likes state
+  useEffect(() => {
+    if (!currentProfile?.id || contents.length === 0) return;
+
+    const fetchUserData = async () => {
+      const contentIds = contents.map(c => c.id);
+      
+      // Fetch favorites
+      const { data: favorites } = await supabase
+        .from("favorites")
+        .select("content_id")
+        .eq("profile_id", currentProfile.id)
+        .in("content_id", contentIds);
+
+      if (favorites) {
+        const favMap: Record<string, boolean> = {};
+        favorites.forEach(f => { favMap[f.content_id] = true; });
+        setMyListItems(favMap);
+      }
+
+      // Fetch likes
+      const { data: likes } = await supabase
+        .from("likes")
+        .select("content_id")
+        .eq("profile_id", currentProfile.id)
+        .in("content_id", contentIds);
+
+      if (likes) {
+        const likeMap: Record<string, boolean> = {};
+        likes.forEach(l => { likeMap[l.content_id] = true; });
+        setLikedItems(likeMap);
+      }
+    };
+
+    fetchUserData();
+  }, [currentProfile?.id, contents]);
 
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
@@ -70,20 +107,18 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
 
   const handleMouseEnter = (id: string, cardElement: HTMLDivElement | null) => {
     hoverTimeoutRef.current = setTimeout(() => {
-      // Calculate position for dynamic expansion
       if (cardElement) {
         const rect = cardElement.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const expandedWidth = 320;
         const cardCenter = rect.left + rect.width / 2;
         
-        // Check if expanded card would overflow left or right
         if (cardCenter - expandedWidth / 2 < 80) {
-          setHoverPosition('left'); // Near left edge, expand rightward
+          setHoverPosition('left');
         } else if (cardCenter + expandedWidth / 2 > viewportWidth - 80) {
-          setHoverPosition('right'); // Near right edge, expand leftward
+          setHoverPosition('right');
         } else {
-          setHoverPosition('center'); // Center expansion
+          setHoverPosition('center');
         }
       }
       setHoveredId(id);
@@ -100,41 +135,73 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
   const toggleMyList = async (e: React.MouseEvent, contentId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!currentProfile?.id) return;
+    if (!currentProfile?.id) {
+      toast.error("Please select a profile first");
+      return;
+    }
 
     const isInList = myListItems[contentId];
-    if (isInList) {
-      await supabase
-        .from("favorites")
-        .delete()
-        .eq("profile_id", currentProfile.id)
-        .eq("content_id", contentId);
-    } else {
-      await supabase
-        .from("favorites")
-        .insert({ profile_id: currentProfile.id, content_id: contentId });
+    const contentTitle = contents.find(c => c.id === contentId)?.title || "Item";
+    
+    try {
+      if (isInList) {
+        const { error } = await supabase
+          .from("favorites")
+          .delete()
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", contentId);
+        
+        if (error) throw error;
+        setMyListItems(prev => ({ ...prev, [contentId]: false }));
+        toast.success(`Removed "${contentTitle}" from My List`);
+      } else {
+        const { error } = await supabase
+          .from("favorites")
+          .insert({ profile_id: currentProfile.id, content_id: contentId });
+        
+        if (error) throw error;
+        setMyListItems(prev => ({ ...prev, [contentId]: true }));
+        toast.success(`Added "${contentTitle}" to My List`);
+      }
+    } catch (error) {
+      console.error("Error updating My List:", error);
+      toast.error("Failed to update My List");
     }
-    setMyListItems(prev => ({ ...prev, [contentId]: !isInList }));
   };
 
   const toggleLike = async (e: React.MouseEvent, contentId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!currentProfile?.id) return;
+    if (!currentProfile?.id) {
+      toast.error("Please select a profile first");
+      return;
+    }
 
     const isLiked = likedItems[contentId];
-    if (isLiked) {
-      await supabase
-        .from("likes")
-        .delete()
-        .eq("profile_id", currentProfile.id)
-        .eq("content_id", contentId);
-    } else {
-      await supabase
-        .from("likes")
-        .insert({ profile_id: currentProfile.id, content_id: contentId });
+    
+    try {
+      if (isLiked) {
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", contentId);
+        
+        if (error) throw error;
+        setLikedItems(prev => ({ ...prev, [contentId]: false }));
+      } else {
+        const { error } = await supabase
+          .from("likes")
+          .insert({ profile_id: currentProfile.id, content_id: contentId });
+        
+        if (error) throw error;
+        setLikedItems(prev => ({ ...prev, [contentId]: true }));
+        toast.success("Added to your likes");
+      }
+    } catch (error) {
+      console.error("Error updating likes:", error);
+      toast.error("Failed to update likes");
     }
-    setLikedItems(prev => ({ ...prev, [contentId]: !isLiked }));
   };
 
   const handleMoreInfo = (e: React.MouseEvent, contentId: string) => {
@@ -160,7 +227,6 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
       </div>
       
       <div className="relative">
-        {/* Scroll Left Button */}
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
@@ -170,7 +236,6 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
           </button>
         )}
 
-        {/* Scroll Right Button */}
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}
@@ -184,12 +249,11 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
           ref={scrollContainerRef}
           className="flex overflow-x-auto scrollbar-hide pb-16 pt-4 gap-2 md:gap-3"
         >
-          {contents.map((content, index) => {
+          {contents.map((content) => {
             const previewUrl = content.trailerUrl || content.videoUrl;
             const hasVideoError = videoError[content.id];
             const isHovered = hoveredId === content.id;
             
-            // Dynamic positioning styles for expanded card
             const getExpandedCardStyle = () => {
               const baseStyle = { width: '320px' };
               switch (hoverPosition) {
@@ -210,7 +274,6 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
                 onMouseEnter={() => handleMouseEnter(content.id, cardRefs.current[content.id])}
                 onMouseLeave={handleMouseLeave}
               >
-                {/* Base Card - Always visible */}
                 <div 
                   className={`transition-all duration-300 ease-out cursor-pointer ${
                     isHovered ? "opacity-0" : "opacity-100"
@@ -242,14 +305,12 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
                   </div>
                 </div>
 
-                {/* Expanded Card - Shows on hover with dynamic positioning */}
                 {isHovered && (
                   <div 
                     className="absolute z-30 animate-scale-in"
                     style={getExpandedCardStyle()}
                   >
                     <div className="bg-card rounded-lg overflow-hidden border border-border shadow-2xl">
-                      {/* Video/Image Preview */}
                       <div className="relative aspect-video">
                         {previewUrl && !hasVideoError ? (
                           <ReactPlayer
@@ -280,9 +341,7 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
                         <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
                       </div>
                       
-                      {/* Content Info */}
                       <div className="p-4 space-y-3">
-                        {/* Action Buttons */}
                         <div className="flex items-center gap-2">
                           <Button
                             size="sm"
@@ -296,7 +355,9 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
                           <Button
                             size="sm"
                             variant="outline"
-                            className="rounded-full w-10 h-10 p-0 border-muted-foreground/50 hover:border-foreground"
+                            className={`rounded-full w-10 h-10 p-0 border-muted-foreground/50 hover:border-foreground ${
+                              myListItems[content.id] ? "border-primary text-primary" : ""
+                            }`}
                             onClick={(e) => toggleMyList(e, content.id)}
                           >
                             {myListItems[content.id] ? (
@@ -325,10 +386,8 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
                           </Button>
                         </div>
 
-                        {/* Title */}
                         <h3 className="font-bold text-lg text-foreground truncate">{content.title}</h3>
                         
-                        {/* Metadata */}
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           {content.rating && (
                             <span className="px-2 py-0.5 border border-secondary/50 text-secondary rounded text-xs">
@@ -339,7 +398,6 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free'
                           {content.category && <span>• {content.category}</span>}
                         </div>
 
-                        {/* Trailer & Details Buttons */}
                         <div className="flex gap-2 pt-1">
                           <Button
                             size="sm"
