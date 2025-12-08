@@ -264,6 +264,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
         }
 
         // Create episodes for this season
+        const DEFAULT_VAST_AD_URL = 'https://servedby.aqua-adserver.com/fc.php?script=apVideo:vast2&zoneid=12154';
         const episodeInserts = validEpisodes.map((ep, index) => ({
           season_id: seasonData.id,
           episode_number: index + 1,
@@ -272,7 +273,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
           video_url: ep.vimeoUrl,
           thumbnail_url: ep.thumbnailUrl || null,
           duration: ep.duration || null,
-          vast_ad_url: null
+          vast_ad_url: DEFAULT_VAST_AD_URL
         }));
 
         const { error: episodesError } = await supabase
