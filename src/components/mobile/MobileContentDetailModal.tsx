@@ -180,7 +180,7 @@ const MobileContentDetailModal = ({ contentId, isOpen, onClose }: MobileContentD
             config={{
               vimeo: {
                 playerOptions: {
-                  background: false,
+                  background: true,
                   responsive: true,
                   quality: 'auto'
                 }
