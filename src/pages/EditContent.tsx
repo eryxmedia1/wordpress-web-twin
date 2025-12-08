@@ -26,6 +26,36 @@ const RATING_OPTIONS = [
 ];
 
 const DEFAULT_MIDROLL_URL = "https://servedby.aqua-adserver.com/fc.php?script=apVideo:vast2&zoneid=12154";
+const DEFAULT_VAST_AD_URL = "https://servedby.aqua-adserver.com/fc.php?script=apVideo:vast2&zoneid=12154";
+
+// Helper function to fetch Vimeo metadata
+async function fetchVimeoMetadata(url: string): Promise<{
+  title: string;
+  thumbnail: string;
+  duration: string;
+  description: string;
+} | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke('vimeo-metadata', {
+      body: { url }
+    });
+    
+    if (error || !data) {
+      console.error('Vimeo metadata fetch error:', error);
+      return null;
+    }
+    
+    return {
+      title: data.title || '',
+      thumbnail: data.thumbnail_url || '',
+      duration: data.duration || '',
+      description: data.description || ''
+    };
+  } catch (err) {
+    console.error('Error fetching Vimeo metadata:', err);
+    return null;
+  }
+}
 
 const currentYear = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 50 }, (_, i) => (currentYear - i).toString());
@@ -1029,7 +1059,7 @@ const EditContent = () => {
                             duration: "",
                             videoUrl: v.video_url || "",
                             thumbnail: v.poster_url || "",
-                            vastAdUrl: ""
+                            vastAdUrl: DEFAULT_VAST_AD_URL
                           }));
                           setSeasons(newSeasons);
                         }}
@@ -1050,7 +1080,7 @@ const EditContent = () => {
                               duration: "",
                               videoUrl: "",
                               thumbnail: "",
-                              vastAdUrl: ""
+                              vastAdUrl: DEFAULT_VAST_AD_URL
                             });
                             setSeasons(newSeasons);
                           }}
@@ -1078,28 +1108,40 @@ const EditContent = () => {
                         variant="outline"
                         size="sm"
                         className="mt-2"
-                        onClick={() => {
+                        onClick={async () => {
                           const urls = bulkImportUrls.split('\n').map(u => u.trim()).filter(u => u.length > 0);
                           if (urls.length === 0) {
                             toast.error("Please enter at least one video URL");
                             return;
                           }
+                          
+                          toast.info(`Fetching metadata for ${urls.length} URLs...`);
+                          
                           const newSeasons = [...seasons];
                           const startNumber = newSeasons[seasonIndex].episodes.length + 1;
+                          
+                          // Fetch metadata for all URLs in parallel
+                          const metadataPromises = urls.map(url => 
+                            url.includes('vimeo.com') ? fetchVimeoMetadata(url) : Promise.resolve(null)
+                          );
+                          
+                          const metadataResults = await Promise.all(metadataPromises);
+                          
                           urls.forEach((url, idx) => {
+                            const metadata = metadataResults[idx];
                             newSeasons[seasonIndex].episodes.push({
                               number: startNumber + idx,
-                              title: `Episode ${startNumber + idx}`,
-                              description: "",
-                              duration: "",
+                              title: metadata?.title || `Episode ${startNumber + idx}`,
+                              description: metadata?.description || "",
+                              duration: metadata?.duration || "",
                               videoUrl: url,
-                              thumbnail: "",
-                              vastAdUrl: ""
+                              thumbnail: metadata?.thumbnail || "",
+                              vastAdUrl: DEFAULT_VAST_AD_URL
                             });
                           });
                           setSeasons(newSeasons);
                           setBulkImportUrls("");
-                          toast.success(`Added ${urls.length} episodes`);
+                          toast.success(`Added ${urls.length} episodes with metadata`);
                         }}
                       >
                         <Upload className="w-3 h-3 mr-1" /> Import {bulkImportUrls.split('\n').filter(u => u.trim()).length || 0} URLs
