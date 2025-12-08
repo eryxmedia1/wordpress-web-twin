@@ -130,11 +130,18 @@ const Watch = () => {
 
   // Seek to saved progress when player is ready and progress is loaded
   useEffect(() => {
-    if (playerReady && showVideo && progress > 0 && progress < 100 && !hasInitialSeek.current && playerRef.current) {
-      const seekPosition = progress / 100;
-      console.log("Seeking to saved progress:", seekPosition, "(" + progress + "%)");
-      playerRef.current.seekTo(seekPosition, 'fraction');
-      hasInitialSeek.current = true;
+    if (playerReady && showVideo && progress > 0 && progress < 95 && !hasInitialSeek.current && playerRef.current) {
+      // Add a delay to ensure Vimeo player is truly ready for seeking
+      const seekTimer = setTimeout(() => {
+        if (playerRef.current && !hasInitialSeek.current) {
+          const seekPosition = progress / 100;
+          console.log("Seeking to saved progress via effect:", seekPosition, "(" + progress + "%)");
+          playerRef.current.seekTo(seekPosition, 'fraction');
+          hasInitialSeek.current = true;
+        }
+      }, 800); // Slightly longer delay for the effect-based seek
+      
+      return () => clearTimeout(seekTimer);
     }
   }, [playerReady, showVideo, progress]);
 
@@ -332,12 +339,17 @@ const Watch = () => {
                   console.log("Player ready, saved progress:", progress);
                   setPlayerReady(true);
                   
-                  // Seek to saved progress immediately if available
-                  if (progress > 0 && progress < 100 && !hasInitialSeek.current && playerRef.current) {
-                    const seekPosition = progress / 100;
-                    console.log("Seeking to position:", seekPosition);
-                    playerRef.current.seekTo(seekPosition, 'fraction');
-                    hasInitialSeek.current = true;
+                  // Delay seek slightly to ensure player is fully initialized
+                  // This is especially important for Vimeo which needs a moment after onReady
+                  if (progress > 0 && progress < 95 && !hasInitialSeek.current && playerRef.current) {
+                    setTimeout(() => {
+                      if (playerRef.current && !hasInitialSeek.current) {
+                        const seekPosition = progress / 100;
+                        console.log("Seeking to position after delay:", seekPosition);
+                        playerRef.current.seekTo(seekPosition, 'fraction');
+                        hasInitialSeek.current = true;
+                      }
+                    }, 500); // Small delay for Vimeo to be fully ready
                   }
                   
                   setIsPlaying(true);
