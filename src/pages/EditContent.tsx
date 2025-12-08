@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Film, Plus, Trash, Video } from "lucide-react";
+import { Film, Plus, Trash, Video, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
@@ -85,6 +85,25 @@ const EditContent = () => {
       vastAdUrl: ""
     }] 
   }]);
+  
+  // Available videos for episode selection
+  const [availableVideos, setAvailableVideos] = useState<{id: string; title: string; video_url: string | null; poster_url: string | null}[]>([]);
+  
+  // Fetch available videos for episode selection
+  useEffect(() => {
+    async function fetchAvailableVideos() {
+      const { data, error } = await supabase
+        .from('contents')
+        .select('id, title, video_url, poster_url')
+        .not('video_url', 'is', null)
+        .order('title', { ascending: true });
+        
+      if (!error && data) {
+        setAvailableVideos(data);
+      }
+    }
+    fetchAvailableVideos();
+  }, []);
   
   // For a single movie or general content details
   const [contentDetails, setContentDetails] = useState<ContentDetails>({
@@ -881,6 +900,28 @@ const EditContent = () => {
                 
                 {seasons.map((season, seasonIndex) => (
                   <TabsContent key={season.number} value={`season-${season.number}`} className="mt-6">
+                    {/* Season Number Selector */}
+                    <div className="mb-4">
+                      <Label className="mb-2 block">Season Number</Label>
+                      <Select
+                        value={season.number.toString()}
+                        onValueChange={(value) => {
+                          const newSeasons = [...seasons];
+                          newSeasons[seasonIndex].number = parseInt(value);
+                          setSeasons(newSeasons);
+                        }}
+                      >
+                        <SelectTrigger className="bg-gray-800 border-gray-700 w-40">
+                          <SelectValue placeholder="Select season" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+                            <SelectItem key={num} value={num.toString()}>Season {num}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="text-lg font-medium">Episodes</h4>
                       <Button 
@@ -904,21 +945,64 @@ const EditContent = () => {
                     </div>
                     
                     {season.episodes.map((episode, episodeIndex) => (
-                      <Card key={episode.number} className="bg-gray-800 border-gray-700 mb-4">
+                      <Card key={episodeIndex} className="bg-gray-800 border-gray-700 mb-4">
                         <CardContent className="p-4">
                           <div className="flex justify-between items-center mb-4">
                             <h5 className="text-md font-medium">Episode {episode.number}: {episode.title}</h5>
-                            <Button 
-                              variant="ghost" 
-                              className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                              onClick={() => {
-                                const newSeasons = [...seasons];
-                                newSeasons[seasonIndex].episodes = newSeasons[seasonIndex].episodes.filter((_, i) => i !== episodeIndex);
-                                setSeasons(newSeasons);
-                              }}
-                            >
-                              <Trash className="w-4 h-4" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              {/* Move Up Button */}
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="text-gray-400 hover:text-white hover:bg-gray-700"
+                                disabled={episodeIndex === 0}
+                                onClick={() => {
+                                  if (episodeIndex === 0) return;
+                                  const newSeasons = [...seasons];
+                                  const episodes = newSeasons[seasonIndex].episodes;
+                                  // Swap positions
+                                  [episodes[episodeIndex - 1], episodes[episodeIndex]] = [episodes[episodeIndex], episodes[episodeIndex - 1]];
+                                  // Update episode numbers
+                                  episodes.forEach((ep, idx) => { ep.number = idx + 1; });
+                                  setSeasons(newSeasons);
+                                }}
+                              >
+                                <ChevronUp className="w-4 h-4" />
+                              </Button>
+                              {/* Move Down Button */}
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="text-gray-400 hover:text-white hover:bg-gray-700"
+                                disabled={episodeIndex === season.episodes.length - 1}
+                                onClick={() => {
+                                  if (episodeIndex === season.episodes.length - 1) return;
+                                  const newSeasons = [...seasons];
+                                  const episodes = newSeasons[seasonIndex].episodes;
+                                  // Swap positions
+                                  [episodes[episodeIndex], episodes[episodeIndex + 1]] = [episodes[episodeIndex + 1], episodes[episodeIndex]];
+                                  // Update episode numbers
+                                  episodes.forEach((ep, idx) => { ep.number = idx + 1; });
+                                  setSeasons(newSeasons);
+                                }}
+                              >
+                                <ChevronDown className="w-4 h-4" />
+                              </Button>
+                              {/* Delete Button */}
+                              <Button 
+                                variant="ghost" 
+                                className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                                onClick={() => {
+                                  const newSeasons = [...seasons];
+                                  newSeasons[seasonIndex].episodes = newSeasons[seasonIndex].episodes.filter((_, i) => i !== episodeIndex);
+                                  // Re-number remaining episodes
+                                  newSeasons[seasonIndex].episodes.forEach((ep, idx) => { ep.number = idx + 1; });
+                                  setSeasons(newSeasons);
+                                }}
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -968,16 +1052,42 @@ const EditContent = () => {
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <Label htmlFor={`episode-${season.number}-${episode.number}-video`} className="mb-1 block">Video URL</Label>
+                              <Label className="mb-1 block">Select Video from Library</Label>
+                              <Select
+                                value={episode.videoUrl || ""}
+                                onValueChange={(value) => {
+                                  const newSeasons = [...seasons];
+                                  const selectedVideo = availableVideos.find(v => v.video_url === value);
+                                  newSeasons[seasonIndex].episodes[episodeIndex].videoUrl = value;
+                                  // Auto-fill thumbnail if available
+                                  if (selectedVideo?.poster_url && !episode.thumbnail) {
+                                    newSeasons[seasonIndex].episodes[episodeIndex].thumbnail = selectedVideo.poster_url;
+                                  }
+                                  setSeasons(newSeasons);
+                                }}
+                              >
+                                <SelectTrigger className="bg-gray-900 border-gray-800">
+                                  <SelectValue placeholder="Select a video..." />
+                                </SelectTrigger>
+                                <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
+                                  <SelectItem value="">-- None --</SelectItem>
+                                  {availableVideos.map((video) => (
+                                    <SelectItem key={video.id} value={video.video_url || ""}>
+                                      {video.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-gray-500 mt-1">Or enter URL manually below</p>
                               <Input 
-                                id={`episode-${season.number}-${episode.number}-video`}
                                 value={episode.videoUrl}
                                 onChange={(e) => {
                                   const newSeasons = [...seasons];
                                   newSeasons[seasonIndex].episodes[episodeIndex].videoUrl = e.target.value;
                                   setSeasons(newSeasons);
                                 }}
-                                className="bg-gray-900 border-gray-800"
+                                className="bg-gray-900 border-gray-800 mt-2"
+                                placeholder="https://example.com/video.mp4"
                               />
                             </div>
                             
