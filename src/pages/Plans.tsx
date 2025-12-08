@@ -163,13 +163,16 @@ const Plans = () => {
             return (
               <Card 
                 key={plan.id}
-                className={`relative overflow-hidden transition-all duration-300 ${
+                className={`relative overflow-hidden transition-all duration-300 border border-border ${
                   isHighlighted 
                     ? 'ring-2 ring-primary scale-105 shadow-2xl' 
                     : isCurrentPlan 
                     ? 'ring-2 ring-secondary' 
                     : 'hover:shadow-xl'
-                } ${plan.slug === 'premium' ? 'bg-gradient-to-b from-card to-amber-950/10' : 'bg-card'}`}
+                } ${plan.slug === 'premium' 
+                    ? 'bg-gradient-to-b from-[#1a1f2e] to-amber-950/10' 
+                    : 'bg-[#1a1f2e]'
+                }`}
               >
                 {isCurrentPlan && (
                   <div className="absolute top-0 left-0 right-0 bg-secondary text-secondary-foreground text-center py-1 text-sm font-medium">
