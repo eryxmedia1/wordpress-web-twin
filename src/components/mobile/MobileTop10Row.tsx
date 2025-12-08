@@ -240,13 +240,22 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
                       playing
                       muted
                       loop
+                      playsinline
                       width="100%"
                       height="100%"
                       style={{ position: 'absolute', top: 0, left: 0 }}
                       onError={() => handleVideoError(item.id)}
                       config={{
+                        vimeo: {
+                          playerOptions: {
+                            background: true,
+                            responsive: true,
+                            quality: 'auto',
+                          },
+                        },
                         file: {
                           attributes: {
+                            playsInline: true,
                             style: { objectFit: 'cover', width: '100%', height: '100%' }
                           }
                         }

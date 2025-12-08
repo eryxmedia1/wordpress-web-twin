@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Play, Plus, X, Volume2, VolumeX } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Play, Plus, X, Volume2, VolumeX, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,8 @@ import { useProfile } from "@/context/ProfileContext";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import ReactPlayer from "react-player";
+
+const PREVIEW_DURATION = 60; // 60 seconds max for non-trailer videos
 
 interface Content {
   id: string;
@@ -35,6 +37,11 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
   const [isMuted, setIsMuted] = useState(true);
   const [videoReady, setVideoReady] = useState<{ [key: string]: boolean }>({});
   const [videoError, setVideoError] = useState<{ [key: string]: boolean }>({});
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [previewEnded, setPreviewEnded] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(PREVIEW_DURATION);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const playerRefs = useRef<{ [key: string]: ReactPlayer | null }>({});
   const navigate = useNavigate();
   const { currentProfile } = useProfile();
 
@@ -100,8 +107,19 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
-    setCurrentIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
+    const newIndex = emblaApi.selectedScrollSnap();
+    if (newIndex !== currentIndex) {
+      setCurrentIndex(newIndex);
+      // Reset preview state when changing slides
+      setPreviewEnded(false);
+      setIsPlaying(true);
+      setTimeRemaining(PREVIEW_DURATION);
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+      }
+    }
+  }, [emblaApi, currentIndex]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -113,6 +131,58 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
       emblaApi.off("select", onSelect);
     };
   }, [emblaApi, onSelect]);
+
+  // 60-second countdown for non-trailer videos
+  const currentContent = contents[currentIndex];
+  const hasTrailer = !!currentContent?.trailer_url;
+  const currentVideoUrl = currentContent?.trailer_url || currentContent?.video_url;
+  const isCurrentVideoReady = videoReady[currentContent?.id];
+
+  useEffect(() => {
+    if (!isCurrentVideoReady || !isPlaying || previewEnded) return;
+    
+    // Only apply 60-second limit if using full video (no trailer)
+    if (!hasTrailer && currentVideoUrl) {
+      countdownRef.current = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            setIsPlaying(false);
+            setPreviewEnded(true);
+            if (countdownRef.current) clearInterval(countdownRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, [isCurrentVideoReady, isPlaying, hasTrailer, currentVideoUrl, previewEnded, currentIndex]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, []);
+
+  const handleReplay = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTimeRemaining(PREVIEW_DURATION);
+    setPreviewEnded(false);
+    setIsPlaying(true);
+    const player = playerRefs.current[currentContent?.id];
+    if (player) {
+      player.seekTo(0);
+    }
+  };
 
   const scrollTo = useCallback(
     (index: number) => {
@@ -226,10 +296,11 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
                       isVideoReady ? "opacity-100" : "opacity-0"
                     )}>
                       <ReactPlayer
+                        ref={(ref) => { playerRefs.current[content.id] = ref; }}
                         url={videoUrl}
-                        playing={isActive}
+                        playing={isActive && isPlaying && !previewEnded}
                         muted={isMuted}
-                        loop
+                        loop={!!content.trailer_url}
                         playsinline
                         width="100%"
                         height="100%"
@@ -266,6 +337,35 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
 
                   {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
+
+                  {/* Preview Timer - shows countdown for non-trailer videos */}
+                  {isActive && showVideo && isVideoReady && !content.trailer_url && isPlaying && !previewEnded && (
+                    <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+                      <div className="bg-background/50 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1.5">
+                        <div className="w-10 h-1 bg-foreground/30 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all duration-1000 ease-linear"
+                            style={{ width: `${(timeRemaining / PREVIEW_DURATION) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-foreground/80 font-medium min-w-[20px]">
+                          {timeRemaining}s
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Replay Button - appears after preview ends */}
+                  {isActive && previewEnded && !content.trailer_url && (
+                    <button
+                      type="button"
+                      onClick={handleReplay}
+                      className="absolute top-3 left-3 z-20 p-2 rounded-full bg-background/50 hover:bg-background/70 backdrop-blur-sm border border-foreground/30 touch-manipulation"
+                      title="Replay preview"
+                    >
+                      <RotateCcw className="w-4 h-4 text-foreground" />
+                    </button>
+                  )}
 
                   {/* Mute/Unmute Button */}
                   {showVideo && isVideoReady && (
