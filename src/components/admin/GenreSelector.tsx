@@ -34,9 +34,10 @@ const GENRES = [
 interface GenreSelectorProps {
   selectedGenres: string[];
   onGenresChange: (genres: string[]) => void;
+  label?: string;
 }
 
-export const GenreSelector = ({ selectedGenres, onGenresChange }: GenreSelectorProps) => {
+export const GenreSelector = ({ selectedGenres, onGenresChange, label = "Categories" }: GenreSelectorProps) => {
   const toggleGenre = (genre: string) => {
     if (selectedGenres.includes(genre)) {
       onGenresChange(selectedGenres.filter(g => g !== genre));
@@ -47,9 +48,9 @@ export const GenreSelector = ({ selectedGenres, onGenresChange }: GenreSelectorP
 
   return (
     <div className="space-y-2">
-      <Label className="text-white font-medium">Genres</Label>
-      <p className="text-xs text-gray-400 mb-2">
-        Select one or more genres for this content
+      <Label className="text-foreground font-medium">{label}</Label>
+      <p className="text-xs text-muted-foreground mb-2">
+        Select one or more {label.toLowerCase()} for this content
       </p>
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
         {GENRES.map((genre) => {
@@ -57,8 +58,10 @@ export const GenreSelector = ({ selectedGenres, onGenresChange }: GenreSelectorP
           return (
             <div
               key={genre}
-              className={`flex items-center justify-center p-2 rounded-lg transition-colors cursor-pointer text-sm ${
-                isSelected ? 'bg-primary/20 border border-primary text-white' : 'bg-muted/50 hover:bg-muted text-gray-300'
+              className={`flex items-center justify-center p-2.5 rounded-lg transition-all cursor-pointer text-sm font-medium border ${
+                isSelected 
+                  ? 'bg-primary/20 border-primary text-primary' 
+                  : 'bg-card/50 border-border hover:border-primary/50 text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => toggleGenre(genre)}
             >
