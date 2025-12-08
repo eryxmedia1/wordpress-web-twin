@@ -213,28 +213,33 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo, seeAllLink }: T
               <div
                 key={item.id}
                 className="relative flex-shrink-0 group flex items-end"
-                style={{ minWidth: '180px' }}
+                style={{ minWidth: '220px' }}
                 onMouseEnter={() => handleMouseEnter(item.id)}
                 onMouseLeave={handleMouseLeave}
               >
-                {/* Large Rank Number */}
-                <div className="absolute left-0 bottom-0 z-0 select-none pointer-events-none">
+                {/* Large Rank Number - positioned more to the left for better visibility */}
+                <div className="absolute -left-2 bottom-0 z-0 select-none pointer-events-none">
                   <span 
-                    className="text-[140px] md:text-[180px] font-black leading-none"
+                    className="text-[160px] md:text-[200px] font-black leading-none"
                     style={{
                       color: 'transparent',
-                      WebkitTextStroke: '3px hsl(180 60% 45%)',
-                      textShadow: '0 0 30px hsl(180 60% 45% / 0.4)',
+                      WebkitTextStroke: '4px hsl(180 60% 45%)',
+                      textShadow: '0 0 40px hsl(180 60% 45% / 0.5)',
                       fontFamily: 'system-ui, -apple-system, sans-serif',
+                      letterSpacing: '-0.05em',
                     }}
                   >
-                    {item.rank}
+                    {item.rank === 10 ? (
+                      <span className="tracking-tighter">10</span>
+                    ) : (
+                      item.rank
+                    )}
                   </span>
                 </div>
                 
-              {/* Card Container */}
+              {/* Card Container - pushed more to the right to show numbers better */}
                 <div 
-                  className={`relative ml-12 md:ml-16 rounded-lg overflow-hidden bg-card z-10 shadow-xl transition-all duration-300 ease-out ${
+                  className={`relative ml-20 md:ml-24 rounded-lg overflow-hidden bg-card z-10 shadow-xl transition-all duration-300 ease-out ${
                     isHovered 
                       ? 'w-56 md:w-72 shadow-2xl scale-105' 
                       : 'w-28 md:w-36 h-40 md:h-52'

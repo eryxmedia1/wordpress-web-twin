@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Star, Info, Play, Plus, Check, ThumbsUp, ListVideo, ChevronDown, SkipForward } from "lucide-react";
+import { ArrowLeft, Star, Info, Play, Plus, Check, ThumbsUp, ListVideo, ChevronDown, SkipForward, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,8 @@ import { UpgradeGate } from "@/components/UpgradeGate";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ContentData {
   id: string;
@@ -80,6 +82,8 @@ const Watch = () => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [adBreakCount, setAdBreakCount] = useState(0);
   const [autoPlayNext, setAutoPlayNext] = useState(true);
+  const [bingeMode, setBingeMode] = useState(false);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   
   // My List and Playlist state
   const [isInList, setIsInList] = useState(false);
@@ -350,15 +354,20 @@ const Watch = () => {
   const handleVideoEnded = useCallback(() => {
     saveProgress(100);
     
-    if (autoPlayNext && nextEpisode && nextEpisode.video_url) {
-      toast.success(`Playing next: ${nextEpisode.title}`);
-      setSearchParams({ episode: nextEpisode.id });
+    if ((autoPlayNext || bingeMode) && nextEpisode && nextEpisode.video_url) {
+      if (bingeMode) {
+        // Binge mode: immediately play next without preview
+        setSearchParams({ episode: nextEpisode.id });
+      } else {
+        toast.success(`Playing next: ${nextEpisode.title}`);
+        setSearchParams({ episode: nextEpisode.id });
+      }
     } else if (!nextEpisode) {
       toast.info("You've reached the end of this series!");
       setShowVideo(false);
       setIsPlaying(false);
     }
-  }, [autoPlayNext, nextEpisode, saveProgress, setSearchParams]);
+  }, [autoPlayNext, bingeMode, nextEpisode, saveProgress, setSearchParams]);
 
   // Handle episode selection from dropdown
   const handleEpisodeSelect = useCallback((selectedEpisodeId: string) => {
@@ -725,8 +734,8 @@ const Watch = () => {
 
           {/* Progress Bar Overlay at bottom */}
           <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-4">
-            {/* Next Episode Preview - Shows when near end */}
-            {nextEpisode && progress > 90 && autoPlayNext && (
+            {/* Next Episode Preview - Shows when near end (only if not in binge mode) */}
+            {nextEpisode && progress > 90 && autoPlayNext && !bingeMode && (
               <div className="mb-3 bg-card/90 backdrop-blur-sm rounded-lg p-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {nextEpisode.thumbnail_url && (
@@ -762,6 +771,21 @@ const Watch = () => {
               </div>
             )}
             
+            {/* Binge Mode Toggle - Shows for episodic content */}
+            {allEpisodes.length > 1 && (
+              <div className="mb-2 flex items-center justify-end gap-2">
+                <div className="flex items-center gap-2 bg-background/60 backdrop-blur-sm rounded-full px-3 py-1.5">
+                  <Zap className={`h-4 w-4 ${bingeMode ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
+                  <span className="text-xs font-medium">Binge Mode</span>
+                  <Switch 
+                    checked={bingeMode} 
+                    onCheckedChange={setBingeMode}
+                    className="scale-75"
+                  />
+                </div>
+              </div>
+            )}
+            
             <div className="flex items-center gap-3 text-sm text-foreground">
               <span>{formatTime(currentTime)}</span>
               <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
@@ -774,7 +798,8 @@ const Watch = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-1 text-center">
               {Math.round(progress)}% watched • Progress saved automatically
-              {autoPlayNext && nextEpisode && ' • Auto-play next enabled'}
+              {bingeMode && ' • Binge Mode ON'}
+              {!bingeMode && autoPlayNext && nextEpisode && ' • Auto-play next enabled'}
             </p>
           </div>
         </div>
@@ -828,8 +853,8 @@ const Watch = () => {
           <div className="container mx-auto px-4 md:px-6 mt-6">
             {/* Episode indicator and selector */}
             {episode && (
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
                   <span className="text-primary font-medium">Episode {episode.episode_number}</span>
                   <span className="text-muted-foreground">•</span>
                   <Link to={`/watch/${id}`} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -837,48 +862,117 @@ const Watch = () => {
                   </Link>
                 </div>
                 
-                {/* Episode Selector for non-playing view */}
-                {allEpisodes.length > 0 && (
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Select value={episodeId || ''} onValueChange={handleEpisodeSelect}>
-                      <SelectTrigger className="w-full md:w-[320px] bg-card border-border">
-                        <SelectValue placeholder="Select Episode" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border max-h-[300px]">
-                        {seasonsWithEpisodes.map(season => (
-                          <div key={season.id}>
-                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
-                              Season {season.season_number}{season.title ? `: ${season.title}` : ''}
-                            </div>
-                            {season.episodes.map(ep => (
-                              <SelectItem 
-                                key={ep.id} 
-                                value={ep.id}
-                                disabled={!ep.video_url}
-                                className="cursor-pointer"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-primary font-medium">E{ep.episode_number}</span>
-                                  <span className="truncate">{ep.title}</span>
-                                  {!ep.video_url && <span className="text-xs text-muted-foreground">(No video)</span>}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </div>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    {nextEpisode && nextEpisode.video_url && (
-                      <Button
-                        variant="outline"
-                        onClick={playNextEpisode}
-                        className="gap-2"
+                {/* Season Tabs and Episode Selector */}
+                {seasonsWithEpisodes.length > 0 && (
+                  <div className="space-y-4">
+                    {/* Season Tabs */}
+                    {seasonsWithEpisodes.length > 1 && (
+                      <Tabs 
+                        value={selectedSeasonId || seasonsWithEpisodes.find(s => s.episodes.some(e => e.id === episodeId))?.id || seasonsWithEpisodes[0]?.id} 
+                        onValueChange={setSelectedSeasonId}
+                        className="w-full"
                       >
-                        <SkipForward className="h-4 w-4" />
-                        Next Episode
-                      </Button>
+                        <TabsList className="bg-card border border-border w-full md:w-auto flex-wrap h-auto gap-1 p-1">
+                          {seasonsWithEpisodes.map(season => (
+                            <TabsTrigger 
+                              key={season.id} 
+                              value={season.id}
+                              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2"
+                            >
+                              Season {season.season_number}
+                              {season.title && <span className="hidden md:inline ml-1 text-xs opacity-70">: {season.title}</span>}
+                            </TabsTrigger>
+                          ))}
+                        </TabsList>
+                      </Tabs>
                     )}
+                    
+                    {/* Episode Grid for Selected Season */}
+                    {(() => {
+                      const currentSeasonId = selectedSeasonId || seasonsWithEpisodes.find(s => s.episodes.some(e => e.id === episodeId))?.id || seasonsWithEpisodes[0]?.id;
+                      const currentSeason = seasonsWithEpisodes.find(s => s.id === currentSeasonId);
+                      
+                      if (!currentSeason) return null;
+                      
+                      return (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                          {currentSeason.episodes.map(ep => (
+                            <button
+                              key={ep.id}
+                              onClick={() => ep.video_url && handleEpisodeSelect(ep.id)}
+                              disabled={!ep.video_url}
+                              className={`relative rounded-lg overflow-hidden text-left transition-all ${
+                                ep.id === episodeId 
+                                  ? 'ring-2 ring-primary' 
+                                  : 'hover:ring-1 hover:ring-muted-foreground/50'
+                              } ${!ep.video_url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            >
+                              <div className="aspect-video bg-muted relative">
+                                {ep.thumbnail_url ? (
+                                  <img 
+                                    src={ep.thumbnail_url} 
+                                    alt={ep.title} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-muted">
+                                    <Play className="h-8 w-8 text-muted-foreground" />
+                                  </div>
+                                )}
+                                {ep.id === episodeId && (
+                                  <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                    <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded">Now Playing</span>
+                                  </div>
+                                )}
+                                {!ep.video_url && (
+                                  <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                                    <span className="text-xs text-muted-foreground">Coming Soon</span>
+                                  </div>
+                                )}
+                                {ep.duration && (
+                                  <span className="absolute bottom-1 right-1 bg-background/80 text-xs px-1.5 py-0.5 rounded">
+                                    {ep.duration}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="p-2 bg-card">
+                                <p className="text-xs text-primary font-medium">E{ep.episode_number}</p>
+                                <p className="text-sm font-medium line-clamp-1">{ep.title}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* Binge Mode Toggle and Next Episode Button */}
+                    <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
+                      <div className="flex items-center gap-4">
+                        {/* Binge Mode Toggle */}
+                        <div className="flex items-center gap-2 bg-card border border-border rounded-full px-4 py-2">
+                          <Zap className={`h-4 w-4 ${bingeMode ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
+                          <span className="text-sm font-medium">Binge Mode</span>
+                          <Switch 
+                            checked={bingeMode} 
+                            onCheckedChange={setBingeMode}
+                          />
+                        </div>
+                        {bingeMode && (
+                          <span className="text-xs text-muted-foreground">Episodes play back-to-back without interruption</span>
+                        )}
+                      </div>
+                      
+                      {nextEpisode && nextEpisode.video_url && (
+                        <Button
+                          variant="outline"
+                          onClick={playNextEpisode}
+                          className="gap-2"
+                        >
+                          <SkipForward className="h-4 w-4" />
+                          Next: E{nextEpisode.episode_number} - {nextEpisode.title}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
