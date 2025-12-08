@@ -7,7 +7,7 @@ import ExpandingSidebar from "@/components/ExpandingSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileLayout from "@/components/mobile/MobileLayout";
 import ReactPlayer from "react-player";
-import { Loader2, Radio, Volume2, VolumeX, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Radio, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,9 @@ export default function LiveTV() {
   const [liveSegment, setLiveSegment] = useState<LiveSegment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlayerReady, setIsPlayerReady] = useState(false);
+  const [pendingSeek, setPendingSeek] = useState<number | null>(null);
   const playerRef = useRef<ReactPlayer>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -108,11 +110,19 @@ export default function LiveTV() {
         const data = await res.json();
         setLiveSegment(data);
         
-        // Seek to offset if we have a player
-        if (data.offsetSeconds && playerRef.current) {
-          setTimeout(() => {
-            playerRef.current?.seekTo(data.offsetSeconds, 'seconds');
-          }, 500);
+        // Set pending seek - will be applied when player is ready
+        if (data.offsetSeconds) {
+          setPendingSeek(data.offsetSeconds);
+          // If player is already ready, seek immediately
+          if (isPlayerReady && playerRef.current) {
+            playerRef.current.seekTo(data.offsetSeconds, 'seconds');
+            setIsPlaying(true);
+          }
+        } else {
+          // No offset needed, can play immediately when ready
+          if (isPlayerReady) {
+            setIsPlaying(true);
+          }
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -126,10 +136,15 @@ export default function LiveTV() {
     } catch (error) {
       console.error('Error fetching live segment:', error);
     }
-  }, [selectedChannel]);
+  }, [selectedChannel, isPlayerReady]);
 
   useEffect(() => {
     if (selectedChannel) {
+      // Reset player state when switching channels
+      setIsPlayerReady(false);
+      setIsPlaying(false);
+      setPendingSeek(null);
+      
       fetchLiveSegment();
       
       // Poll every 30 seconds to stay in sync
@@ -146,12 +161,35 @@ export default function LiveTV() {
   const handleChannelSelect = (channel: Channel) => {
     setSelectedChannel(channel);
     setLiveSegment(null);
+    setIsPlayerReady(false);
+    setIsPlaying(false);
+    setPendingSeek(null);
     navigate(`/live/${channel.slug}`, { replace: true });
   };
 
   const handleVideoEnd = () => {
     // When video ends, immediately fetch next segment
     fetchLiveSegment();
+  };
+
+  // Handle player ready - seek to correct position then start playing
+  const handlePlayerReady = () => {
+    setIsPlayerReady(true);
+    
+    if (pendingSeek !== null && playerRef.current) {
+      // Seek to the correct position
+      playerRef.current.seekTo(pendingSeek, 'seconds');
+      // Start playing after seek
+      setIsPlaying(true);
+      setPendingSeek(null);
+    } else if (liveSegment?.offsetSeconds && playerRef.current) {
+      // Fallback - use offset from segment
+      playerRef.current.seekTo(liveSegment.offsetSeconds, 'seconds');
+      setIsPlaying(true);
+    } else {
+      // No seeking needed, just play
+      setIsPlaying(true);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -245,6 +283,13 @@ export default function LiveTV() {
                 {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
               </Button>
 
+              {/* Loading overlay until player is ready and seeked */}
+              {liveSegment?.videoUrl && !isPlaying && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                </div>
+              )}
+
               {liveSegment?.videoUrl ? (
                 <ReactPlayer
                   ref={playerRef}
@@ -254,11 +299,12 @@ export default function LiveTV() {
                   width="100%"
                   height="100%"
                   onEnded={handleVideoEnd}
+                  onReady={handlePlayerReady}
                   config={{
                     vimeo: {
                       playerOptions: {
                         background: true,
-                        autoplay: true,
+                        autoplay: false, // We control playback via onReady
                         quality: 'auto',
                       },
                     },
