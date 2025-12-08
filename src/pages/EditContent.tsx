@@ -12,6 +12,7 @@ import { Film, Plus, Trash, Video } from "lucide-react";
 import { toast } from "sonner";
 import AdminNavbar from "@/components/AdminNavbar";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
+import { TagsSelector } from "@/components/admin/TagsSelector";
 import { supabase, DbContent, DbProfile, DbSeason, DbEpisode, ContentType, MidrollConfig } from "@/integrations/supabase/client";
 
 interface Episode {
@@ -56,6 +57,7 @@ const EditContent = () => {
   const [contentType, setContentType] = useState<ContentType>("movie");
   const [loading, setLoading] = useState(false);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   
   // For TV shows
   const [seasons, setSeasons] = useState<Season[]>([{ 
@@ -177,11 +179,28 @@ const EditContent = () => {
     });
     setSelectedChannels(content.channels || []);
     
+    // Fetch associated tags
+    await fetchContentTags(content.id);
+    
     if (content.type === 'show') {
       await fetchSeasons(content.id);
     }
     
     setLoading(false);
+  }
+
+  async function fetchContentTags(contentId: string) {
+    const { data: contentTags, error } = await supabase
+      .from('content_tags')
+      .select('tag_id')
+      .eq('content_id', contentId);
+      
+    if (error) {
+      console.error("Failed to fetch content tags:", error);
+      return;
+    }
+    
+    setSelectedTagIds((contentTags || []).map(ct => ct.tag_id));
   }
 
   async function fetchSeasons(contentId: string) {
@@ -426,6 +445,32 @@ const EditContent = () => {
               .from('seasons')
               .delete()
               .eq('id', existingSeason.id);
+          }
+        }
+      }
+      
+      // Save content tags
+      if (contentId) {
+        // Delete existing content_tags for this content
+        await supabase
+          .from('content_tags')
+          .delete()
+          .eq('content_id', contentId);
+        
+        // Insert new content_tags
+        if (selectedTagIds.length > 0) {
+          const contentTagsToInsert = selectedTagIds.map(tagId => ({
+            content_id: contentId,
+            tag_id: tagId
+          }));
+          
+          const { error: tagsError } = await supabase
+            .from('content_tags')
+            .insert(contentTagsToInsert as any);
+            
+          if (tagsError) {
+            console.error("Failed to save tags:", tagsError);
+            toast.error("Content saved but failed to save some tags");
           }
         }
       }
@@ -723,6 +768,14 @@ const EditContent = () => {
             <ChannelsSelector 
               selectedChannels={selectedChannels} 
               onChannelsChange={setSelectedChannels} 
+            />
+          </div>
+          
+          <div className="border border-gray-700 rounded-md p-6">
+            <TagsSelector 
+              selectedTagIds={selectedTagIds} 
+              onTagsChange={setSelectedTagIds}
+              contentType={contentType}
             />
           </div>
           
