@@ -66,6 +66,8 @@ const MATURITY_RATINGS = [
 const AUDIO_LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Japanese", "Korean", "Chinese", "Hindi"];
 const SUBTITLE_LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Japanese", "Korean", "Chinese", "Hindi"];
 
+const DEFAULT_MIDROLL_URL = "https://servedby.aqua-adserver.com/fc.php?script=apVideo:vast2&zoneid=12154";
+
 const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -526,8 +528,17 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                       type="url"
                       {...register("vastAdMidroll")}
                       className="mt-1 bg-gray-700 border-gray-600 text-white"
-                      placeholder="https://example.com/ads/midroll.xml"
+                      placeholder={DEFAULT_MIDROLL_URL}
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 text-xs"
+                      onClick={() => setValue("vastAdMidroll", DEFAULT_MIDROLL_URL)}
+                    >
+                      Use Default Midroll URL
+                    </Button>
                   </div>
 
                   <div>
