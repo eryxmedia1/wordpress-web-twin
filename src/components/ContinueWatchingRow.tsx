@@ -97,7 +97,7 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
           `)
           .eq("profile_id", currentProfile.id)
           .gt("progress_percent", 0)
-          .lt("progress_percent", 100)
+          .lt("progress_percent", 95) // Only remove when 95% complete (nearly finished)
           .order("last_watched_at", { ascending: false })
           .limit(20),
         supabase
