@@ -77,19 +77,8 @@ const EditContent = () => {
   const [isFeatured, setIsFeatured] = useState(false);
   const [bulkImportUrls, setBulkImportUrls] = useState("");
   
-  // For TV shows
-  const [seasons, setSeasons] = useState<Season[]>([{ 
-    number: 1, 
-    episodes: [{ 
-      number: 1, 
-      title: "Pilot", 
-      description: "", 
-      duration: "", 
-      videoUrl: "",
-      thumbnail: "",
-      vastAdUrl: ""
-    }] 
-  }]);
+  // For TV shows - start with empty array, will be populated from DB
+  const [seasons, setSeasons] = useState<Season[]>([]);
   
   // Available videos for episode selection
   const [availableVideos, setAvailableVideos] = useState<{id: string; title: string; video_url: string | null; poster_url: string | null}[]>([]);
@@ -916,17 +905,27 @@ const EditContent = () => {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-medium">Seasons & Episodes</h3>
                 <Button 
-                  onClick={() => setSeasons([...seasons, { 
-                    number: seasons.length + 1, 
-                    episodes: [{ number: 1, title: "Episode 1", description: "", duration: "", videoUrl: "", thumbnail: "", vastAdUrl: "" }] 
-                  }])}
+                  onClick={() => {
+                    const nextSeasonNumber = seasons.length > 0 
+                      ? Math.max(...seasons.map(s => s.number)) + 1 
+                      : 1;
+                    setSeasons([...seasons, { 
+                      number: nextSeasonNumber, 
+                      episodes: [] 
+                    }]);
+                  }}
                   className="bg-[#e50914] hover:bg-[#f6121d]"
                 >
                   <Plus className="mr-2" /> Add Season
                 </Button>
               </div>
               
-              <Tabs defaultValue={`season-1`} className="w-full">
+              {seasons.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No seasons added yet. Click "Add Season" to get started.</p>
+                </div>
+              ) : (
+              <Tabs defaultValue={`season-${seasons[0]?.number || 1}`} className="w-full">
                 <TabsList className="bg-gray-800 h-auto flex-wrap">
                   {seasons.map((season) => (
                     <TabsTrigger key={season.number} value={`season-${season.number}`} className="data-[state=active]:bg-gray-700">
@@ -973,8 +972,10 @@ const EditContent = () => {
                         }))}
                         selectedVideos={season.episodes.map((ep, idx) => {
                           const matchedVideo = availableVideos.find(v => v.video_url === ep.videoUrl);
+                          // Use a stable ID based on videoUrl or index
+                          const stableId = matchedVideo?.id || (ep.videoUrl ? `url-${btoa(ep.videoUrl).slice(0, 12)}` : `manual-${season.number}-${ep.number}`);
                           return {
-                            id: matchedVideo?.id || `episode-${idx}`,
+                            id: stableId,
                             title: matchedVideo?.title || ep.title,
                             video_url: ep.videoUrl,
                             poster_url: matchedVideo?.poster_url || ep.thumbnail || null,
@@ -1279,6 +1280,7 @@ const EditContent = () => {
                   </TabsContent>
                 ))}
               </Tabs>
+              )}
             </div>
           )}
         </div>
