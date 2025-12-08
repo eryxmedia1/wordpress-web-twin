@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Bell, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings, Shield } from "lucide-react";
+import { Search, Bell, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings, Shield, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -320,6 +320,13 @@ const Navbar = () => {
               <Link to="/account" className="flex items-center gap-3 px-4 py-2">
                 <User className="h-4 w-4" />
                 <span>Account</span>
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link to="/plans" className="flex items-center gap-3 px-4 py-2">
+                <Crown className="h-4 w-4 text-amber-500" />
+                <span>Manage Subscription</span>
               </Link>
             </DropdownMenuItem>
 

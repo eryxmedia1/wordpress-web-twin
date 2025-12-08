@@ -1,19 +1,22 @@
 import { Link } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ContentLockBadge } from "@/components/ContentLockBadge";
 
 interface Top10Item {
   id: string;
   title: string;
   posterUrl: string;
   rank: number;
+  requiredPlans?: string[];
 }
 
 interface Top10RowProps {
   title: string;
   items: Top10Item[];
+  userPlan?: string;
 }
 
-const Top10Row = ({ title, items }: Top10RowProps) => {
+const Top10Row = ({ title, items, userPlan = 'free' }: Top10RowProps) => {
   return (
     <section className="space-y-4">
       <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
@@ -47,6 +50,14 @@ const Top10Row = ({ title, items }: Top10RowProps) => {
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                {/* Lock Badge for restricted content */}
+                {item.requiredPlans && item.requiredPlans.length > 0 && (
+                  <ContentLockBadge 
+                    requiredPlans={item.requiredPlans} 
+                    userPlan={userPlan} 
+                  />
+                )}
               </div>
             </Link>
           ))}

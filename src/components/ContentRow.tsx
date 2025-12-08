@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import ReactPlayer from "react-player";
+import { ContentLockBadge } from "@/components/ContentLockBadge";
 
 interface Content {
   id: string;
@@ -15,6 +16,7 @@ interface Content {
   category?: string;
   videoUrl?: string | null;
   trailerUrl?: string | null;
+  requiredPlans?: string[];
 }
 
 interface ContentRowProps {
@@ -22,9 +24,10 @@ interface ContentRowProps {
   contents: Content[];
   seeAllLink?: string;
   onMoreInfo?: (contentId: string) => void;
+  userPlan?: string;
 }
 
-const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps) => {
+const ContentRow = ({ title, contents, seeAllLink, onMoreInfo, userPlan = 'free' }: ContentRowProps) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoverPosition, setHoverPosition] = useState<'left' | 'center' | 'right'>('center');
   const [videoError, setVideoError] = useState<Record<string, boolean>>({});
@@ -221,10 +224,16 @@ const ContentRow = ({ title, contents, seeAllLink, onMoreInfo }: ContentRowProps
                       className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                       loading="lazy"
                     />
-                    {content.rating && (
+                    {content.rating && !content.requiredPlans?.length && (
                       <div className="absolute top-2 right-2 bg-secondary text-secondary-foreground px-1.5 py-0.5 text-xs font-medium rounded-sm">
                         {content.rating}
                       </div>
+                    )}
+                    {content.requiredPlans && content.requiredPlans.length > 0 && (
+                      <ContentLockBadge 
+                        requiredPlans={content.requiredPlans} 
+                        userPlan={userPlan} 
+                      />
                     )}
                   </div>
                   <h3 className="text-sm font-medium truncate text-foreground mt-2">{content.title}</h3>
