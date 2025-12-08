@@ -17,6 +17,9 @@ interface Top10Item {
   requiredPlans?: string[];
   trailerUrl?: string;
   videoUrl?: string;
+  rating?: string;
+  year?: string;
+  genre?: string;
 }
 
 interface Top10RowProps {
@@ -218,15 +221,19 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                   </span>
                 </div>
                 
-                {/* Poster */}
+              {/* Card Container */}
                 <div 
                   className={`relative ml-12 md:ml-16 rounded-lg overflow-hidden bg-card z-10 shadow-xl transition-all duration-300 ease-out ${
                     isHovered 
-                      ? 'w-52 md:w-64 h-64 md:h-80 scale-110 shadow-2xl' 
+                      ? 'w-56 md:w-72 shadow-2xl scale-105' 
                       : 'w-28 md:w-36 h-40 md:h-52'
                   }`}
                 >
-                  <Link to={`/watch/${item.id}`} className="block w-full h-full">
+                  {/* Video/Poster Section - Top */}
+                  <Link 
+                    to={`/watch/${item.id}`} 
+                    className={`block relative ${isHovered ? 'h-32 md:h-40' : 'h-full'}`}
+                  >
                     {showVideo ? (
                       <ReactPlayer
                         url={videoUrl}
@@ -252,16 +259,21 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                         className="w-full h-full object-cover"
                       />
                     )}
+                    
+                    {/* Gradient overlay at bottom of video */}
+                    {isHovered && (
+                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent" />
+                    )}
                   </Link>
                   
-                  <div className={`absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent transition-opacity pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
-                  
+                  {/* Content Section - Bottom (only on hover) */}
                   {isHovered && (
-                    <div className="absolute bottom-0 left-0 right-0 p-3 space-y-2">
+                    <div className="bg-card p-3 space-y-3">
+                      {/* Action Buttons Row */}
                       <div className="flex items-center gap-2">
                         <Button
                           size="icon"
-                          className="h-8 w-8 rounded-full bg-white hover:bg-white/90 text-black"
+                          className="h-9 w-9 rounded-full bg-white hover:bg-white/90 text-black"
                           onClick={(e) => handlePlay(e, item.id)}
                         >
                           <Play className="h-4 w-4 fill-current" />
@@ -269,7 +281,7 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                         <Button
                           size="icon"
                           variant="outline"
-                          className={`h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isInList ? 'border-primary text-primary' : ''}`}
+                          className={`h-9 w-9 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isInList ? 'border-primary text-primary' : ''}`}
                           onClick={(e) => toggleMyList(e, item.id)}
                         >
                           {isInList ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -277,7 +289,7 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                         <Button
                           size="icon"
                           variant="outline"
-                          className={`h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isLiked ? 'text-primary border-primary' : ''}`}
+                          className={`h-9 w-9 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isLiked ? 'text-primary border-primary' : ''}`}
                           onClick={(e) => toggleLike(e, item.id)}
                         >
                           <ThumbsUp className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
@@ -286,14 +298,31 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
                           <Button
                             size="icon"
                             variant="outline"
-                            className="h-8 w-8 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ml-auto"
+                            className="h-9 w-9 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ml-auto"
                             onClick={(e) => handleMoreInfo(e, item.id)}
                           >
                             <Info className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
-                      <p className="text-sm font-semibold text-foreground line-clamp-2">{item.title}</p>
+                      
+                      {/* Title */}
+                      <p className="text-sm font-semibold text-foreground line-clamp-1">{item.title}</p>
+                      
+                      {/* Metadata Row */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {item.rating && (
+                          <span className="px-1.5 py-0.5 text-xs font-medium border border-muted-foreground/40 text-muted-foreground rounded">
+                            {item.rating}
+                          </span>
+                        )}
+                        {item.year && (
+                          <span className="text-xs text-muted-foreground">{item.year}</span>
+                        )}
+                        {item.genre && (
+                          <span className="text-xs text-muted-foreground">• {item.genre.split(',')[0]}</span>
+                        )}
+                      </div>
                     </div>
                   )}
                   

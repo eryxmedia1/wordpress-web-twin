@@ -16,6 +16,9 @@ interface Top10Item {
   requiredPlans?: string[];
   trailerUrl?: string;
   videoUrl?: string;
+  rating?: string;
+  year?: string;
+  genre?: string;
 }
 
 interface MobileTop10RowProps {
@@ -213,10 +216,11 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
                 </span>
               </div>
 
+              {/* Card Container */}
               <div 
                 className={`relative ml-6 rounded-lg overflow-hidden bg-card shadow-lg transition-all duration-300 ${
                   isExpanded 
-                    ? 'w-[160px] h-[240px] shadow-2xl' 
+                    ? 'w-[180px] shadow-2xl' 
                     : 'w-[90px] aspect-[2/3]'
                 }`}
               >
@@ -228,39 +232,45 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
                   />
                 )}
                 
-                {showVideo ? (
-                  <ReactPlayer
-                    url={videoUrl}
-                    playing
-                    muted
-                    loop
-                    width="100%"
-                    height="100%"
-                    style={{ position: 'absolute', top: 0, left: 0 }}
-                    onError={() => handleVideoError(item.id)}
-                    config={{
-                      file: {
-                        attributes: {
-                          style: { objectFit: 'cover', width: '100%', height: '100%' }
+                {/* Video/Poster Section - Top */}
+                <div className={`relative ${isExpanded ? 'h-[100px]' : 'h-full'}`}>
+                  {showVideo ? (
+                    <ReactPlayer
+                      url={videoUrl}
+                      playing
+                      muted
+                      loop
+                      width="100%"
+                      height="100%"
+                      style={{ position: 'absolute', top: 0, left: 0 }}
+                      onError={() => handleVideoError(item.id)}
+                      config={{
+                        file: {
+                          attributes: {
+                            style: { objectFit: 'cover', width: '100%', height: '100%' }
+                          }
                         }
-                      }
-                    }}
-                  />
-                ) : (
-                  <img
-                    src={item.posterUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover transition-transform duration-300"
-                  />
-                )}
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src={item.posterUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover transition-transform duration-300"
+                    />
+                  )}
+                  
+                  {/* Gradient overlay at bottom of video */}
+                  {isExpanded && (
+                    <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-card to-transparent" />
+                  )}
+                </div>
 
+                {/* Content Section - Bottom (only when expanded) */}
                 {isExpanded && (
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent pointer-events-none" />
-                )}
-
-                {isExpanded && (
-                  <div className="absolute bottom-0 left-0 right-0 p-2 space-y-2">
-                    <div className="flex items-center justify-center gap-2">
+                  <div className="bg-card p-2 space-y-2">
+                    {/* Action Buttons Row */}
+                    <div className="flex items-center justify-center gap-1.5">
                       <Button
                         size="icon"
                         className="h-7 w-7 rounded-full bg-white hover:bg-white/90 text-black"
@@ -293,7 +303,24 @@ const MobileTop10Row = ({ title, items, onItemClick, userPlan = 'free' }: Mobile
                         <Info className="h-3 w-3" />
                       </Button>
                     </div>
-                    <p className="text-xs font-semibold text-foreground text-center line-clamp-2">{item.title}</p>
+                    
+                    {/* Title */}
+                    <p className="text-xs font-semibold text-foreground text-center line-clamp-1">{item.title}</p>
+                    
+                    {/* Metadata Row */}
+                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                      {item.rating && (
+                        <span className="px-1 py-0.5 text-[10px] font-medium border border-muted-foreground/40 text-muted-foreground rounded">
+                          {item.rating}
+                        </span>
+                      )}
+                      {item.year && (
+                        <span className="text-[10px] text-muted-foreground">{item.year}</span>
+                      )}
+                      {item.genre && (
+                        <span className="text-[10px] text-muted-foreground">• {item.genre.split(',')[0]}</span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

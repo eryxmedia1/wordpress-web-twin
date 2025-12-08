@@ -168,6 +168,9 @@ const Browse = () => {
       rank: item.top_rank || index + 1,
       trailerUrl: item.trailer_url || undefined,
       videoUrl: item.video_url || undefined,
+      rating: item.maturity_rating || undefined,
+      year: item.release_year?.toString() || undefined,
+      genre: item.genre || undefined,
     }));
 
   // Sample data for components
