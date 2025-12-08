@@ -352,6 +352,7 @@ const Browse = () => {
               title="Top 10 on Zoe RatedTV Today"
               items={mapToTop10(top10)}
               onMoreInfo={handleMoreInfo}
+              seeAllLink="/category/top-10"
             />
           )}
 
@@ -363,6 +364,7 @@ const Browse = () => {
             <ContentRow
               title="Only on Zoe RatedTV"
               contents={mapToContentRow(zoeOriginals)}
+              seeAllLink="/category/originals"
               onMoreInfo={handleMoreInfo}
             />
           )}
@@ -370,7 +372,7 @@ const Browse = () => {
             <ContentRow
               title="TV Series"
               contents={mapToContentRow(tvShows)}
-              seeAllLink="/genre/tv-shows"
+              seeAllLink="/category/tv-shows"
               onMoreInfo={handleMoreInfo}
             />
           )}
@@ -392,7 +394,7 @@ const Browse = () => {
             <ContentRow
               title="Movies"
               contents={mapToContentRow(movies)}
-              seeAllLink="/genre/movies"
+              seeAllLink="/category/movies"
               onMoreInfo={handleMoreInfo}
             />
           )}

@@ -5,9 +5,10 @@ import ContentRow from "./ContentRow";
 interface ChannelRowProps {
   channelName: string;
   onMoreInfo: (contentId: string) => void;
+  seeAllLink?: string;
 }
 
-const ChannelRow = ({ channelName, onMoreInfo }: ChannelRowProps) => {
+const ChannelRow = ({ channelName, onMoreInfo, seeAllLink }: ChannelRowProps) => {
   const [contents, setContents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -42,10 +43,14 @@ const ChannelRow = ({ channelName, onMoreInfo }: ChannelRowProps) => {
     trailerUrl: item.trailer_url,
   }));
 
+  // Generate seeAllLink if not provided
+  const linkToUse = seeAllLink || `/category/${channelName.toLowerCase().replace(/\s+/g, '-')}`;
+
   return (
     <ContentRow
       title={channelName}
       contents={mappedContents}
+      seeAllLink={linkToUse}
       onMoreInfo={onMoreInfo}
     />
   );

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ContentLockBadge } from "@/components/ContentLockBadge";
 import { Button } from "@/components/ui/button";
-import { Play, Plus, Check, ThumbsUp, Info } from "lucide-react";
+import { Play, Plus, Check, ThumbsUp, Info, ChevronRight } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -27,9 +27,10 @@ interface Top10RowProps {
   items: Top10Item[];
   userPlan?: string;
   onMoreInfo?: (id: string) => void;
+  seeAllLink?: string;
 }
 
-const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps) => {
+const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo, seeAllLink }: Top10RowProps) => {
   const navigate = useNavigate();
   const { currentProfile } = useProfile();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -186,7 +187,17 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo }: Top10RowProps
 
   return (
     <section className="space-y-4">
-      <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
+        {seeAllLink && (
+          <Link 
+            to={seeAllLink} 
+            className="flex items-center text-sm text-secondary hover:text-secondary/80 transition-colors"
+          >
+            See All <ChevronRight className="h-4 w-4" />
+          </Link>
+        )}
+      </div>
       
       <ScrollArea className="w-full">
         <div className="flex gap-2 pb-4">

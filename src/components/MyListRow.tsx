@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
-import { Play, Info } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Play, Info, ChevronRight } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,10 +20,12 @@ interface FavoriteItem {
 
 interface MyListRowProps {
   onMoreInfo: (contentId: string) => void;
+  seeAllLink?: string;
 }
 
-const MyListRow = ({ onMoreInfo }: MyListRowProps) => {
+const MyListRow = ({ onMoreInfo, seeAllLink = "/category/my-list" }: MyListRowProps) => {
   const { currentProfile } = useProfile();
+  const navigate = useNavigate();
   const [items, setItems] = useState<FavoriteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -82,7 +84,15 @@ const MyListRow = ({ onMoreInfo }: MyListRowProps) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="text-xl md:text-2xl font-bold text-foreground">My List</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl md:text-2xl font-bold text-foreground">My List</h2>
+        <button
+          onClick={() => navigate(seeAllLink)}
+          className="flex items-center text-sm text-secondary hover:text-secondary/80 transition-colors"
+        >
+          See All <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
 
       <ScrollArea className="w-full">
         <div className="flex gap-4 pb-4">

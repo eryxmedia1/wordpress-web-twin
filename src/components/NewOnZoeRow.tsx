@@ -44,6 +44,7 @@ const NewOnZoeRow = ({ onMoreInfo }: NewOnZoeRowProps) => {
     <ContentRow
       title="New on Zoe RatedTV"
       contents={mappedContents}
+      seeAllLink="/category/new"
       onMoreInfo={onMoreInfo}
     />
   );
