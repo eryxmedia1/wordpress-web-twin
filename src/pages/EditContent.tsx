@@ -24,6 +24,8 @@ const RATING_OPTIONS = [
   "NR", "Unrated"
 ];
 
+const DEFAULT_MIDROLL_URL = "https://servedby.aqua-adserver.com/fc.php?script=apVideo:vast2&zoneid=12154";
+
 const currentYear = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 50 }, (_, i) => (currentYear - i).toString());
 
@@ -777,8 +779,20 @@ const EditContent = () => {
                     vastAdUrl: {...contentDetails.vastAdUrl, midroll: e.target.value}
                   })}
                   className="bg-gray-800 border-gray-700"
-                  placeholder="https://example.com/vast/midroll.xml"
+                  placeholder={DEFAULT_MIDROLL_URL}
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 text-xs"
+                  onClick={() => setContentDetails({
+                    ...contentDetails, 
+                    vastAdUrl: {...contentDetails.vastAdUrl, midroll: DEFAULT_MIDROLL_URL}
+                  })}
+                >
+                  Use Default Midroll URL
+                </Button>
               </div>
 
               {/* Mid-roll Configuration */}
