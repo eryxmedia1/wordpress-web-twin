@@ -5,13 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { GenreSelector } from "./GenreSelector";
 import { ChannelsSelector } from "./ChannelsSelector";
 import { MembershipPlansSelector } from "./MembershipPlansSelector";
 import { TagsSelector } from "./TagsSelector";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface EpisodeEntry {
   id: string;
@@ -20,6 +21,13 @@ interface EpisodeEntry {
   description: string;
   thumbnailUrl: string;
   duration: string;
+}
+
+interface SeasonEntry {
+  id: string;
+  seasonNumber: number;
+  episodes: EpisodeEntry[];
+  isOpen: boolean;
 }
 
 interface AddEpisodicShowFormProps {
@@ -40,34 +48,84 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isFeatured, setIsFeatured] = useState(false);
   const [isZoeOriginal, setIsZoeOriginal] = useState(false);
-  const [seasonNumber, setSeasonNumber] = useState("1");
 
-  // Episodes
-  const [episodes, setEpisodes] = useState<EpisodeEntry[]>([
-    { id: crypto.randomUUID(), title: "", vimeoUrl: "", description: "", thumbnailUrl: "", duration: "" }
+  // Seasons with episodes
+  const [seasons, setSeasons] = useState<SeasonEntry[]>([
+    {
+      id: crypto.randomUUID(),
+      seasonNumber: 1,
+      isOpen: true,
+      episodes: [
+        { id: crypto.randomUUID(), title: "", vimeoUrl: "", description: "", thumbnailUrl: "", duration: "" }
+      ]
+    }
   ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fetchingMetadata, setFetchingMetadata] = useState<string | null>(null);
 
-  const addEpisode = () => {
-    setEpisodes([
-      ...episodes,
-      { id: crypto.randomUUID(), title: "", vimeoUrl: "", description: "", thumbnailUrl: "", duration: "" }
+  const addSeason = () => {
+    const nextSeasonNumber = Math.max(...seasons.map(s => s.seasonNumber)) + 1;
+    setSeasons([
+      ...seasons,
+      {
+        id: crypto.randomUUID(),
+        seasonNumber: nextSeasonNumber,
+        isOpen: true,
+        episodes: [
+          { id: crypto.randomUUID(), title: "", vimeoUrl: "", description: "", thumbnailUrl: "", duration: "" }
+        ]
+      }
     ]);
   };
 
-  const removeEpisode = (id: string) => {
-    if (episodes.length > 1) {
-      setEpisodes(episodes.filter(ep => ep.id !== id));
+  const removeSeason = (seasonId: string) => {
+    if (seasons.length > 1) {
+      setSeasons(seasons.filter(s => s.id !== seasonId));
     }
   };
 
-  const updateEpisode = (id: string, field: keyof EpisodeEntry, value: string) => {
-    setEpisodes(episodes.map(ep => ep.id === id ? { ...ep, [field]: value } : ep));
+  const toggleSeasonOpen = (seasonId: string) => {
+    setSeasons(seasons.map(s => s.id === seasonId ? { ...s, isOpen: !s.isOpen } : s));
   };
 
-  const fetchVimeoMetadata = async (episodeId: string, url: string) => {
+  const addEpisodeToSeason = (seasonId: string) => {
+    setSeasons(seasons.map(s => {
+      if (s.id === seasonId) {
+        return {
+          ...s,
+          episodes: [
+            ...s.episodes,
+            { id: crypto.randomUUID(), title: "", vimeoUrl: "", description: "", thumbnailUrl: "", duration: "" }
+          ]
+        };
+      }
+      return s;
+    }));
+  };
+
+  const removeEpisodeFromSeason = (seasonId: string, episodeId: string) => {
+    setSeasons(seasons.map(s => {
+      if (s.id === seasonId && s.episodes.length > 1) {
+        return { ...s, episodes: s.episodes.filter(ep => ep.id !== episodeId) };
+      }
+      return s;
+    }));
+  };
+
+  const updateEpisode = (seasonId: string, episodeId: string, field: keyof EpisodeEntry, value: string) => {
+    setSeasons(seasons.map(s => {
+      if (s.id === seasonId) {
+        return {
+          ...s,
+          episodes: s.episodes.map(ep => ep.id === episodeId ? { ...ep, [field]: value } : ep)
+        };
+      }
+      return s;
+    }));
+  };
+
+  const fetchVimeoMetadata = async (seasonId: string, episodeId: string, url: string) => {
     if (!url.includes('vimeo')) return;
     
     setFetchingMetadata(episodeId);
@@ -79,17 +137,25 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
       if (error) throw error;
 
       if (data) {
-        setEpisodes(episodes.map(ep => {
-          if (ep.id === episodeId) {
+        setSeasons(seasons.map(s => {
+          if (s.id === seasonId) {
             return {
-              ...ep,
-              title: ep.title || data.title || "",
-              description: ep.description || data.description || "",
-              thumbnailUrl: ep.thumbnailUrl || data.thumbnail_url || "",
-              duration: ep.duration || data.duration || ""
+              ...s,
+              episodes: s.episodes.map(ep => {
+                if (ep.id === episodeId) {
+                  return {
+                    ...ep,
+                    title: ep.title || data.title || "",
+                    description: ep.description || data.description || "",
+                    thumbnailUrl: ep.thumbnailUrl || data.thumbnail_url || "",
+                    duration: ep.duration || data.duration || ""
+                  };
+                }
+                return ep;
+              })
             };
           }
-          return ep;
+          return s;
         }));
       }
     } catch (error) {
@@ -97,6 +163,12 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
     } finally {
       setFetchingMetadata(null);
     }
+  };
+
+  const getTotalEpisodeCount = () => {
+    return seasons.reduce((total, s) => {
+      return total + s.episodes.filter(ep => ep.title.trim() && ep.vimeoUrl.trim()).length;
+    }, 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,8 +179,8 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
       return;
     }
 
-    const validEpisodes = episodes.filter(ep => ep.title.trim() && ep.vimeoUrl.trim());
-    if (validEpisodes.length === 0) {
+    const totalEpisodes = getTotalEpisodeCount();
+    if (totalEpisodes === 0) {
       toast.error("Please add at least one episode with title and URL");
       return;
     }
@@ -137,38 +209,44 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
 
       if (showError) throw showError;
 
-      // Create season
-      const { data: seasonData, error: seasonError } = await supabase
-        .from('seasons')
-        .insert([{
-          content_id: showData.id,
-          season_number: parseInt(seasonNumber),
-          title: `Season ${seasonNumber}`,
-          description: null,
-          poster_url: null
-        }])
-        .select()
-        .single();
+      // Create seasons and episodes
+      for (const season of seasons) {
+        const validEpisodes = season.episodes.filter(ep => ep.title.trim() && ep.vimeoUrl.trim());
+        if (validEpisodes.length === 0) continue;
 
-      if (seasonError) throw seasonError;
+        // Create season
+        const { data: seasonData, error: seasonError } = await supabase
+          .from('seasons')
+          .insert({
+            content_id: showData.id,
+            season_number: season.seasonNumber,
+            title: `Season ${season.seasonNumber}`,
+            description: null,
+            poster_url: null
+          } as any)
+          .select()
+          .single();
 
-      // Create episodes
-      const episodeInserts = validEpisodes.map((ep, index) => ({
-        season_id: seasonData.id,
-        episode_number: index + 1,
-        title: ep.title,
-        description: ep.description || null,
-        video_url: ep.vimeoUrl,
-        thumbnail_url: ep.thumbnailUrl || null,
-        duration: ep.duration || null,
-        vast_ad_url: null
-      }));
+        if (seasonError) throw seasonError;
 
-      const { error: episodesError } = await supabase
-        .from('episodes')
-        .insert(episodeInserts);
+        // Create episodes for this season
+        const episodeInserts = validEpisodes.map((ep, index) => ({
+          season_id: seasonData.id,
+          episode_number: index + 1,
+          title: ep.title,
+          description: ep.description || null,
+          video_url: ep.vimeoUrl,
+          thumbnail_url: ep.thumbnailUrl || null,
+          duration: ep.duration || null,
+          vast_ad_url: null
+        }));
 
-      if (episodesError) throw episodesError;
+        const { error: episodesError } = await supabase
+          .from('episodes')
+          .insert(episodeInserts);
+
+        if (episodesError) throw episodesError;
+      }
 
       // Add membership plans
       if (selectedPlans.length > 0) {
@@ -188,7 +266,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
         await supabase.from('content_tags').insert(tagInserts);
       }
 
-      toast.success(`"${title}" created with ${validEpisodes.length} episodes!`);
+      toast.success(`"${title}" created with ${seasons.length} season(s) and ${totalEpisodes} episode(s)!`);
       onClose();
     } catch (error) {
       console.error('Error creating episodic show:', error);
@@ -217,12 +295,11 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
               />
             </div>
             <div>
-              <Label className="text-white">Season Number</Label>
+              <Label className="text-white">Release Year</Label>
               <Input
                 type="number"
-                value={seasonNumber}
-                onChange={(e) => setSeasonNumber(e.target.value)}
-                min="1"
+                value={releaseYear}
+                onChange={(e) => setReleaseYear(e.target.value)}
                 className="bg-gray-700 border-gray-600 text-white"
               />
             </div>
@@ -259,25 +336,14 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-white">Release Year</Label>
-              <Input
-                type="number"
-                value={releaseYear}
-                onChange={(e) => setReleaseYear(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
-              />
-            </div>
-            <div>
-              <Label className="text-white">Maturity Rating</Label>
-              <Input
-                value={maturityRating}
-                onChange={(e) => setMaturityRating(e.target.value)}
-                placeholder="TV-PG, TV-MA, etc."
-                className="bg-gray-700 border-gray-600 text-white"
-              />
-            </div>
+          <div>
+            <Label className="text-white">Maturity Rating</Label>
+            <Input
+              value={maturityRating}
+              onChange={(e) => setMaturityRating(e.target.value)}
+              placeholder="TV-PG, TV-MA, etc."
+              className="bg-gray-700 border-gray-600 text-white w-48"
+            />
           </div>
 
           <div className="flex gap-6">
@@ -298,90 +364,135 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
         </CardContent>
       </Card>
 
-      {/* Episodes */}
+      {/* Seasons & Episodes */}
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-white">Episodes (Season {seasonNumber})</CardTitle>
-          <Button type="button" onClick={addEpisode} variant="outline" size="sm">
-            <Plus className="w-4 h-4 mr-1" /> Add Episode
+          <CardTitle className="text-white">Seasons & Episodes</CardTitle>
+          <Button type="button" onClick={addSeason} variant="outline" size="sm">
+            <Plus className="w-4 h-4 mr-1" /> Add Season
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
-          {episodes.map((episode, index) => (
-            <div key={episode.id} className="p-4 bg-gray-700 rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-white font-medium">Episode {index + 1}</span>
-                {episodes.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeEpisode(episode.id)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-gray-300 text-sm">Vimeo URL *</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={episode.vimeoUrl}
-                      onChange={(e) => updateEpisode(episode.id, 'vimeoUrl', e.target.value)}
-                      onBlur={() => fetchVimeoMetadata(episode.id, episode.vimeoUrl)}
-                      placeholder="https://vimeo.com/..."
-                      className="bg-gray-600 border-gray-500 text-white"
-                    />
-                    {fetchingMetadata === episode.id && (
-                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                    )}
+          {seasons.map((season) => (
+            <Collapsible key={season.id} open={season.isOpen} onOpenChange={() => toggleSeasonOpen(season.id)}>
+              <div className="border border-gray-600 rounded-lg overflow-hidden">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-center justify-between p-4 bg-gray-700 cursor-pointer hover:bg-gray-600">
+                    <div className="flex items-center gap-3">
+                      {season.isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                      <span className="text-white font-medium">Season {season.seasonNumber}</span>
+                      <span className="text-gray-400 text-sm">
+                        ({season.episodes.filter(ep => ep.title && ep.vimeoUrl).length} episodes)
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      {seasons.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); removeSeason(season.id); }}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-sm">Episode Title *</Label>
-                  <Input
-                    value={episode.title}
-                    onChange={(e) => updateEpisode(episode.id, 'title', e.target.value)}
-                    placeholder="Episode title"
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
-              </div>
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent>
+                  <div className="p-4 space-y-4 bg-gray-800">
+                    {season.episodes.map((episode, index) => (
+                      <div key={episode.id} className="p-4 bg-gray-700 rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-white font-medium">Episode {index + 1}</span>
+                          {season.episodes.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeEpisodeFromSeason(season.id, episode.id)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
 
-              <div>
-                <Label className="text-gray-300 text-sm">Episode Description</Label>
-                <Textarea
-                  value={episode.description}
-                  onChange={(e) => updateEpisode(episode.id, 'description', e.target.value)}
-                  placeholder="Episode description..."
-                  className="bg-gray-600 border-gray-500 text-white h-16"
-                />
-              </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-gray-300 text-sm">Vimeo URL *</Label>
+                            <div className="flex gap-2 items-center">
+                              <Input
+                                value={episode.vimeoUrl}
+                                onChange={(e) => updateEpisode(season.id, episode.id, 'vimeoUrl', e.target.value)}
+                                onBlur={() => fetchVimeoMetadata(season.id, episode.id, episode.vimeoUrl)}
+                                placeholder="https://vimeo.com/..."
+                                className="bg-gray-600 border-gray-500 text-white"
+                              />
+                              {fetchingMetadata === episode.id && (
+                                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-gray-300 text-sm">Episode Title *</Label>
+                            <Input
+                              value={episode.title}
+                              onChange={(e) => updateEpisode(season.id, episode.id, 'title', e.target.value)}
+                              placeholder="Episode title"
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+                        </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-gray-300 text-sm">Thumbnail URL</Label>
-                  <Input
-                    value={episode.thumbnailUrl}
-                    onChange={(e) => updateEpisode(episode.id, 'thumbnailUrl', e.target.value)}
-                    placeholder="Auto-filled from Vimeo"
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-sm">Duration</Label>
-                  <Input
-                    value={episode.duration}
-                    onChange={(e) => updateEpisode(episode.id, 'duration', e.target.value)}
-                    placeholder="e.g., 45m"
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
+                        <div>
+                          <Label className="text-gray-300 text-sm">Episode Description</Label>
+                          <Textarea
+                            value={episode.description}
+                            onChange={(e) => updateEpisode(season.id, episode.id, 'description', e.target.value)}
+                            placeholder="Episode description..."
+                            className="bg-gray-600 border-gray-500 text-white h-16"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-gray-300 text-sm">Thumbnail URL</Label>
+                            <Input
+                              value={episode.thumbnailUrl}
+                              onChange={(e) => updateEpisode(season.id, episode.id, 'thumbnailUrl', e.target.value)}
+                              placeholder="Auto-filled from Vimeo"
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-gray-300 text-sm">Duration</Label>
+                            <Input
+                              value={episode.duration}
+                              onChange={(e) => updateEpisode(season.id, episode.id, 'duration', e.target.value)}
+                              placeholder="e.g., 45m"
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    <Button 
+                      type="button" 
+                      onClick={() => addEpisodeToSeason(season.id)} 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full"
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Add Episode to Season {season.seasonNumber}
+                    </Button>
+                  </div>
+                </CollapsibleContent>
               </div>
-            </div>
+            </Collapsible>
           ))}
         </CardContent>
       </Card>
@@ -398,7 +509,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
               Creating Show...
             </>
           ) : (
-            `Create Show with ${episodes.filter(e => e.title && e.vimeoUrl).length} Episodes`
+            `Create Show with ${seasons.length} Season(s) & ${getTotalEpisodeCount()} Episode(s)`
           )}
         </Button>
         <Button type="button" variant="outline" onClick={onClose}>

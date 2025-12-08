@@ -31,16 +31,6 @@ export const MembershipPlansSelector = ({
         .order("sort_order");
       if (data) {
         setMembershipPlans(data);
-        
-        // Auto-select Standard and Premium for new content if nothing selected
-        if (selectedPlans.length === 0 && !loaded) {
-          const standardAndPremium = data
-            .filter(p => p.slug === 'standard' || p.slug === 'premium')
-            .map(p => p.id);
-          if (standardAndPremium.length > 0) {
-            onSelectedPlansChange(standardAndPremium);
-          }
-        }
         setLoaded(true);
       }
     };
