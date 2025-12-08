@@ -50,8 +50,11 @@ interface Content {
   created_at?: string;
 }
 
-// Channel names for network rows
+// Channel names for network rows - ordered after TV Series
 const CHANNELS = [
+  "Boss Mogul TV",
+  "Caught On Camera",
+  "Cap Village Media",
   "Zoe RatedTV",
   "MadFaceTV",
   "AyiTV",
@@ -354,15 +357,6 @@ const Browse = () => {
             imageUrl="/placeholder.svg"
           />
 
-          {/* Network / Channel Rows */}
-          {CHANNELS.map((channel) => (
-            <ChannelRow
-              key={channel}
-              channelName={channel}
-              onMoreInfo={handleMoreInfo}
-            />
-          ))}
-
           {/* TV Series */}
           {tvShows.length > 0 && (
             <ContentRow
@@ -372,6 +366,15 @@ const Browse = () => {
               onMoreInfo={handleMoreInfo}
             />
           )}
+
+          {/* Network / Channel Rows - After TV Series */}
+          {CHANNELS.map((channel) => (
+            <ChannelRow
+              key={channel}
+              channelName={channel}
+              onMoreInfo={handleMoreInfo}
+            />
+          ))}
 
           {/* Category Circles */}
           <CategoryCircles title="TV Show Categories" categories={categories} />

@@ -19,6 +19,8 @@ const AVAILABLE_CHANNELS = [
   "Indie Films",
   "More Networks",
   "Boss Mogul TV",
+  "Caught On Camera",
+  "Cap Village Media",
   "Live From Da Street",
 ];
 
