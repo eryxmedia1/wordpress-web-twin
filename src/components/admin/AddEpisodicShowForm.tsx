@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -362,12 +363,25 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
 
           <div>
             <Label className="text-white">Maturity Rating</Label>
-            <Input
-              value={maturityRating}
-              onChange={(e) => setMaturityRating(e.target.value)}
-              placeholder="TV-PG, TV-MA, etc."
-              className="bg-gray-700 border-gray-600 text-white w-48"
-            />
+            <Select value={maturityRating} onValueChange={setMaturityRating}>
+              <SelectTrigger className="bg-gray-700 border-gray-600 text-white w-48">
+                <SelectValue placeholder="Select rating..." />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-700 border-gray-600 z-50">
+                <SelectItem value="TV-Y">TV-Y (Young Children)</SelectItem>
+                <SelectItem value="TV-Y7">TV-Y7 (Older Children)</SelectItem>
+                <SelectItem value="TV-G">TV-G (General Audiences)</SelectItem>
+                <SelectItem value="TV-PG">TV-PG (Parental Guidance)</SelectItem>
+                <SelectItem value="TV-14">TV-14 (Parents Cautioned)</SelectItem>
+                <SelectItem value="TV-MA">TV-MA (Mature Audiences)</SelectItem>
+                <SelectItem value="G">G (General)</SelectItem>
+                <SelectItem value="PG">PG (Parental Guidance)</SelectItem>
+                <SelectItem value="PG-13">PG-13</SelectItem>
+                <SelectItem value="R">R (Restricted)</SelectItem>
+                <SelectItem value="NC-17">NC-17 (Adults Only)</SelectItem>
+                <SelectItem value="NR">NR (Not Rated)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex gap-6">
