@@ -5,7 +5,7 @@ import { useProfile } from "@/context/ProfileContext";
 import Navbar from "@/components/Navbar";
 import ExpandingSidebar from "@/components/ExpandingSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import MobileLayout from "@/components/mobile/MobileLayout";
+import MobileLiveTV from "@/components/mobile/MobileLiveTV";
 import ReactPlayer from "react-player";
 import { Loader2, Radio, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ interface Channel {
   logo_url: string | null;
   description: string | null;
   is_active: boolean;
+  playback_url: string | null;
+  is_live_streaming: boolean;
 }
 
 interface LiveSegment {
@@ -435,7 +437,7 @@ export default function LiveTV() {
   );
 
   if (isMobile) {
-    return <MobileLayout>{content}</MobileLayout>;
+    return <MobileLiveTV />;
   }
 
   return (
