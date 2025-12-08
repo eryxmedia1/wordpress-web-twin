@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
 import ExpandingSidebar from "@/components/ExpandingSidebar";
 import FeaturedCarousel from "@/components/FeaturedCarousel";
@@ -20,6 +21,9 @@ import NewOnZoeRow from "@/components/NewOnZoeRow";
 import WeThinkYoullLoveRow from "@/components/WeThinkYoullLoveRow";
 import NextToWatchRow from "@/components/NextToWatchRow";
 import ChannelRow from "@/components/ChannelRow";
+import MobileLayout from "@/components/mobile/MobileLayout";
+import MobileHeroCarousel from "@/components/mobile/MobileHeroCarousel";
+import MobileContentRow from "@/components/mobile/MobileContentRow";
 
 interface Content {
   id: string;
@@ -53,6 +57,7 @@ const CHANNELS = [
 
 const Browse = () => {
   const { currentProfile } = useProfile();
+  const isMobile = useIsMobile();
   const [featuredContents, setFeaturedContents] = useState<Content[]>([]);
   const [movies, setMovies] = useState<Content[]>([]);
   const [tvShows, setTvShows] = useState<Content[]>([]);
@@ -186,6 +191,86 @@ const Browse = () => {
     );
   }
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <MobileLayout>
+        {/* Mobile Hero Carousel */}
+        <MobileHeroCarousel
+          contents={featuredContents}
+          onMoreInfo={handleMoreInfo}
+        />
+
+        {/* Mobile Content Rows */}
+        <div className="space-y-4 pb-4">
+          {/* Zoe Originals */}
+          {zoeOriginals.length > 0 && (
+            <MobileContentRow
+              title="Only on Zoe RatedTV"
+              items={mapToContentRow(zoeOriginals)}
+              onItemClick={handleMoreInfo}
+            />
+          )}
+
+          {/* Movies */}
+          {movies.length > 0 && (
+            <MobileContentRow
+              title="Movies"
+              items={mapToContentRow(movies)}
+              onItemClick={handleMoreInfo}
+              seeAllLink="/genre/movies"
+            />
+          )}
+
+          {/* TV Series */}
+          {tvShows.length > 0 && (
+            <MobileContentRow
+              title="TV Series"
+              items={mapToContentRow(tvShows)}
+              onItemClick={handleMoreInfo}
+              seeAllLink="/genre/tv-shows"
+            />
+          )}
+
+          {/* Top 10 */}
+          {top10.length > 0 && (
+            <MobileContentRow
+              title="Top 10 on Zoe RatedTV"
+              items={mapToTop10(top10).map(item => ({
+                id: item.id,
+                title: `${item.rank}. ${item.title}`,
+                posterUrl: item.posterUrl,
+              }))}
+              onItemClick={handleMoreInfo}
+            />
+          )}
+
+          {/* Network Rows */}
+          {CHANNELS.slice(0, 3).map((channel) => (
+            <MobileContentRow
+              key={channel}
+              title={channel}
+              items={movies.slice(0, 5).map(m => ({
+                id: m.id,
+                title: m.title,
+                posterUrl: m.poster_url || "/placeholder.svg"
+              }))}
+              onItemClick={handleMoreInfo}
+            />
+          ))}
+        </div>
+
+        {/* Content Detail Modal */}
+        <ContentDetailModal
+          contentId={selectedContentId}
+          isOpen={!!selectedContentId}
+          onClose={() => setSelectedContentId(null)}
+        />
+      </MobileLayout>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
