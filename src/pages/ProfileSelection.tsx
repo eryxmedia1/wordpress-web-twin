@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile, UserProfile } from '@/context/ProfileContext';
 import { useAuth } from '@/context/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Smile, Star, Heart, Zap, Crown, Ghost } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import ProfileEditor from '@/components/ProfileEditor';
+import MobileProfileSelection from '@/components/mobile/MobileProfileSelection';
 
 const AVATAR_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   smile: Smile,
@@ -20,6 +22,7 @@ const ProfileSelection = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { profiles, isLoading, selectProfile, createProfile, updateProfile, deleteProfile } = useProfile();
+  const isMobile = useIsMobile();
   const [isManaging, setIsManaging] = useState(false);
   const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -80,6 +83,21 @@ const ProfileSelection = () => {
     );
   }
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <MobileProfileSelection
+        profiles={profiles}
+        isManaging={isManaging}
+        onSelectProfile={handleSelectProfile}
+        onCreateProfile={handleCreateProfile}
+        onToggleManage={() => setIsManaging(!isManaging)}
+        onSignOut={handleSignOut}
+      />
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       {/* Header with logo and sign out */}
