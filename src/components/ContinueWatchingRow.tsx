@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Play, Plus, ThumbsUp, Info, Check, X } from "lucide-react";
+import { Play, Plus, ThumbsUp, Info, Check } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -247,23 +247,7 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
     }
   };
 
-  const removeFromHistory = async (historyId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!currentProfile?.id) return;
-
-    const { error } = await supabase
-      .from("watch_history")
-      .delete()
-      .eq("id", historyId);
-
-    if (!error) {
-      setItems(prev => prev.filter(item => item.id !== historyId));
-      toast.success("Removed from Continue Watching");
-    } else {
-      toast.error("Failed to remove");
-    }
-  };
+  // Removed removeFromHistory - users cannot delete continue watching items
 
   const getPositionStyles = (position: 'left' | 'center' | 'right') => {
     switch (position) {
@@ -365,14 +349,6 @@ const ContinueWatchingRow = ({ onMoreInfo }: ContinueWatchingRowProps) => {
                       ...positionStyles,
                     }}
                   >
-                    {/* Remove Button */}
-                    <button
-                      onClick={(e) => removeFromHistory(item.id, e)}
-                      className="absolute top-2 right-2 z-10 bg-background/80 hover:bg-background rounded-full p-1.5 transition-colors"
-                      title="Remove from Continue Watching"
-                    >
-                      <X className="w-4 h-4 text-foreground" />
-                    </button>
 
                     {/* Video/Image Preview with ReactPlayer */}
                     <div className="relative aspect-video bg-black">
