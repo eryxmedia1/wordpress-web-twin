@@ -492,9 +492,14 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          is_live_streaming: boolean | null
           logo_url: string | null
+          mux_stream_id: string | null
           name: string
+          playback_url: string | null
+          rtmp_url: string | null
           slug: string
+          stream_key: string | null
           timezone: string | null
           updated_at: string | null
         }
@@ -504,9 +509,14 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          is_live_streaming?: boolean | null
           logo_url?: string | null
+          mux_stream_id?: string | null
           name: string
+          playback_url?: string | null
+          rtmp_url?: string | null
           slug: string
+          stream_key?: string | null
           timezone?: string | null
           updated_at?: string | null
         }
@@ -516,9 +526,14 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          is_live_streaming?: boolean | null
           logo_url?: string | null
+          mux_stream_id?: string | null
           name?: string
+          playback_url?: string | null
+          rtmp_url?: string | null
           slug?: string
+          stream_key?: string | null
           timezone?: string | null
           updated_at?: string | null
         }
