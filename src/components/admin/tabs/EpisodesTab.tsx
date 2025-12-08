@@ -27,7 +27,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Plus, Trash2, Film, Loader2, GripVertical, X } from "lucide-react";
+import { Plus, Trash2, Film, Loader2, GripVertical, X, Upload } from "lucide-react";
 import { VimeoUrlInput } from "@/components/VimeoUrlInput";
 import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
 
@@ -80,6 +80,13 @@ const EpisodesTab = () => {
   const [newSeasonDialogOpen, setNewSeasonDialogOpen] = useState(false);
   const [newSeasonTitle, setNewSeasonTitle] = useState("");
   const [addingSeason, setAddingSeason] = useState(false);
+
+  // Bulk import state
+  const [bulkImportDialogOpen, setBulkImportDialogOpen] = useState(false);
+  const [bulkImportSeasonId, setBulkImportSeasonId] = useState<string>("");
+  const [bulkUrls, setBulkUrls] = useState("");
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
 
   // Fetch all TV shows
   useEffect(() => {
@@ -305,6 +312,144 @@ const EpisodesTab = () => {
     }
   };
 
+  // Open bulk import dialog
+  const openBulkImportDialog = (seasonId: string) => {
+    setBulkImportSeasonId(seasonId);
+    setBulkUrls("");
+    setBulkProgress({ current: 0, total: 0 });
+    setBulkImportDialogOpen(true);
+  };
+
+  // Fetch Vimeo metadata for a URL (simplified for bulk import)
+  const fetchVimeoMetadataSimple = async (url: string): Promise<{ title: string | null; description: string | null; thumbnail_url: string | null; thumbnail_large: string | null; duration: string | null } | null> => {
+    try {
+      // Extract video ID from various Vimeo URL formats
+      const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
+      const match = url.match(vimeoRegex);
+      
+      if (!match) return null;
+      
+      const videoId = match[1];
+      const response = await fetch(`https://vimeo.com/api/v2/video/${videoId}.json`);
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (data && data[0]) {
+        return {
+          title: data[0].title,
+          description: data[0].description,
+          thumbnail_url: data[0].thumbnail_small,
+          thumbnail_large: data[0].thumbnail_large,
+          duration: formatDuration(data[0].duration),
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching Vimeo metadata:", error);
+      return null;
+    }
+  };
+
+  // Format duration from seconds to readable format
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    }
+    return `${secs}s`;
+  };
+
+  // Bulk import episodes
+  const handleBulkImport = async () => {
+    if (!bulkImportSeasonId || !bulkUrls.trim()) {
+      toast.error("Please enter at least one Vimeo URL");
+      return;
+    }
+
+    setBulkImporting(true);
+    
+    // Parse URLs - one per line
+    const urls = bulkUrls
+      .split('\n')
+      .map(url => url.trim())
+      .filter(url => url.length > 0 && url.includes('vimeo'));
+
+    if (urls.length === 0) {
+      toast.error("No valid Vimeo URLs found");
+      setBulkImporting(false);
+      return;
+    }
+
+    setBulkProgress({ current: 0, total: urls.length });
+    
+    const currentEpisodes = episodesBySeasonId[bulkImportSeasonId] || [];
+    let nextEpisodeNumber = currentEpisodes.length > 0 
+      ? Math.max(...currentEpisodes.map(e => e.episode_number)) + 1 
+      : 1;
+
+    const newEpisodes: Episode[] = [];
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      setBulkProgress({ current: i + 1, total: urls.length });
+
+      // Fetch metadata from Vimeo
+      const metadata = await fetchVimeoMetadataSimple(url);
+      
+      const episodeData = {
+        season_id: bulkImportSeasonId,
+        episode_number: nextEpisodeNumber,
+        title: metadata?.title || `Episode ${nextEpisodeNumber}`,
+        description: metadata?.description || null,
+        video_url: url,
+        thumbnail_url: metadata?.thumbnail_large || metadata?.thumbnail_url || null,
+        duration: metadata?.duration || null,
+        vast_ad_url: null,
+      };
+
+      const { data, error } = await supabase
+        .from("episodes")
+        .insert([episodeData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error adding episode:", error);
+        failCount++;
+      } else {
+        newEpisodes.push(data);
+        successCount++;
+        nextEpisodeNumber++;
+      }
+    }
+
+    // Update local state with all new episodes
+    if (newEpisodes.length > 0) {
+      setEpisodesBySeasonId(prev => ({
+        ...prev,
+        [bulkImportSeasonId]: [...(prev[bulkImportSeasonId] || []), ...newEpisodes],
+      }));
+    }
+
+    if (successCount > 0) {
+      toast.success(`Added ${successCount} episode${successCount !== 1 ? 's' : ''} successfully`);
+    }
+    if (failCount > 0) {
+      toast.error(`Failed to add ${failCount} episode${failCount !== 1 ? 's' : ''}`);
+    }
+
+    setBulkImporting(false);
+    setBulkImportDialogOpen(false);
+  };
+
   const selectedShow = tvShows.find(s => s.id === selectedShowId);
 
   if (loading) {
@@ -455,7 +600,7 @@ const EpisodesTab = () => {
                       </AccordionTrigger>
                       <AccordionContent className="pt-4 pb-6">
                         {/* Season Actions */}
-                        <div className="flex items-center gap-2 mb-4">
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
                           <Button 
                             size="sm" 
                             onClick={() => openAddEpisodeDialog(season.id)}
@@ -463,6 +608,15 @@ const EpisodesTab = () => {
                           >
                             <Plus className="w-4 h-4 mr-1" />
                             Add Episode
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => openBulkImportDialog(season.id)}
+                            className="border-primary text-primary hover:bg-primary/10"
+                          >
+                            <Upload className="w-4 h-4 mr-1" />
+                            Bulk Import
                           </Button>
                           <Button 
                             size="sm" 
@@ -628,6 +782,71 @@ const EpisodesTab = () => {
                 <Plus className="w-4 h-4 mr-2" />
               )}
               Add Episode
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Import Dialog */}
+      <Dialog open={bulkImportDialogOpen} onOpenChange={setBulkImportDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Bulk Import Episodes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+              <p className="text-sm text-foreground">
+                <strong>Instructions:</strong> Paste multiple Vimeo URLs below (one per line). 
+                Each URL will be automatically processed to fetch title, thumbnail, and duration.
+              </p>
+            </div>
+            
+            <div>
+              <Label>Vimeo URLs (one per line)</Label>
+              <Textarea
+                value={bulkUrls}
+                onChange={(e) => setBulkUrls(e.target.value)}
+                placeholder={`https://vimeo.com/123456789\nhttps://vimeo.com/234567890\nhttps://vimeo.com/345678901`}
+                className="mt-1 bg-background border-border font-mono text-sm"
+                rows={8}
+                disabled={bulkImporting}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {bulkUrls.split('\n').filter(url => url.trim().includes('vimeo')).length} valid URL(s) detected
+              </p>
+            </div>
+
+            {bulkImporting && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Processing episodes...</span>
+                  <span>{bulkProgress.current} of {bulkProgress.total}</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${bulkProgress.total > 0 ? (bulkProgress.current / bulkProgress.total) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <Button 
+              onClick={handleBulkImport} 
+              disabled={bulkImporting || !bulkUrls.trim()}
+              className="w-full bg-primary hover:bg-primary/90"
+            >
+              {bulkImporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Importing {bulkProgress.current} of {bulkProgress.total}...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import All Episodes
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
