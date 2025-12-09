@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ReactPlayer from "react-player";
-import { Loader2, Radio, Volume2, VolumeX, ChevronLeft, ChevronRight, Maximize, X } from "lucide-react";
+import { Loader2, Radio, Volume2, VolumeX, Maximize, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
+import { useAds } from "@/hooks/useAds";
+import { AdBreakOverlay } from "@/components/AdBreakOverlay";
+import { useProfile } from "@/context/ProfileContext";
 
 interface Channel {
   id: string;
@@ -44,6 +47,7 @@ interface LiveSegment {
 export default function MobileLiveTV() {
   const { channelSlug } = useParams();
   const navigate = useNavigate();
+  const { currentProfile } = useProfile();
   
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
@@ -60,10 +64,77 @@ export default function MobileLiveTV() {
   const muxPollRef = useRef<NodeJS.Timeout | null>(null);
   const targetOffsetRef = useRef<number>(0);
 
+  // Mid-roll ad timer state
+  const [watchTimeSeconds, setWatchTimeSeconds] = useState(0);
+  const [preRollPlayed, setPreRollPlayed] = useState(false);
+  const midrollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
     containScroll: 'trimSnaps',
   });
+
+  // Ad system hook
+  const {
+    currentAd,
+    isAdPlaying,
+    showCountdown,
+    countdownSeconds,
+    adQueueLength,
+    currentAdIndex,
+    podConfig,
+    onAdComplete,
+    skipAd,
+    requestPreRoll,
+    requestMidRoll,
+  } = useAds({
+    channelId: selectedChannel?.id,
+  });
+
+  // Calculate next ad break countdown
+  const midrollIntervalSeconds = (podConfig.midrollIntervalMinutes || 10) * 60;
+  const nextAdBreakIn = midrollIntervalSeconds > 0 
+    ? midrollIntervalSeconds - (watchTimeSeconds % midrollIntervalSeconds)
+    : 0;
+
+  // Mid-roll timer effect
+  useEffect(() => {
+    if (!isPlaying || isAdPlaying || isLiveStreaming) {
+      if (midrollTimerRef.current) {
+        clearInterval(midrollTimerRef.current);
+        midrollTimerRef.current = null;
+      }
+      return;
+    }
+
+    midrollTimerRef.current = setInterval(() => {
+      setWatchTimeSeconds(prev => {
+        const newTime = prev + 1;
+        // Check if it's time for a mid-roll break
+        if (newTime > 0 && midrollIntervalSeconds > 0 && newTime % midrollIntervalSeconds === 0) {
+          console.log('[MobileLiveTV] Triggering mid-roll ad break');
+          requestMidRoll(10); // 10 second countdown
+        }
+        return newTime;
+      });
+    }, 1000);
+
+    return () => {
+      if (midrollTimerRef.current) {
+        clearInterval(midrollTimerRef.current);
+        midrollTimerRef.current = null;
+      }
+    };
+  }, [isPlaying, isAdPlaying, isLiveStreaming, midrollIntervalSeconds, requestMidRoll]);
+
+  // Request pre-roll on initial channel load
+  useEffect(() => {
+    if (selectedChannel && isPlaying && !isAdPlaying && !preRollPlayed && !isLiveStreaming) {
+      console.log('[MobileLiveTV] Requesting pre-roll ad');
+      requestPreRoll();
+      setPreRollPlayed(true);
+    }
+  }, [selectedChannel, isPlaying, isAdPlaying, preRollPlayed, isLiveStreaming, requestPreRoll]);
 
   // Check Mux stream status for a channel
   const checkMuxStreamStatus = useCallback(async (channel: Channel) => {
@@ -214,6 +285,8 @@ export default function MobileLiveTV() {
     setLiveSegment(null);
     setIsPlaying(false);
     setIsSeeking(false);
+    setPreRollPlayed(false); // Reset pre-roll for new channel
+    setWatchTimeSeconds(0); // Reset watch time
     targetOffsetRef.current = 0;
     navigate(`/live/${channel.slug}`, { replace: true });
   };
@@ -305,12 +378,19 @@ export default function MobileLiveTV() {
           isFullscreen ? "fixed inset-0 z-50" : "aspect-video"
         )}
       >
-        {/* Live Badge */}
+        {/* Live Badge and Ad Break Timer */}
         <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
           <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
             {isLiveStreaming ? '🔴 LIVE' : 'LIVE'}
           </span>
+          {/* Ad Break Countdown - only show for playlist-based streaming */}
+          {!isLiveStreaming && nextAdBreakIn > 0 && isPlaying && !isAdPlaying && (
+            <span className="bg-black/70 text-white px-2 py-0.5 rounded text-xs flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              Ad in {Math.floor(nextAdBreakIn / 60)}:{String(nextAdBreakIn % 60).padStart(2, '0')}
+            </span>
+          )}
         </div>
 
         {/* Channel Logo */}
@@ -394,6 +474,21 @@ export default function MobileLiveTV() {
           <div className="w-full h-full flex items-center justify-center">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
           </div>
+        )}
+
+        {/* Ad Break Overlay */}
+        {(isAdPlaying || showCountdown) && (
+          <AdBreakOverlay
+            ad={currentAd}
+            position="mid"
+            showCountdown={showCountdown}
+            countdownSeconds={countdownSeconds}
+            adQueueLength={adQueueLength}
+            currentAdIndex={currentAdIndex}
+            canSkip={false}
+            onAdComplete={onAdComplete}
+            onSkip={skipAd}
+          />
         )}
       </div>
 
