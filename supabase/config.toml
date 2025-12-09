@@ -7,7 +7,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.mux-live-stream]
-verify_jwt = false
+verify_jwt = true
 
 [functions.select-ad]
 verify_jwt = false

@@ -11,7 +11,6 @@ type AuthContextType = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  setUserAsAdmin: () => Promise<void>; // New function to set the user as admin
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,7 +20,6 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: async () => {},
   logout: async () => {},
-  setUserAsAdmin: async () => {}, // Initialize the new function
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -36,60 +34,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Function to check admin status with improved security
+  // Function to check admin status using secure user_roles table
   const checkAdminStatus = async (userId: string) => {
     try {
       console.log("Checking admin status for user:", userId);
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', userId)
-        .single();
+      
+      // Use the secure has_role function via user_roles table
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
       
       if (error) {
         console.error("Error checking admin status:", error);
-        toast.error("Error checking user permissions");
         setIsAdmin(false);
         setIsLoading(false);
         return;
       }
       
-      // Security hardening: only grant admin if explicitly set in the database
-      setIsAdmin(!!profile?.is_admin);
-      console.log("Admin status set to:", !!profile?.is_admin);
+      // Only grant admin if role exists in user_roles table
+      const hasAdminRole = !!data;
+      setIsAdmin(hasAdminRole);
+      console.log("Admin status set to:", hasAdminRole);
     } catch (error) {
       console.error("Error checking admin status:", error);
       setIsAdmin(false);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Function to set the current user as admin
-  const setUserAsAdmin = async () => {
-    if (!user) {
-      toast.error("You must be logged in to become an admin");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_admin: true })
-        .eq('id', user.id);
-      
-      if (error) {
-        console.error("Error setting admin status:", error);
-        toast.error("Failed to update admin privileges");
-        return;
-      }
-      
-      // Update local state
-      setIsAdmin(true);
-      toast.success("Admin privileges granted!");
-    } catch (error: any) {
-      console.error("Error setting admin status:", error);
-      toast.error(error.message || "Failed to update admin privileges");
     }
   };
 
@@ -175,7 +148,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, isAdmin, isLoading, login, logout, setUserAsAdmin }}>
+    <AuthContext.Provider value={{ session, user, isAdmin, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
