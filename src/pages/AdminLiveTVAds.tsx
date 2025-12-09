@@ -40,8 +40,11 @@ import { cn } from "@/lib/utils";
 import { 
   Film, Plus, Pencil, Trash2, ArrowLeft, Loader2, PlayCircle, 
   CalendarIcon, Globe, Target, Settings, Video, Layers, Tv,
-  HelpCircle, Info, BookOpen, Zap, Users, MapPin, Clock, BarChart3
+  HelpCircle, Info, BookOpen, Zap, Users, MapPin, Clock, BarChart3,
+  CheckCircle2, AlertCircle, ArrowRight
 } from "lucide-react";
+import { VimeoUrlInput } from "@/components/VimeoUrlInput";
+import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
 
 interface Ad {
   id: string;
@@ -677,7 +680,266 @@ export default function AdminLiveTVAds() {
                 </CardContent>
               </Card>
 
-              <Accordion type="multiple" className="space-y-4" defaultValue={["overview", "ad-pods", "targeting", "placements", "examples"]}>
+              <Accordion type="multiple" className="space-y-4" defaultValue={["quick-start", "multi-ad-setup", "overview", "ad-pods", "targeting", "placements", "examples"]}>
+                
+                {/* QUICK START - Most Important */}
+                <AccordionItem value="quick-start" className="border-2 border-primary/50 rounded-lg px-4 bg-gradient-to-r from-primary/10 to-primary/5">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-3">
+                      <Zap className="h-5 w-5 text-primary" />
+                      🚀 Quick Start: Set Up Multi-Ad Breaks in 5 Minutes
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-6 pt-2">
+                    <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <h4 className="font-bold text-green-400 mb-2 flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5" />
+                        Goal: Have 3 different commercials play during each mid-roll break
+                      </h4>
+                      <p className="text-sm text-muted-foreground">Follow these 3 simple steps:</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex gap-4 p-4 bg-muted/30 rounded-lg">
+                        <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">1</div>
+                        <div>
+                          <h5 className="font-semibold">Go to "Global" tab → Set Mid-roll Pod Size = 3</h5>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            This tells the system: "I want 3 ads to play back-to-back for every mid-roll break"
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 p-4 bg-muted/30 rounded-lg">
+                        <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">2</div>
+                        <div>
+                          <h5 className="font-semibold">Go to "Ads" tab → Create at least 3 ads with "Mid-roll" enabled</h5>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Paste your Vimeo URL → Duration auto-fills → Enable "Mid-roll" position → Save
+                          </p>
+                          <p className="text-xs text-yellow-500 mt-2">
+                            ⚠️ You need at least as many ads as your pod size! If pod size is 3, create 3+ ads.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 p-4 bg-muted/30 rounded-lg">
+                        <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">3</div>
+                        <div>
+                          <h5 className="font-semibold">Done! Test by watching any content</h5>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Every mid-roll break will now show: "AD BREAK in 10... (3 ads)" → Ad 1 → Ad 2 → Ad 3 → Resume
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                      <h5 className="font-medium text-blue-400 mb-2">💡 Pro Tip: Want different ad counts for different channels?</h5>
+                      <p className="text-sm text-muted-foreground">
+                        Go to "Channels" tab → Select MadFaceTV → Set Mid-roll = 4 ads. Now MadFaceTV gets 4 ads per break while others get the global setting (3).
+                      </p>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* DETAILED MULTI-AD SETUP */}
+                <AccordionItem value="multi-ad-setup" className="border-2 border-yellow-500/50 rounded-lg px-4 bg-gradient-to-r from-yellow-500/10 to-yellow-500/5">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-3">
+                      <Layers className="h-5 w-5 text-yellow-500" />
+                      📺 Complete Guide: Multiple Ads in One Break (Step-by-Step)
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-6 pt-2">
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <h4 className="font-bold mb-3">Understanding the System</h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Think of it like traditional TV: You don't create "1 commercial break" — you create individual commercials, 
+                        then tell the system how many to play together. The system picks which ones based on targeting.
+                      </p>
+                      <div className="flex items-center gap-3 flex-wrap text-sm">
+                        <Badge variant="outline" className="bg-background">Individual Ad</Badge>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        <Badge variant="outline" className="bg-background">Individual Ad</Badge>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        <Badge variant="outline" className="bg-background">Individual Ad</Badge>
+                        <span className="text-muted-foreground">=</span>
+                        <Badge className="bg-primary">Ad Pod (3 ads)</Badge>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-lg">Step-by-Step Setup</h4>
+                      
+                      {/* Step 1 */}
+                      <div className="border border-border rounded-lg overflow-hidden">
+                        <div className="bg-primary/10 px-4 py-2 font-semibold flex items-center gap-2">
+                          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
+                          Create Your Ad Inventory
+                        </div>
+                        <div className="p-4 space-y-3">
+                          <p className="text-sm text-muted-foreground">
+                            Upload each commercial as a separate ad. Each ad = 1 video file (typically 15-60 seconds).
+                          </p>
+                          <div className="bg-muted/30 p-3 rounded text-sm">
+                            <p className="font-medium mb-2">Example: You have 10 commercials to run</p>
+                            <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                              <li>Nike Shoes - 30 sec</li>
+                              <li>Coca-Cola - 15 sec</li>
+                              <li>Local Car Dealer - 30 sec</li>
+                              <li>iPhone 15 - 30 sec</li>
+                              <li>... (create all 10 individually)</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Step 2 */}
+                      <div className="border border-border rounded-lg overflow-hidden">
+                        <div className="bg-primary/10 px-4 py-2 font-semibold flex items-center gap-2">
+                          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
+                          Configure Each Ad's Eligibility
+                        </div>
+                        <div className="p-4 space-y-3">
+                          <p className="text-sm text-muted-foreground">
+                            For each ad, decide WHERE and WHEN it can play:
+                          </p>
+                          <div className="grid md:grid-cols-2 gap-3">
+                            <div className="bg-muted/30 p-3 rounded">
+                              <h6 className="font-medium mb-2">Positions (check all that apply)</h6>
+                              <ul className="text-sm text-muted-foreground space-y-1">
+                                <li>☑️ Pre-roll (before video starts)</li>
+                                <li>☑️ Mid-roll (during video)</li>
+                                <li>☐ Post-roll (after video ends)</li>
+                              </ul>
+                            </div>
+                            <div className="bg-muted/30 p-3 rounded">
+                              <h6 className="font-medium mb-2">Targeting (optional)</h6>
+                              <ul className="text-sm text-muted-foreground space-y-1">
+                                <li>• US viewers only</li>
+                                <li>• Free tier members only</li>
+                                <li>• Mobile devices only</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Step 3 */}
+                      <div className="border border-border rounded-lg overflow-hidden">
+                        <div className="bg-primary/10 px-4 py-2 font-semibold flex items-center gap-2">
+                          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
+                          Set Pod Sizes (How Many Ads Per Break)
+                        </div>
+                        <div className="p-4 space-y-3">
+                          <p className="text-sm text-muted-foreground">
+                            This is the key step! Pod size = number of ads that play together in one break.
+                          </p>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded">
+                              <Settings className="h-5 w-5 text-green-500" />
+                              <div>
+                                <span className="font-medium">Global Tab:</span>
+                                <span className="text-muted-foreground ml-2">Set defaults for ALL content</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded">
+                              <Video className="h-5 w-5 text-blue-500" />
+                              <div>
+                                <span className="font-medium">Content Tab:</span>
+                                <span className="text-muted-foreground ml-2">Override for specific movies/shows</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded">
+                              <Tv className="h-5 w-5 text-purple-500" />
+                              <div>
+                                <span className="font-medium">Channels Tab:</span>
+                                <span className="text-muted-foreground ml-2">Override for specific live channels</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Step 4 */}
+                      <div className="border border-border rounded-lg overflow-hidden">
+                        <div className="bg-primary/10 px-4 py-2 font-semibold flex items-center gap-2">
+                          <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">4</span>
+                          How the System Selects Ads (Automatic)
+                        </div>
+                        <div className="p-4 space-y-3">
+                          <p className="text-sm text-muted-foreground">
+                            When a mid-roll break triggers, here's what happens:
+                          </p>
+                          <div className="bg-muted/30 p-4 rounded font-mono text-sm space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-primary">→</span>
+                              <span>User watching MadFaceTV at 8:15 PM</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-primary">→</span>
+                              <span>10-min interval reached → Mid-roll triggers</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-primary">→</span>
+                              <span>System checks: Pod size for MadFaceTV = 3</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-primary">→</span>
+                              <span>System finds all ads where:</span>
+                            </div>
+                            <div className="pl-6 text-muted-foreground">
+                              • Mid-roll = enabled<br/>
+                              • Targets MadFaceTV OR all channels<br/>
+                              • User location matches targeting<br/>
+                              • Under impression cap
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-primary">→</span>
+                              <span>Picks 3 ads using weighted random selection</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-green-500">✓</span>
+                              <span className="text-green-500">Plays: Ad 1 → Ad 2 → Ad 3 → Resume show</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Common Scenarios */}
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <h4 className="font-bold mb-4">Common Scenarios</h4>
+                      <div className="space-y-4">
+                        <div className="p-3 border border-border rounded">
+                          <h5 className="font-medium text-sm">Scenario: "I want MadFaceTV to have MORE ads than other channels"</h5>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            1. Set Global mid-roll = 2 ads<br/>
+                            2. Go to Channels tab → Select MadFaceTV → Set mid-roll = 4 ads<br/>
+                            Result: MadFaceTV gets 4 ads per break, all other channels get 2
+                          </p>
+                        </div>
+                        <div className="p-3 border border-border rounded">
+                          <h5 className="font-medium text-sm">Scenario: "Show Nike ad ONLY to US mobile users"</h5>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            1. Create Nike ad<br/>
+                            2. In Targeting tab: Select Countries = US, Device Types = Mobile<br/>
+                            Result: Nike ad only appears for US viewers on phones
+                          </p>
+                        </div>
+                        <div className="p-3 border border-border rounded">
+                          <h5 className="font-medium text-sm">Scenario: "Premium members should see fewer ads"</h5>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Create ads targeting ONLY "free" and "standard" tiers. Premium users won't see those ads.
+                            Or: Set global pod size = 1 for premium content.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
                 {/* Overview */}
                 <AccordionItem value="overview" className="border rounded-lg px-4 bg-card">
                   <AccordionTrigger className="text-lg font-semibold">
@@ -1381,12 +1643,26 @@ export default function AdminLiveTVAds() {
 
                         {formData.adType === 'video' ? (
                           <div>
-                            <Label>Video URL *</Label>
-                            <Input
+                            <Label>Video URL * (paste Vimeo URL for auto-metadata)</Label>
+                            <VimeoUrlInput
                               value={formData.video_url}
-                              onChange={(e) => setFormData(prev => ({ ...prev, video_url: e.target.value }))}
-                              placeholder="https://vimeo.com/... or direct MP4 URL"
+                              onChange={(value) => setFormData(prev => ({ ...prev, video_url: value }))}
+                              onMetadataFetched={(metadata: VimeoMetadata) => {
+                                // Auto-fill duration from metadata
+                                if (metadata.duration_seconds) {
+                                  setFormData(prev => ({ 
+                                    ...prev, 
+                                    duration_seconds: metadata.duration_seconds || prev.duration_seconds,
+                                    // Auto-fill name if empty
+                                    name: prev.name || metadata.title || prev.name
+                                  }));
+                                }
+                              }}
+                              placeholder="https://vimeo.com/... (auto-fetches duration & thumbnail)"
                             />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Paste a Vimeo URL to automatically fetch duration and thumbnail preview
+                            </p>
                           </div>
                         ) : (
                           <div>
@@ -1400,7 +1676,7 @@ export default function AdminLiveTVAds() {
                         )}
 
                         <div>
-                          <Label>Duration (seconds)</Label>
+                          <Label>Duration (seconds) {formData.adType === 'video' && <span className="text-muted-foreground text-xs">(auto-filled from video)</span>}</Label>
                           <Input
                             type="number"
                             value={formData.duration_seconds}
