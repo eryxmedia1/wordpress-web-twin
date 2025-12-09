@@ -28,8 +28,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, PlayCircle, GripVertical, Search, Clock, Tv, Radio, Film, List, Settings } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, PlayCircle, GripVertical, Search, Clock, Tv, Radio, Film, List, Settings, Link2 } from "lucide-react";
+import { VimeoUrlInput } from "@/components/VimeoUrlInput";
+import { useVimeoMetadata, VimeoMetadata } from "@/hooks/useVimeoMetadata";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -192,6 +195,12 @@ export default function AdminLiveTVPlaylists() {
   const [editingItem, setEditingItem] = useState<PlaylistItem | null>(null);
   const [midrollBreaks, setMidrollBreaks] = useState<number[]>([]);
   const [newBreakMinutes, setNewBreakMinutes] = useState('');
+
+  // Vimeo URL import
+  const [vimeoUrl, setVimeoUrl] = useState('');
+  const [vimeoMetadata, setVimeoMetadata] = useState<VimeoMetadata | null>(null);
+  const [isAddingVimeo, setIsAddingVimeo] = useState(false);
+  const { fetchMetadata: fetchVimeoMeta, isLoading: isLoadingVimeo } = useVimeoMetadata();
 
   const [formData, setFormData] = useState({
     playlist_name: '',
@@ -424,6 +433,76 @@ export default function AdminLiveTVPlaylists() {
       fetchPlaylistItems();
     } catch (error: any) {
       toast.error(error.message);
+    }
+  };
+
+  const handleVimeoMetadataFetched = (metadata: VimeoMetadata) => {
+    setVimeoMetadata(metadata);
+  };
+
+  const handleAddVimeoUrl = async () => {
+    if (!selectedPlaylist || !vimeoUrl) return;
+    if (!vimeoMetadata) {
+      // Try to fetch metadata first
+      const meta = await fetchVimeoMeta(vimeoUrl);
+      if (!meta) {
+        toast.error('Could not fetch video metadata');
+        return;
+      }
+      setVimeoMetadata(meta);
+    }
+    
+    setIsAddingVimeo(true);
+    try {
+      // Create a new content record from Vimeo metadata
+      const contentToInsert = {
+        title: vimeoMetadata?.title || 'Untitled Video',
+        video_url: vimeoUrl,
+        poster_url: vimeoMetadata?.thumbnail_large || vimeoMetadata?.thumbnail_url || null,
+        backdrop_url: vimeoMetadata?.thumbnail_large || vimeoMetadata?.thumbnail_url || null,
+        duration: vimeoMetadata?.duration || null,
+        description: vimeoMetadata?.description || null,
+        type: 'movie' as const,
+        genre: null,
+        release_year: null,
+        rating: null,
+        trailer_url: null,
+        featured: false,
+        vast_ad_preroll: null,
+        vast_ad_midroll: null,
+        vast_ad_postroll: null,
+      };
+      
+      const { data: newContent, error: contentError } = await supabase
+        .from('contents')
+        .insert([contentToInsert])
+        .select('id, title, poster_url, duration, type')
+        .single();
+      
+      if (contentError) throw contentError;
+      
+      // Add to playlist
+      const nextOrder = playlistItems.length + 1;
+      const durationSeconds = vimeoMetadata?.duration_seconds || parseDuration(vimeoMetadata?.duration || '');
+      
+      const { error: playlistError } = await supabase.from('live_playlist_items').insert({
+        channel_playlist_id: selectedPlaylist.id,
+        video_id: newContent.id,
+        order_index: nextOrder,
+        duration_seconds: durationSeconds || null,
+      });
+      
+      if (playlistError) throw playlistError;
+      
+      toast.success(`Added "${newContent.title}" to playlist`);
+      setVimeoUrl('');
+      setVimeoMetadata(null);
+      setIsSearchOpen(false);
+      fetchPlaylistItems();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add video');
+    } finally {
+      setIsAddingVimeo(false);
     }
   };
 
@@ -783,89 +862,153 @@ export default function AdminLiveTVPlaylists() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>{selectedPlaylist.playlist_name} - Schedule</CardTitle>
-                    <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                    <Popover open={isSearchOpen} onOpenChange={(open) => {
+                      setIsSearchOpen(open);
+                      if (!open) {
+                        setVimeoUrl('');
+                        setVimeoMetadata(null);
+                      }
+                    }}>
                       <PopoverTrigger asChild>
                         <Button><Plus className="h-4 w-4 mr-2" />Add Video</Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-96 p-0" align="end">
-                        <div className="p-3 border-b">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search videos..." className="pl-9" autoFocus />
-                          </div>
-                        </div>
-                        <ScrollArea className="h-96">
-                          {isSearching || isAddingEpisodes ? (
-                            <div className="flex flex-col items-center justify-center p-4 gap-2">
-                              <Loader2 className="h-6 w-6 animate-spin" />
-                              {isAddingEpisodes && <p className="text-sm text-muted-foreground">Adding episodes...</p>}
+                      <PopoverContent className="w-[420px] p-0" align="end">
+                        <Tabs defaultValue="search" className="w-full">
+                          <TabsList className="w-full grid grid-cols-2 h-auto p-1">
+                            <TabsTrigger value="search" className="text-sm py-2">
+                              <Search className="h-4 w-4 mr-2" />
+                              Search Library
+                            </TabsTrigger>
+                            <TabsTrigger value="vimeo" className="text-sm py-2">
+                              <Link2 className="h-4 w-4 mr-2" />
+                              Add Vimeo URL
+                            </TabsTrigger>
+                          </TabsList>
+                          
+                          <TabsContent value="search" className="m-0">
+                            <div className="p-3 border-b">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search videos..." className="pl-9" autoFocus />
+                              </div>
                             </div>
-                          ) : (
-                            <div className="p-2 space-y-2">
-                              {episodicShows.length > 0 && (
-                                <div className="mb-3">
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2 flex items-center gap-1">
-                                    <List className="h-3 w-3" /> TV Shows (Add All Episodes)
-                                  </p>
-                                  <div className="space-y-1">
-                                    {episodicShows.map((show) => (
-                                      <button
-                                        key={show.id}
-                                        onClick={() => handleAddEpisodicShow(show)}
-                                        className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent text-left border border-primary/30 bg-primary/5"
-                                      >
-                                        {show.poster_url ? (
-                                          <img src={show.poster_url} alt={show.title} className="w-16 h-10 object-cover rounded" />
-                                        ) : (
-                                          <div className="w-16 h-10 bg-muted rounded flex items-center justify-center">
-                                            <Tv className="h-4 w-4 text-muted-foreground" />
-                                          </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium truncate">{show.title}</p>
-                                          <p className="text-xs text-primary">Click to add all episodes</p>
-                                        </div>
-                                        <Badge variant="secondary"><List className="h-3 w-3 mr-1" />Series</Badge>
-                                      </button>
-                                    ))}
-                                  </div>
+                            <ScrollArea className="h-80">
+                              {isSearching || isAddingEpisodes ? (
+                                <div className="flex flex-col items-center justify-center p-4 gap-2">
+                                  <Loader2 className="h-6 w-6 animate-spin" />
+                                  {isAddingEpisodes && <p className="text-sm text-muted-foreground">Adding episodes...</p>}
                                 </div>
-                              )}
-
-                              {searchResults.length > 0 && (
-                                <div>
+                              ) : (
+                                <div className="p-2 space-y-2">
                                   {episodicShows.length > 0 && (
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2 flex items-center gap-1">
-                                      <Film className="h-3 w-3" /> Movies & Videos
-                                    </p>
+                                    <div className="mb-3">
+                                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2 flex items-center gap-1">
+                                        <List className="h-3 w-3" /> TV Shows (Add All Episodes)
+                                      </p>
+                                      <div className="space-y-1">
+                                        {episodicShows.map((show) => (
+                                          <button
+                                            key={show.id}
+                                            onClick={() => handleAddEpisodicShow(show)}
+                                            className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent text-left border border-primary/30 bg-primary/5"
+                                          >
+                                            {show.poster_url ? (
+                                              <img src={show.poster_url} alt={show.title} className="w-16 h-10 object-cover rounded" />
+                                            ) : (
+                                              <div className="w-16 h-10 bg-muted rounded flex items-center justify-center">
+                                                <Tv className="h-4 w-4 text-muted-foreground" />
+                                              </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-medium truncate">{show.title}</p>
+                                              <p className="text-xs text-primary">Click to add all episodes</p>
+                                            </div>
+                                            <Badge variant="secondary"><List className="h-3 w-3 mr-1" />Series</Badge>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
                                   )}
-                                  <div className="space-y-1">
-                                    {searchResults.map((video) => (
-                                      <button key={video.id} onClick={() => handleAddVideo(video)} className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent text-left">
-                                        {video.poster_url ? (
-                                          <img src={video.poster_url} alt={video.title} className="w-16 h-10 object-cover rounded" />
-                                        ) : (
-                                          <div className="w-16 h-10 bg-muted rounded" />
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium truncate">{video.title}</p>
-                                          <p className="text-xs text-muted-foreground">{video.type} • {video.duration || 'N/A'}</p>
-                                        </div>
-                                      </button>
-                                    ))}
-                                  </div>
+
+                                  {searchResults.length > 0 && (
+                                    <div>
+                                      {episodicShows.length > 0 && (
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2 flex items-center gap-1">
+                                          <Film className="h-3 w-3" /> Movies & Videos
+                                        </p>
+                                      )}
+                                      <div className="space-y-1">
+                                        {searchResults.map((video) => (
+                                          <button key={video.id} onClick={() => handleAddVideo(video)} className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent text-left">
+                                            {video.poster_url ? (
+                                              <img src={video.poster_url} alt={video.title} className="w-16 h-10 object-cover rounded" />
+                                            ) : (
+                                              <div className="w-16 h-10 bg-muted rounded" />
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-medium truncate">{video.title}</p>
+                                              <p className="text-xs text-muted-foreground">{video.type} • {video.duration || 'N/A'}</p>
+                                            </div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {searchQuery && searchResults.length === 0 && episodicShows.length === 0 && (
+                                    <p className="p-4 text-center text-muted-foreground">No videos found</p>
+                                  )}
+                                  {!searchQuery && (
+                                    <p className="p-4 text-center text-muted-foreground">Start typing to search</p>
+                                  )}
                                 </div>
                               )}
-
-                              {searchQuery && searchResults.length === 0 && episodicShows.length === 0 && (
-                                <p className="p-4 text-center text-muted-foreground">No videos found</p>
-                              )}
-                              {!searchQuery && (
-                                <p className="p-4 text-center text-muted-foreground">Start typing to search</p>
-                              )}
+                            </ScrollArea>
+                          </TabsContent>
+                          
+                          <TabsContent value="vimeo" className="m-0 p-4 space-y-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Paste Vimeo URL</Label>
+                              <VimeoUrlInput
+                                value={vimeoUrl}
+                                onChange={setVimeoUrl}
+                                onMetadataFetched={handleVimeoMetadataFetched}
+                                placeholder="https://vimeo.com/123456789"
+                              />
                             </div>
-                          )}
-                        </ScrollArea>
+                            
+                            {vimeoMetadata && !vimeoMetadata.is_direct_url && (
+                              <div className="border border-border rounded-lg p-3 bg-muted/30">
+                                <p className="text-sm font-medium text-foreground mb-1">Ready to add:</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {vimeoMetadata.title || 'Untitled'} • {vimeoMetadata.duration || 'Unknown duration'}
+                                </p>
+                              </div>
+                            )}
+                            
+                            <Button 
+                              onClick={handleAddVimeoUrl} 
+                              disabled={!vimeoUrl || isAddingVimeo || isLoadingVimeo}
+                              className="w-full"
+                            >
+                              {isAddingVimeo ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Adding...
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Add to Playlist
+                                </>
+                              )}
+                            </Button>
+                            
+                            <p className="text-xs text-muted-foreground text-center">
+                              Video will be added to content library and playlist
+                            </p>
+                          </TabsContent>
+                        </Tabs>
                       </PopoverContent>
                     </Popover>
                   </div>
