@@ -308,13 +308,29 @@ serve(async (req) => {
 
     console.log(`Selected ${selectedAds.length} ads from campaign ${selectedCampaign.name}`);
 
+// Helper function to transform Vimeo URLs to playable format
+    const transformVimeoUrl = (url: string | null): string | null => {
+      if (!url) return null;
+      
+      // If already in player format, return as-is
+      if (url.includes('player.vimeo.com')) return url;
+      
+      // Extract video ID from various Vimeo URL formats
+      const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+      if (vimeoMatch && vimeoMatch[1]) {
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+      }
+      
+      return url;
+    };
+
     // Return the selected ads with campaign info
     const response = {
       ads: selectedAds.map(ad => ({
         id: ad.id,
         name: ad.name,
         type: ad.vast_tag_url ? 'vast' : 'video',
-        video_url: ad.video_url,
+        video_url: transformVimeoUrl(ad.video_url),
         vast_tag_url: ad.vast_tag_url,
         duration_seconds: ad.duration_seconds,
         click_through_url: ad.click_through_url,
@@ -498,12 +514,30 @@ async function legacyAdSelection(supabase: any, request: SelectAdRequest) {
     remaining = remaining.filter(ad => ad.id !== selected.id);
   }
 
+  // Helper function to transform Vimeo URLs to playable format
+  const transformVimeoUrl = (url: string | null): string | null => {
+    if (!url) return null;
+    
+    // If already in player format, return as-is
+    if (url.includes('player.vimeo.com')) return url;
+    
+    // Extract video ID from various Vimeo URL formats
+    const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (vimeoMatch && vimeoMatch[1]) {
+      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+    
+    return url;
+  };
+
+  console.log(`Legacy selection: returning ${selectedAds.length} ads`);
+
   return new Response(JSON.stringify({
     ads: selectedAds.map(ad => ({
       id: ad.id,
       name: ad.name,
       type: ad.vast_tag_url ? 'vast' : 'video',
-      video_url: ad.video_url,
+      video_url: transformVimeoUrl(ad.video_url),
       vast_tag_url: ad.vast_tag_url,
       duration_seconds: ad.duration_seconds,
     })),

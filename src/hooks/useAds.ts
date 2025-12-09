@@ -328,10 +328,16 @@ export function useAds(options: UseAdsOptions = {}) {
 
       if (res.ok) {
         const data = await res.json();
+        console.log(`[useAds] Fetched ${position} ad pod:`, {
+          adsCount: data.ads?.length || 0,
+          requestedPodSize: podSize,
+          ads: data.ads?.map((a: Ad) => ({ name: a.name, url: a.video_url?.substring(0, 50) })),
+          campaignName: data.campaignName || 'legacy',
+        });
         return data as AdPodResponse;
       }
       
-      console.log('No ads available:', res.status);
+      console.log('[useAds] No ads available:', res.status);
       return null;
     } catch (error) {
       console.error('Error fetching ads:', error);
@@ -416,7 +422,7 @@ export function useAds(options: UseAdsOptions = {}) {
   const requestMidRoll = useCallback(async (countdownDuration: number = 10): Promise<boolean> => {
     // Check if we've reached the max mid-roll count
     if (!canRequestMidRoll()) {
-      console.log('Max mid-roll count reached, not requesting more ads');
+      console.log('[useAds] Max mid-roll count reached, not requesting more ads');
       return false;
     }
 
@@ -424,11 +430,17 @@ export function useAds(options: UseAdsOptions = {}) {
     const nextBreakNumber = midrollBreakCount + 1;
     const podSize = getProgressivePodSize(nextBreakNumber);
     
-    console.log(`Mid-roll break #${nextBreakNumber}, pod size: ${podSize}`);
+    console.log(`[useAds] Mid-roll break #${nextBreakNumber}, requesting pod size: ${podSize} ads`, {
+      break1: midrollPodConfig.break1PodSize,
+      break2: midrollPodConfig.break2PodSize,
+      break3: midrollPodConfig.break3PodSize,
+      break4: midrollPodConfig.break4PodSize,
+    });
     
     const response = await fetchAdPod('mid', podSize);
     if (response?.ads && response.ads.length > 0) {
       setMidrollBreakCount(nextBreakNumber);
+      console.log(`[useAds] Mid-roll break #${nextBreakNumber} loaded: ${response.ads.length} ads will play`);
       // Start countdown
       setCountdownSeconds(countdownDuration);
       setShowCountdown(true);
@@ -437,8 +449,9 @@ export function useAds(options: UseAdsOptions = {}) {
       setAdPosition('mid');
       return true;
     }
+    console.log(`[useAds] Mid-roll break #${nextBreakNumber}: No ads returned from server`);
     return false;
-  }, [fetchAdPod, midrollBreakCount, getProgressivePodSize, canRequestMidRoll]);
+  }, [fetchAdPod, midrollBreakCount, getProgressivePodSize, canRequestMidRoll, midrollPodConfig]);
 
   // Request post-roll ad pod
   const requestPostRoll = useCallback(async (): Promise<boolean> => {
