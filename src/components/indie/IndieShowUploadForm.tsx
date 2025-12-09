@@ -151,7 +151,7 @@ const IndieShowUploadForm = ({
         title: metadata.title || "",
         description: metadata.description || "",
         thumbnailUrl: metadata.thumbnail_url || "",
-        duration: metadata.duration ? `${Math.floor(metadata.duration / 60)}m` : "",
+        duration: metadata.duration ? `${Math.floor(Number(metadata.duration) / 60)}m` : "",
         isLoading: false
       });
 
@@ -189,20 +189,22 @@ const IndieShowUploadForm = ({
     try {
       // 1. Create the show (content type: show)
       const firstEpisode = seasons[0]?.episodes[0];
+      const showInsertData = {
+        title: showTitle.trim(),
+        description: showDescription.trim() || null,
+        poster_url: posterUrl.trim() || firstEpisode?.thumbnailUrl || null,
+        backdrop_url: backdropUrl.trim() || firstEpisode?.thumbnailUrl || null,
+        trailer_url: firstEpisode?.vimeoUrl || null,
+        genre: genre.trim() || null,
+        maturity_rating: maturityRating || null,
+        release_year: releaseYear ? parseInt(releaseYear) : null,
+        type: "show",
+        indie_channel_id: channelId
+      };
+      
       const { data: showData, error: showError } = await supabase
         .from("contents")
-        .insert({
-          title: showTitle.trim(),
-          description: showDescription.trim() || null,
-          poster_url: posterUrl.trim() || firstEpisode?.thumbnailUrl || null,
-          backdrop_url: backdropUrl.trim() || firstEpisode?.thumbnailUrl || null,
-          trailer_url: firstEpisode?.vimeoUrl || null,
-          genre: genre.trim() || null,
-          maturity_rating: maturityRating || null,
-          release_year: releaseYear ? parseInt(releaseYear) : null,
-          type: "show",
-          indie_channel_id: channelId
-        })
+        .insert(showInsertData as any)
         .select("id")
         .single();
 
@@ -212,13 +214,15 @@ const IndieShowUploadForm = ({
       for (const season of seasons) {
         if (season.episodes.length === 0) continue;
 
+        const seasonInsertData = {
+          content_id: showData.id,
+          season_number: season.seasonNumber,
+          title: season.title
+        };
+        
         const { data: seasonData, error: seasonError } = await supabase
           .from("seasons")
-          .insert({
-            content_id: showData.id,
-            season_number: season.seasonNumber,
-            title: season.title
-          })
+          .insert(seasonInsertData as any)
           .select("id")
           .single();
 

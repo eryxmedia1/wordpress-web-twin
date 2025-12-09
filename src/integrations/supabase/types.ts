@@ -531,6 +531,89 @@ export type Database = {
           },
         ]
       }
+      channel_views: {
+        Row: {
+          content_id: string | null
+          device_type: string | null
+          duration_seconds: number | null
+          geo_city: string | null
+          geo_country: string | null
+          geo_postal: string | null
+          geo_region: string | null
+          id: string
+          indie_channel_id: string | null
+          live_channel_id: string | null
+          profile_id: string | null
+          progress_percent: number | null
+          time_zone: string | null
+          user_id: string | null
+          watched_at: string
+        }
+        Insert: {
+          content_id?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          geo_city?: string | null
+          geo_country?: string | null
+          geo_postal?: string | null
+          geo_region?: string | null
+          id?: string
+          indie_channel_id?: string | null
+          live_channel_id?: string | null
+          profile_id?: string | null
+          progress_percent?: number | null
+          time_zone?: string | null
+          user_id?: string | null
+          watched_at?: string
+        }
+        Update: {
+          content_id?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          geo_city?: string | null
+          geo_country?: string | null
+          geo_postal?: string | null
+          geo_region?: string | null
+          id?: string
+          indie_channel_id?: string | null
+          live_channel_id?: string | null
+          profile_id?: string | null
+          progress_percent?: number | null
+          time_zone?: string | null
+          user_id?: string | null
+          watched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_views_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_views_indie_channel_id_fkey"
+            columns: ["indie_channel_id"]
+            isOneToOne: false
+            referencedRelation: "indie_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_views_live_channel_id_fkey"
+            columns: ["live_channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_views_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_membership_plans: {
         Row: {
           content_id: string
