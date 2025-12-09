@@ -113,9 +113,21 @@ const ContinueWatchingRow = ({ onMoreInfo, seeAllLink = "/category/continue-watc
       ]);
 
       if (!historyResult.error && historyResult.data) {
+        // Deduplicate by content_id + episode_id, keeping the most recent entry
+        const deduplicatedMap = new Map<string, typeof historyResult.data[0]>();
+        for (const item of historyResult.data) {
+          if (!item.content) continue;
+          const key = item.episode_id ? `${item.content_id}-${item.episode_id}` : item.content_id;
+          // Since data is ordered by last_watched_at DESC, first occurrence is the most recent
+          if (!deduplicatedMap.has(key)) {
+            deduplicatedMap.set(key, item);
+          }
+        }
+        const deduplicatedItems = Array.from(deduplicatedMap.values());
+
         // For items with episode_id, fetch episode details
         const itemsWithEpisodes = await Promise.all(
-          historyResult.data.filter(item => item.content).map(async (item) => {
+          deduplicatedItems.map(async (item) => {
             if (item.episode_id) {
               const { data: episodeData } = await supabase
                 .from("episodes")
