@@ -23,6 +23,7 @@ import EditContent from "./pages/EditContent";
 import UserProfile from "./pages/UserProfile";
 import Producers from "./pages/Producers";
 import ProducerProfile from "./pages/ProducerProfile";
+import ProducerDashboard from "./pages/ProducerDashboard";
 import RequireAuth from "./components/RequireAuth";
 import RequireProfile from "./components/RequireProfile";
 import RequireAdmin from "./components/RequireAdmin";
@@ -81,6 +82,7 @@ const App = () => (
                   <Route path="/live/:channelSlug" element={<LiveTV />} />
                   <Route path="/indie-channels" element={<IndieChannels />} />
                   <Route path="/indie-channel/:slug" element={<IndieChannelPage />} />
+                  <Route path="/producer/:slug" element={<ProducerDashboard />} />
                   <Route path="/notifications" element={<Notifications />} />
                 </Route>
               </Route>

@@ -792,40 +792,70 @@ export type Database = {
       }
       indie_channels: {
         Row: {
+          allow_ads: boolean | null
+          allowed_countries: string[] | null
+          allowed_regions: string[] | null
+          analytics_access: boolean | null
           backdrop_url: string | null
+          can_go_live: boolean | null
           created_at: string | null
+          custom_branding_enabled: boolean | null
           description: string | null
           id: string
           is_active: boolean | null
           logo_url: string | null
+          max_rows: number | null
+          max_total_videos: number | null
+          max_videos_per_row: number | null
           name: string
           owner_id: string | null
+          revenue_share_percent: number | null
           slug: string
           trailer_url: string | null
           updated_at: string | null
         }
         Insert: {
+          allow_ads?: boolean | null
+          allowed_countries?: string[] | null
+          allowed_regions?: string[] | null
+          analytics_access?: boolean | null
           backdrop_url?: string | null
+          can_go_live?: boolean | null
           created_at?: string | null
+          custom_branding_enabled?: boolean | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
+          max_rows?: number | null
+          max_total_videos?: number | null
+          max_videos_per_row?: number | null
           name: string
           owner_id?: string | null
+          revenue_share_percent?: number | null
           slug: string
           trailer_url?: string | null
           updated_at?: string | null
         }
         Update: {
+          allow_ads?: boolean | null
+          allowed_countries?: string[] | null
+          allowed_regions?: string[] | null
+          analytics_access?: boolean | null
           backdrop_url?: string | null
+          can_go_live?: boolean | null
           created_at?: string | null
+          custom_branding_enabled?: boolean | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
+          max_rows?: number | null
+          max_total_videos?: number | null
+          max_videos_per_row?: number | null
           name?: string
           owner_id?: string | null
+          revenue_share_percent?: number | null
           slug?: string
           trailer_url?: string | null
           updated_at?: string | null
@@ -1214,6 +1244,41 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string | null
+          endpoint: string
+          id: string
+          p256dh_key: string
+          profile_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          p256dh_key: string
+          profile_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          p256dh_key?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seasons: {
         Row: {
           content_id: string
@@ -1363,6 +1428,7 @@ export type Database = {
           is_kids: boolean | null
           name: string
           preferred_genres: string[] | null
+          push_notifications_enabled: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -1374,6 +1440,7 @@ export type Database = {
           is_kids?: boolean | null
           name: string
           preferred_genres?: string[] | null
+          push_notifications_enabled?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -1385,6 +1452,7 @@ export type Database = {
           is_kids?: boolean | null
           name?: string
           preferred_genres?: string[] | null
+          push_notifications_enabled?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
