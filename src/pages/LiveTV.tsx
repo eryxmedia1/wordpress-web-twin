@@ -84,6 +84,7 @@ export default function LiveTV() {
     showCountdown,
     adQueueLength,
     podConfig,
+    canRequestMidRoll,
     requestPreRoll,
     requestMidRoll,
     onAdComplete,
@@ -96,8 +97,9 @@ export default function LiveTV() {
     onAdEnd: () => setIsPlaying(true),
   });
 
-  // Mid-roll ad timer - triggers ad breaks at configured intervals
-  const midrollIntervalSeconds = (podConfig.midrollIntervalMinutes || 10) * 60;
+  // Mid-roll ad timer - triggers ad breaks at 15-minute intervals (4 breaks per hour)
+  // Using 15 minutes (900 seconds) for 4 mid-rolls per 60-minute period
+  const midrollIntervalSeconds = 15 * 60; // 15 minutes = 900 seconds
   
   useEffect(() => {
     // Don't run timer if not playing, ad is playing, or no video
@@ -113,9 +115,9 @@ export default function LiveTV() {
     midrollTimerRef.current = setInterval(() => {
       setWatchTimeSeconds(prev => {
         const newTime = prev + 1;
-        // Check if it's time for a mid-roll break
-        if (newTime > 0 && newTime % midrollIntervalSeconds === 0) {
-          console.log(`[LiveTV Ads] Mid-roll triggered at ${newTime}s (interval: ${midrollIntervalSeconds}s)`);
+        // Check if it's time for a mid-roll break AND we haven't exceeded max (4 per hour)
+        if (newTime > 0 && newTime % midrollIntervalSeconds === 0 && canRequestMidRoll()) {
+          console.log(`[LiveTV Ads] Mid-roll triggered at ${newTime}s (break every 15 min, max 4 per hour)`);
           requestMidRoll(10); // 10 second countdown
         }
         return newTime;
@@ -128,7 +130,7 @@ export default function LiveTV() {
         midrollTimerRef.current = null;
       }
     };
-  }, [isPlaying, isAdPlaying, selectedChannel, midrollIntervalSeconds, requestMidRoll]);
+  }, [isPlaying, isAdPlaying, selectedChannel, midrollIntervalSeconds, requestMidRoll, canRequestMidRoll]);
 
   // Reset watch time when changing channels
   useEffect(() => {

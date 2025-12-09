@@ -129,12 +129,12 @@ export default function AdminLiveTVAds() {
   const [newContentConfig, setNewContentConfig] = useState({ preroll: 1, midroll: 1, postroll: 1, interval: 10, midrollCount: 4 });
   const [newChannelConfig, setNewChannelConfig] = useState({ preroll: 1, midroll: 1, postroll: 1, interval: 10, midrollCount: 4 });
 
-  // Global config state
+  // Global config state - default to 60-minute intervals for 4 mid-rolls per hour
   const [globalConfig, setGlobalConfig] = useState<GlobalConfig>({
     preroll_pod_size: 1,
     midroll_pod_size: 1,
     postroll_pod_size: 1,
-    midroll_interval_minutes: 10,
+    midroll_interval_minutes: 60,
   });
   const [isSavingGlobal, setIsSavingGlobal] = useState(false);
   
