@@ -39,11 +39,19 @@ interface MidrollPodConfig {
   break4PodSize: number;
 }
 
+interface ContentMidrollConfig {
+  enabled: boolean;
+  count: number;
+  startAfterMinutes: number;
+  intervalMinutes: number;
+}
+
 interface UseAdsOptions {
   contentId?: string;
   channelId?: string;
   membershipTier?: string;
   deviceType?: 'mobile' | 'desktop' | 'tv';
+  contentMidrollConfig?: ContentMidrollConfig; // Per-content midroll settings
   onAdStart?: () => void;
   onAdEnd?: () => void;
 }
@@ -62,6 +70,13 @@ const DEFAULT_MIDROLL_POD_CONFIG: MidrollPodConfig = {
   break4PodSize: 3,
 };
 
+const DEFAULT_CONTENT_MIDROLL_CONFIG: ContentMidrollConfig = {
+  enabled: true,
+  count: 4,
+  startAfterMinutes: 5,
+  intervalMinutes: 10,
+};
+
 export function useAds(options: UseAdsOptions = {}) {
   const { currentProfile } = useProfile();
   const [currentAd, setCurrentAd] = useState<Ad | null>(null);
@@ -78,6 +93,12 @@ export function useAds(options: UseAdsOptions = {}) {
   const [midrollPodConfig, setMidrollPodConfig] = useState<MidrollPodConfig>(DEFAULT_MIDROLL_POD_CONFIG);
   const [podConfigFetched, setPodConfigFetched] = useState(false);
   const [midrollBreakCount, setMidrollBreakCount] = useState(0);
+  const [maxMidrollCount, setMaxMidrollCount] = useState<number>(4);
+
+  // Get effective midroll config from options or defaults
+  const effectiveMidrollConfig = useMemo(() => {
+    return options.contentMidrollConfig || DEFAULT_CONTENT_MIDROLL_CONFIG;
+  }, [options.contentMidrollConfig]);
 
   // Detect device type
   const getDeviceType = useCallback((): 'mobile' | 'desktop' | 'tv' => {
@@ -151,10 +172,14 @@ export function useAds(options: UseAdsOptions = {}) {
               postrollPodSize: contentConfig.postroll_pod_size || 1,
               midrollIntervalMinutes: contentConfig.midroll_interval_minutes || 10,
             });
+            // Set max midroll count from content config
+            if (contentConfig.max_midroll_count !== null) {
+              setMaxMidrollCount(contentConfig.max_midroll_count);
+            }
           }
         }
 
-        // Then try channel-specific config
+        // Then try channel-specific config (only if no content config found)
         if (options.channelId) {
           const { data: channelConfig } = await supabase
             .from('ad_pod_config')
@@ -170,6 +195,10 @@ export function useAds(options: UseAdsOptions = {}) {
               postrollPodSize: channelConfig.postroll_pod_size || 1,
               midrollIntervalMinutes: channelConfig.midroll_interval_minutes || 10,
             });
+            // Set max midroll count from channel config if not already set by content
+            if (channelConfig.max_midroll_count !== null) {
+              setMaxMidrollCount(channelConfig.max_midroll_count);
+            }
           }
         }
 
@@ -374,8 +403,23 @@ export function useAds(options: UseAdsOptions = {}) {
     return false;
   }, [fetchAdPod, podConfig.prerollPodSize, startAdPod]);
 
+  // Check if more mid-rolls are allowed based on max count
+  const canRequestMidRoll = useCallback((): boolean => {
+    // Use content's midroll config count if available, otherwise use maxMidrollCount from ad_pod_config
+    const effectiveMaxCount = effectiveMidrollConfig.count || maxMidrollCount;
+    const canRequest = midrollBreakCount < effectiveMaxCount;
+    console.log(`Mid-roll check: ${midrollBreakCount}/${effectiveMaxCount}, can request: ${canRequest}`);
+    return canRequest;
+  }, [midrollBreakCount, maxMidrollCount, effectiveMidrollConfig.count]);
+
   // Request mid-roll ad pod with progressive pod sizes
   const requestMidRoll = useCallback(async (countdownDuration: number = 10): Promise<boolean> => {
+    // Check if we've reached the max mid-roll count
+    if (!canRequestMidRoll()) {
+      console.log('Max mid-roll count reached, not requesting more ads');
+      return false;
+    }
+
     // Increment break count and get progressive pod size
     const nextBreakNumber = midrollBreakCount + 1;
     const podSize = getProgressivePodSize(nextBreakNumber);
@@ -394,7 +438,7 @@ export function useAds(options: UseAdsOptions = {}) {
       return true;
     }
     return false;
-  }, [fetchAdPod, midrollBreakCount, getProgressivePodSize]);
+  }, [fetchAdPod, midrollBreakCount, getProgressivePodSize, canRequestMidRoll]);
 
   // Request post-roll ad pod
   const requestPostRoll = useCallback(async (): Promise<boolean> => {
@@ -472,6 +516,9 @@ export function useAds(options: UseAdsOptions = {}) {
     podConfig,
     midrollPodConfig,
     midrollBreakCount,
+    maxMidrollCount,
+    effectiveMidrollConfig,
+    canRequestMidRoll,
     requestPreRoll,
     requestMidRoll,
     requestPostRoll,

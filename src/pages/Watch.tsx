@@ -19,6 +19,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAds } from "@/hooks/useAds";
 import { AdBreakOverlay } from "@/components/AdBreakOverlay";
 
+interface MidrollConfig {
+  enabled: boolean;
+  count: number;
+  startAfterMinutes: number;
+  intervalMinutes: number;
+}
+
 interface ContentData {
   id: string;
   title: string;
@@ -38,6 +45,7 @@ interface ContentData {
   vast_ad_midroll: string | null;
   vast_ad_postroll: string | null;
   type?: string;
+  midroll_config?: MidrollConfig;
 }
 
 interface EpisodeData {
@@ -108,6 +116,17 @@ const Watch = () => {
   const watchStartTime = useRef<number | null>(null);
   const totalWatchedSeconds = useRef(0);
 
+  // Get content midroll config for useAds
+  const contentMidrollConfig = useMemo(() => {
+    if (!content?.midroll_config) return undefined;
+    return {
+      enabled: content.midroll_config.enabled ?? true,
+      count: content.midroll_config.count ?? 4,
+      startAfterMinutes: content.midroll_config.startAfterMinutes ?? 5,
+      intervalMinutes: content.midroll_config.intervalMinutes ?? 10,
+    };
+  }, [content?.midroll_config]);
+
   // Ad system integration
   const {
     currentAd,
@@ -116,6 +135,8 @@ const Watch = () => {
     countdownSeconds,
     showCountdown,
     adQueueLength,
+    effectiveMidrollConfig,
+    canRequestMidRoll,
     requestPreRoll,
     requestMidRoll,
     requestPostRoll,
@@ -125,6 +146,7 @@ const Watch = () => {
     contentId: id,
     membershipTier: userPlan || 'free',
     deviceType: isMobile ? 'mobile' : 'desktop',
+    contentMidrollConfig,
     onAdStart: () => setIsPlaying(false),
     onAdEnd: () => setIsPlaying(true),
   });
@@ -590,19 +612,25 @@ const Watch = () => {
     }
   };
 
-  // Handle mid-roll ads based on progress
+  // Handle mid-roll ads based on progress and content's midroll_config
   useEffect(() => {
     if (!isPlaying || isAdPlaying || !adConfig.showMidroll || !duration) return;
     
+    // Check if midroll is enabled for this content
+    if (effectiveMidrollConfig && !effectiveMidrollConfig.enabled) return;
+    
+    // Check if we can still request more mid-rolls
+    if (!canRequestMidRoll()) return;
+    
     const currentSeconds = (progress / 100) * duration;
-    const midrollInterval = 10 * 60; // 10 minutes
-    const startAfter = 5 * 60; // 5 minutes
+    const midrollInterval = (effectiveMidrollConfig?.intervalMinutes || 10) * 60;
+    const startAfter = (effectiveMidrollConfig?.startAfterMinutes || 5) * 60;
     
     if (currentSeconds >= startAfter && currentSeconds - lastMidrollTime >= midrollInterval) {
       requestMidRoll(10);
       setLastMidrollTime(currentSeconds);
     }
-  }, [progress, duration, isPlaying, isAdPlaying, adConfig.showMidroll, lastMidrollTime, requestMidRoll]);
+  }, [progress, duration, isPlaying, isAdPlaying, adConfig.showMidroll, lastMidrollTime, requestMidRoll, effectiveMidrollConfig, canRequestMidRoll]);
 
   // Handle post-roll ads when video ends
   const handleVideoEndedWithAds = useCallback(async () => {
