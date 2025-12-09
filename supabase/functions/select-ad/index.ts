@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface SelectAdRequest {
-  position: 'pre' | 'mid' | 'post';
+  position: 'pre' | 'mid' | 'post' | 'live';
   podSize?: number;
   userId?: string;
   profileId?: string;
@@ -23,20 +23,44 @@ interface SelectAdRequest {
   timeZone?: string;
 }
 
-interface Ad {
+interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+  priority: number;
+  start_at: string | null;
+  end_at: string | null;
+  max_impressions: number | null;
+  max_impressions_per_day: number | null;
+  max_impressions_per_user_per_day: number | null;
+  current_impressions: number;
+  current_impressions_today: number;
+  last_impression_date: string | null;
+  allowed_positions: string[];
+  allowed_membership_tiers: string[];
+  target_countries: string[];
+  target_regions: string[];
+  target_cities: string[];
+  target_postal_codes: string[];
+  target_timezones: string[];
+  target_devices: string[];
+}
+
+interface Creative {
   id: string;
   name: string;
   video_url: string | null;
   vast_tag_url: string | null;
   duration_seconds: number;
+  click_through_url: string | null;
+}
+
+interface CampaignCreative {
+  creative_id: string;
   weight: number;
-  position_pre: boolean;
-  position_mid: boolean;
-  position_post: boolean;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -55,7 +79,7 @@ serve(async (req) => {
       contentId, 
       channelId,
       indieChannelId,
-      membershipTier,
+      membershipTier = 'free',
       deviceType,
       geoCountry,
       geoRegion,
@@ -64,262 +88,227 @@ serve(async (req) => {
       timeZone
     } = request;
 
-    console.log('Ad selection request:', { position, podSize, contentId, channelId, indieChannelId, membershipTier, geoCountry });
-
+    // Map position to campaign format
+    const positionKey = position === 'live' ? 'live_break' : `${position}_roll`;
+    const today = new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();
 
-    // Step 1: Get all active ads with correct position
-    let query = supabase
-      .from('ads')
-      .select(`
-        id,
-        name,
-        video_url,
-        vast_tag_url,
-        duration_seconds,
-        weight,
-        position_pre,
-        position_mid,
-        position_post,
-        max_impressions,
-        current_impressions,
-        start_at,
-        end_at,
-        frequency_cap_per_user_per_day
-      `)
-      .eq('status', 'active');
+    console.log('Campaign ad selection request:', { position: positionKey, podSize, contentId, channelId, membershipTier, geoCountry });
 
-    const { data: allAds, error: adsError } = await query;
+    // Step 1: Get all active campaigns
+    const { data: allCampaigns, error: campaignsError } = await supabase
+      .from('ad_campaigns')
+      .select('*')
+      .eq('status', 'active')
+      .order('priority', { ascending: false });
 
-    if (adsError) {
-      console.error('Error fetching ads:', adsError);
-      throw adsError;
+    if (campaignsError) {
+      console.error('Error fetching campaigns:', campaignsError);
+      throw campaignsError;
     }
 
-    if (!allAds || allAds.length === 0) {
-      console.log('No active ads found');
-      return new Response(JSON.stringify({ ads: [], reason: 'no_active_ads' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!allCampaigns || allCampaigns.length === 0) {
+      console.log('No active campaigns, falling back to legacy ad selection');
+      return await legacyAdSelection(supabase, request);
     }
 
-    console.log(`Found ${allAds.length} active ads`);
+    console.log(`Found ${allCampaigns.length} active campaigns`);
 
-    // Step 2: Filter by position
-    let eligibleAds = allAds.filter(ad => {
-      if (position === 'pre') return ad.position_pre;
-      if (position === 'mid') return ad.position_mid;
-      if (position === 'post') return ad.position_post;
-      return false;
-    });
+    // Step 2: Filter campaigns by eligibility
+    let eligibleCampaigns = allCampaigns.filter((campaign: Campaign) => {
+      // Check flight dates
+      if (campaign.start_at && new Date(campaign.start_at) > new Date(now)) return false;
+      if (campaign.end_at && new Date(campaign.end_at) < new Date(now)) return false;
 
-    console.log(`After position filter: ${eligibleAds.length} ads`);
+      // Check position
+      if (!campaign.allowed_positions.includes(positionKey)) return false;
 
-    if (eligibleAds.length === 0) {
-      return new Response(JSON.stringify({ ads: [], reason: 'no_ads_for_position' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+      // Check membership tier
+      if (campaign.allowed_membership_tiers.length > 0) {
+        if (!campaign.allowed_membership_tiers.includes(membershipTier.toLowerCase())) return false;
+      }
 
-    // Step 3: Filter by flight dates
-    eligibleAds = eligibleAds.filter(ad => {
-      if (ad.start_at && new Date(ad.start_at) > new Date(now)) return false;
-      if (ad.end_at && new Date(ad.end_at) < new Date(now)) return false;
+      // Check max impressions
+      if (campaign.max_impressions !== null && campaign.current_impressions >= campaign.max_impressions) return false;
+
+      // Check daily impressions (reset if new day)
+      if (campaign.max_impressions_per_day !== null) {
+        const lastDate = campaign.last_impression_date;
+        const todayImpressions = lastDate === today ? campaign.current_impressions_today : 0;
+        if (todayImpressions >= campaign.max_impressions_per_day) return false;
+      }
+
+      // Check device targeting
+      if (campaign.target_devices.length > 0 && deviceType) {
+        if (!campaign.target_devices.includes(deviceType.toLowerCase())) return false;
+      }
+
+      // Check geo targeting - country
+      if (campaign.target_countries.length > 0 && geoCountry) {
+        if (!campaign.target_countries.some(c => c.toLowerCase() === geoCountry.toLowerCase())) return false;
+      }
+
+      // Check geo targeting - region
+      if (campaign.target_regions.length > 0 && geoRegion) {
+        if (!campaign.target_regions.some(r => r.toLowerCase() === geoRegion.toLowerCase())) return false;
+      }
+
+      // Check geo targeting - city
+      if (campaign.target_cities.length > 0 && geoCity) {
+        if (!campaign.target_cities.some(c => c.toLowerCase() === geoCity.toLowerCase())) return false;
+      }
+
+      // Check geo targeting - postal
+      if (campaign.target_postal_codes.length > 0 && geoPostal) {
+        if (!campaign.target_postal_codes.some(p => p.toLowerCase() === geoPostal.toLowerCase())) return false;
+      }
+
+      // Check timezone targeting
+      if (campaign.target_timezones.length > 0 && timeZone) {
+        if (!campaign.target_timezones.includes(timeZone)) return false;
+      }
+
       return true;
     });
 
-    console.log(`After flight date filter: ${eligibleAds.length} ads`);
+    console.log(`After basic filters: ${eligibleCampaigns.length} campaigns`);
 
-    // Step 4: Filter by impression cap
-    eligibleAds = eligibleAds.filter(ad => {
-      if (ad.max_impressions === null) return true;
-      return ad.current_impressions < ad.max_impressions;
+    if (eligibleCampaigns.length === 0) {
+      console.log('No eligible campaigns after basic filters, falling back to legacy');
+      return await legacyAdSelection(supabase, request);
+    }
+
+    // Step 3: Filter by channel/content targeting
+    const campaignIds = eligibleCampaigns.map(c => c.id);
+    
+    const [channelsRes, contentRes] = await Promise.all([
+      supabase.from('campaign_channels').select('*').in('campaign_id', campaignIds),
+      supabase.from('campaign_content_items').select('*').in('campaign_id', campaignIds),
+    ]);
+
+    const channelTargeting = channelsRes.data || [];
+    const contentTargeting = contentRes.data || [];
+
+    eligibleCampaigns = eligibleCampaigns.filter((campaign: Campaign) => {
+      const campaignChannels = channelTargeting.filter(ct => ct.campaign_id === campaign.id);
+      const campaignContent = contentTargeting.filter(ct => ct.campaign_id === campaign.id);
+
+      // If no targeting specified, it's global - show everywhere
+      if (campaignChannels.length === 0 && campaignContent.length === 0) return true;
+
+      // Check channel targeting
+      if (campaignChannels.length > 0 && (channelId || indieChannelId)) {
+        const matchesChannel = campaignChannels.some(ct => 
+          ct.channel_id === channelId || ct.channel_id === indieChannelId
+        );
+        if (matchesChannel) return true;
+      }
+
+      // Check content targeting
+      if (campaignContent.length > 0 && contentId) {
+        const matchesContent = campaignContent.some(ct => ct.content_id === contentId);
+        if (matchesContent) return true;
+      }
+
+      // If targeting is specified but no match, exclude this campaign
+      return campaignChannels.length === 0 && campaignContent.length === 0;
     });
 
-    console.log(`After impression cap filter: ${eligibleAds.length} ads`);
+    console.log(`After channel/content targeting: ${eligibleCampaigns.length} campaigns`);
 
-    if (eligibleAds.length === 0) {
-      return new Response(JSON.stringify({ ads: [], reason: 'all_ads_capped' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (eligibleCampaigns.length === 0) {
+      console.log('No eligible campaigns after targeting, falling back to legacy');
+      return await legacyAdSelection(supabase, request);
     }
 
-    // Step 5: Get targeting data for remaining ads
-    const adIds = eligibleAds.map(ad => ad.id);
-    const { data: targetingData } = await supabase
-      .from('ad_targeting')
-      .select('*')
-      .in('ad_id', adIds);
-
-    // Step 6: Filter by targeting
-    if (targetingData && targetingData.length > 0) {
-      eligibleAds = eligibleAds.filter(ad => {
-        const targeting = targetingData.find(t => t.ad_id === ad.id);
-        if (!targeting) return true; // No targeting = show to everyone
-
-        // Check membership tier
-        if (targeting.membership_tiers && targeting.membership_tiers.length > 0 && membershipTier) {
-          if (!targeting.membership_tiers.includes(membershipTier.toLowerCase())) {
-            return false;
-          }
-        }
-
-        // Check device type
-        if (targeting.device_types && targeting.device_types.length > 0 && deviceType) {
-          if (!targeting.device_types.includes(deviceType.toLowerCase())) {
-            return false;
-          }
-        }
-
-        // Check country
-        if (targeting.countries && targeting.countries.length > 0 && geoCountry) {
-          if (!targeting.countries.some((c: string) => c.toLowerCase() === geoCountry.toLowerCase())) {
-            return false;
-          }
-        }
-
-        // Check region
-        if (targeting.regions && targeting.regions.length > 0 && geoRegion) {
-          if (!targeting.regions.some((r: string) => r.toLowerCase() === geoRegion.toLowerCase())) {
-            return false;
-          }
-        }
-
-        // Check city
-        if (targeting.cities && targeting.cities.length > 0 && geoCity) {
-          if (!targeting.cities.some((c: string) => c.toLowerCase() === geoCity.toLowerCase())) {
-            return false;
-          }
-        }
-
-        // Check postal code
-        if (targeting.postal_codes && targeting.postal_codes.length > 0 && geoPostal) {
-          if (!targeting.postal_codes.some((p: string) => p.toLowerCase() === geoPostal.toLowerCase())) {
-            return false;
-          }
-        }
-
-        // Check timezone
-        if (targeting.time_zones && targeting.time_zones.length > 0 && timeZone) {
-          if (!targeting.time_zones.includes(timeZone)) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-
-      console.log(`After targeting filter: ${eligibleAds.length} ads`);
-    }
-
-    // Step 7: Get placements for remaining ads
-    const { data: placementsData } = await supabase
-      .from('ad_placements')
-      .select('*')
-      .in('ad_id', adIds);
-
-    // Step 8: Filter by placements
-    if (placementsData && placementsData.length > 0) {
-      eligibleAds = eligibleAds.filter(ad => {
-        const placements = placementsData.filter(p => p.ad_id === ad.id);
-        if (placements.length === 0) return true; // No placements = global
-
-        // Check if any placement matches
-        return placements.some(placement => {
-          // Check position is enabled for this placement
-          if (position === 'pre' && !placement.pre_enabled) return false;
-          if (position === 'mid' && !placement.mid_enabled) return false;
-          if (position === 'post' && !placement.post_enabled) return false;
-
-          // Check placement type
-          if (placement.placement_type === 'global') return true;
-          
-          // Check "all channels" flag for channel placements
-          if (placement.placement_type === 'channel' && placement.all_channels && channelId) return true;
-          
-          if (placement.placement_type === 'content' && contentId && placement.content_id === contentId) return true;
-          if (placement.placement_type === 'channel' && channelId && placement.channel_id === channelId) return true;
-          if (placement.indie_channel_id && indieChannelId && placement.indie_channel_id === indieChannelId) return true;
-
-          return false;
-        });
-      });
-
-      console.log(`After placement filter: ${eligibleAds.length} ads`);
-    }
-
-    if (eligibleAds.length === 0) {
-      return new Response(JSON.stringify({ ads: [], reason: 'no_matching_placements' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Step 9: Apply frequency cap (if user is identified)
+    // Step 4: Check user frequency caps
     if (userId) {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
       const { data: recentImpressions } = await supabase
         .from('ad_impressions')
-        .select('ad_id')
+        .select('campaign_id')
         .eq('user_id', userId)
         .gte('played_at', twentyFourHoursAgo);
 
       if (recentImpressions && recentImpressions.length > 0) {
         const impressionCounts = recentImpressions.reduce((acc: Record<string, number>, imp) => {
-          acc[imp.ad_id] = (acc[imp.ad_id] || 0) + 1;
+          if (imp.campaign_id) {
+            acc[imp.campaign_id] = (acc[imp.campaign_id] || 0) + 1;
+          }
           return acc;
         }, {});
 
-        eligibleAds = eligibleAds.filter(ad => {
-          const adData = allAds.find(a => a.id === ad.id);
-          if (!adData?.frequency_cap_per_user_per_day) return true;
-          const count = impressionCounts[ad.id] || 0;
-          return count < adData.frequency_cap_per_user_per_day;
+        eligibleCampaigns = eligibleCampaigns.filter((campaign: Campaign) => {
+          if (!campaign.max_impressions_per_user_per_day) return true;
+          const count = impressionCounts[campaign.id] || 0;
+          return count < campaign.max_impressions_per_user_per_day;
         });
 
-        console.log(`After frequency cap filter: ${eligibleAds.length} ads`);
+        console.log(`After user frequency cap: ${eligibleCampaigns.length} campaigns`);
       }
     }
 
-    if (eligibleAds.length === 0) {
-      return new Response(JSON.stringify({ ads: [], reason: 'frequency_capped' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (eligibleCampaigns.length === 0) {
+      console.log('No eligible campaigns after frequency cap, falling back to legacy');
+      return await legacyAdSelection(supabase, request);
     }
 
-    // Step 10: Select multiple ads for the pod using weighted random selection
-    const selectedAds: Ad[] = [];
-    const selectedAdIds = new Set<string>();
-    let remainingAds = [...eligibleAds];
+    // Step 5: Select campaign by highest priority (already sorted)
+    const selectedCampaign = eligibleCampaigns[0];
+    console.log(`Selected campaign: ${selectedCampaign.name} (priority: ${selectedCampaign.priority})`);
 
-    for (let i = 0; i < podSize && remainingAds.length > 0; i++) {
-      const totalWeight = remainingAds.reduce((sum, ad) => sum + (ad.weight || 1), 0);
+    // Step 6: Get creatives for the selected campaign
+    const { data: campaignCreatives } = await supabase
+      .from('campaign_creatives')
+      .select('creative_id, weight')
+      .eq('campaign_id', selectedCampaign.id);
+
+    if (!campaignCreatives || campaignCreatives.length === 0) {
+      console.log('No creatives attached to campaign, falling back to legacy');
+      return await legacyAdSelection(supabase, request);
+    }
+
+    // Get creative details
+    const creativeIds = campaignCreatives.map(cc => cc.creative_id);
+    const { data: creatives } = await supabase
+      .from('ads')
+      .select('id, name, video_url, vast_tag_url, duration_seconds, click_through_url')
+      .in('id', creativeIds)
+      .eq('status', 'active');
+
+    if (!creatives || creatives.length === 0) {
+      console.log('No active creatives found, falling back to legacy');
+      return await legacyAdSelection(supabase, request);
+    }
+
+    // Step 7: Select creatives by weight for the pod
+    const selectedAds: Creative[] = [];
+    let remainingCreatives = creatives.map(c => ({
+      ...c,
+      weight: campaignCreatives.find(cc => cc.creative_id === c.id)?.weight || 1
+    }));
+
+    for (let i = 0; i < podSize && remainingCreatives.length > 0; i++) {
+      const totalWeight = remainingCreatives.reduce((sum, c) => sum + c.weight, 0);
       let random = Math.random() * totalWeight;
-      let selectedAd: Ad | null = null;
+      let selectedCreative = remainingCreatives[0];
 
-      for (const ad of remainingAds) {
-        random -= (ad.weight || 1);
+      for (const creative of remainingCreatives) {
+        random -= creative.weight;
         if (random <= 0) {
-          selectedAd = ad;
+          selectedCreative = creative;
           break;
         }
       }
 
-      // Fallback to first ad if somehow none selected
-      if (!selectedAd) {
-        selectedAd = remainingAds[0];
-      }
-
-      selectedAds.push(selectedAd);
-      selectedAdIds.add(selectedAd.id);
-      
-      // Remove selected ad from remaining pool (no duplicates in same pod)
-      remainingAds = remainingAds.filter(ad => ad.id !== selectedAd!.id);
+      selectedAds.push(selectedCreative);
+      remainingCreatives = remainingCreatives.filter(c => c.id !== selectedCreative.id);
     }
 
-    console.log(`Selected ${selectedAds.length} ads for pod`);
+    console.log(`Selected ${selectedAds.length} ads from campaign ${selectedCampaign.name}`);
 
-    // Return the selected ads
+    // Return the selected ads with campaign info
     const response = {
       ads: selectedAds.map(ad => ({
         id: ad.id,
@@ -328,8 +317,11 @@ serve(async (req) => {
         video_url: ad.video_url,
         vast_tag_url: ad.vast_tag_url,
         duration_seconds: ad.duration_seconds,
+        click_through_url: ad.click_through_url,
       })),
       trackingIds: selectedAds.map(() => crypto.randomUUID()),
+      campaignId: selectedCampaign.id,
+      campaignName: selectedCampaign.name,
     };
 
     return new Response(JSON.stringify(response), {
@@ -344,3 +336,179 @@ serve(async (req) => {
     });
   }
 });
+
+// Fallback to legacy ad selection if no campaigns match
+async function legacyAdSelection(supabase: any, request: SelectAdRequest) {
+  const { 
+    position, 
+    podSize = 1,
+    userId, 
+    contentId, 
+    channelId,
+    indieChannelId,
+    membershipTier,
+    deviceType,
+    geoCountry,
+    geoRegion,
+    geoCity,
+    geoPostal,
+    timeZone
+  } = request;
+
+  const now = new Date().toISOString();
+
+  // Get all active ads with correct position
+  let query = supabase
+    .from('ads')
+    .select(`
+      id, name, video_url, vast_tag_url, duration_seconds, weight,
+      position_pre, position_mid, position_post,
+      max_impressions, current_impressions, start_at, end_at, frequency_cap_per_user_per_day
+    `)
+    .eq('status', 'active');
+
+  const { data: allAds, error: adsError } = await query;
+
+  if (adsError || !allAds || allAds.length === 0) {
+    return new Response(JSON.stringify({ ads: [], reason: 'no_active_ads' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Filter by position
+  let eligibleAds = allAds.filter((ad: any) => {
+    if (position === 'pre') return ad.position_pre;
+    if (position === 'mid') return ad.position_mid;
+    if (position === 'post') return ad.position_post;
+    if (position === 'live') return ad.position_mid || ad.position_pre;
+    return false;
+  });
+
+  // Filter by flight dates
+  eligibleAds = eligibleAds.filter((ad: any) => {
+    if (ad.start_at && new Date(ad.start_at) > new Date(now)) return false;
+    if (ad.end_at && new Date(ad.end_at) < new Date(now)) return false;
+    return true;
+  });
+
+  // Filter by impression cap
+  eligibleAds = eligibleAds.filter((ad: any) => {
+    if (ad.max_impressions === null) return true;
+    return ad.current_impressions < ad.max_impressions;
+  });
+
+  if (eligibleAds.length === 0) {
+    return new Response(JSON.stringify({ ads: [], reason: 'no_eligible_ads' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Get targeting and placement data
+  const adIds = eligibleAds.map((ad: any) => ad.id);
+  const [targetingRes, placementsRes] = await Promise.all([
+    supabase.from('ad_targeting').select('*').in('ad_id', adIds),
+    supabase.from('ad_placements').select('*').in('ad_id', adIds),
+  ]);
+
+  const targetingData = targetingRes.data || [];
+  const placementsData = placementsRes.data || [];
+
+  // Apply targeting filters
+  if (targetingData.length > 0) {
+    eligibleAds = eligibleAds.filter((ad: any) => {
+      const targeting = targetingData.find((t: any) => t.ad_id === ad.id);
+      if (!targeting) return true;
+
+      if (targeting.membership_tiers?.length > 0 && membershipTier) {
+        if (!targeting.membership_tiers.includes(membershipTier.toLowerCase())) return false;
+      }
+      if (targeting.device_types?.length > 0 && deviceType) {
+        if (!targeting.device_types.includes(deviceType.toLowerCase())) return false;
+      }
+      if (targeting.countries?.length > 0 && geoCountry) {
+        if (!targeting.countries.some((c: string) => c.toLowerCase() === geoCountry.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }
+
+  // Apply placement filters
+  if (placementsData.length > 0) {
+    eligibleAds = eligibleAds.filter((ad: any) => {
+      const placements = placementsData.filter((p: any) => p.ad_id === ad.id);
+      if (placements.length === 0) return true;
+
+      return placements.some((placement: any) => {
+        if (placement.placement_type === 'global') return true;
+        if (placement.all_channels && channelId) return true;
+        if (placement.content_id === contentId) return true;
+        if (placement.channel_id === channelId) return true;
+        if (placement.indie_channel_id === indieChannelId) return true;
+        return false;
+      });
+    });
+  }
+
+  // Apply frequency cap
+  if (userId) {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentImpressions } = await supabase
+      .from('ad_impressions')
+      .select('ad_id')
+      .eq('user_id', userId)
+      .gte('played_at', twentyFourHoursAgo);
+
+    if (recentImpressions && recentImpressions.length > 0) {
+      const counts = recentImpressions.reduce((acc: Record<string, number>, imp: any) => {
+        acc[imp.ad_id] = (acc[imp.ad_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      eligibleAds = eligibleAds.filter((ad: any) => {
+        if (!ad.frequency_cap_per_user_per_day) return true;
+        return (counts[ad.id] || 0) < ad.frequency_cap_per_user_per_day;
+      });
+    }
+  }
+
+  if (eligibleAds.length === 0) {
+    return new Response(JSON.stringify({ ads: [], reason: 'all_filtered' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Weighted random selection
+  const selectedAds: any[] = [];
+  let remaining = [...eligibleAds];
+
+  for (let i = 0; i < podSize && remaining.length > 0; i++) {
+    const totalWeight = remaining.reduce((sum, ad) => sum + (ad.weight || 1), 0);
+    let random = Math.random() * totalWeight;
+    let selected = remaining[0];
+
+    for (const ad of remaining) {
+      random -= (ad.weight || 1);
+      if (random <= 0) {
+        selected = ad;
+        break;
+      }
+    }
+
+    selectedAds.push(selected);
+    remaining = remaining.filter(ad => ad.id !== selected.id);
+  }
+
+  return new Response(JSON.stringify({
+    ads: selectedAds.map(ad => ({
+      id: ad.id,
+      name: ad.name,
+      type: ad.vast_tag_url ? 'vast' : 'video',
+      video_url: ad.video_url,
+      vast_tag_url: ad.vast_tag_url,
+      duration_seconds: ad.duration_seconds,
+    })),
+    trackingIds: selectedAds.map(() => crypto.randomUUID()),
+  }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
