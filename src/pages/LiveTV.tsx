@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import ExpandingSidebar from "@/components/ExpandingSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileLiveTV from "@/components/mobile/MobileLiveTV";
+import MobileLayout from "@/components/mobile/MobileLayout";
 import ReactPlayer from "react-player";
 import { Loader2, Radio, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -671,7 +672,11 @@ export default function LiveTV() {
   );
 
   if (isMobile) {
-    return <MobileLiveTV />;
+    return (
+      <MobileLayout hideHeader>
+        <MobileLiveTV />
+      </MobileLayout>
+    );
   }
 
   return (
