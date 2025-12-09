@@ -103,6 +103,7 @@ const Watch = () => {
   const [playerReady, setPlayerReady] = useState(false);
   const [preRollPlayed, setPreRollPlayed] = useState(false);
   const [lastMidrollTime, setLastMidrollTime] = useState(0);
+  const viewTracked = useRef(false);
 
   // Ad system integration
   const {
@@ -131,10 +132,71 @@ const Watch = () => {
   // Reset seek flag when navigating to new content or episode
   useEffect(() => {
     hasInitialSeek.current = false;
+    viewTracked.current = false;
     setPlayerReady(false);
     setShowVideo(false);
     setIsPlaying(false);
   }, [id, episodeId]);
+
+  // Track view with geo data when video starts playing
+  const trackView = useCallback(async () => {
+    if (viewTracked.current || !id) return;
+    viewTracked.current = true;
+
+    try {
+      // Detect geo location
+      let geoData = {
+        country: null as string | null,
+        region: null as string | null,
+        city: null as string | null,
+        postal: null as string | null,
+        timezone: null as string | null,
+      };
+
+      try {
+        const { data: geoResponse } = await supabase.functions.invoke('detect-geo');
+        if (geoResponse) {
+          geoData = {
+            country: geoResponse.country || null,
+            region: geoResponse.region || null,
+            city: geoResponse.city || null,
+            postal: geoResponse.postal || null,
+            timezone: geoResponse.timezone || null,
+          };
+        }
+      } catch (geoError) {
+        console.log('Geo detection failed, continuing without geo data:', geoError);
+      }
+
+      // Get user and profile info
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Find indie_channel_id if this content belongs to an indie channel
+      const { data: contentData } = await supabase
+        .from('contents')
+        .select('indie_channel_id')
+        .eq('id', id)
+        .single();
+
+      // Insert view record
+      await supabase.from('channel_views').insert({
+        content_id: id,
+        indie_channel_id: contentData?.indie_channel_id || null,
+        profile_id: currentProfile?.id || null,
+        user_id: user?.id || null,
+        device_type: isMobile ? 'mobile' : 'desktop',
+        geo_country: geoData.country,
+        geo_region: geoData.region,
+        geo_city: geoData.city,
+        geo_postal: geoData.postal,
+        time_zone: geoData.timezone,
+        duration_seconds: 0,
+        progress_percent: 0,
+      });
+    } catch (error) {
+      console.error('Error tracking view:', error);
+    }
+  }, [id, currentProfile?.id, isMobile]);
 
   // Fetch all episodes for the content (for episode selector and auto-play next)
   useEffect(() => {
@@ -451,6 +513,9 @@ const Watch = () => {
       return;
     }
     setShowVideo(true);
+    
+    // Track view when video starts
+    trackView();
     
     // Request pre-roll ad for free/standard users
     if (!preRollPlayed && adConfig.showPreroll) {
