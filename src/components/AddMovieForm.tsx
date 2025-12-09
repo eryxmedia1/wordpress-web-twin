@@ -11,6 +11,7 @@ import { MembershipPlansSelector } from "@/components/admin/MembershipPlansSelec
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { SubtitlesSelector } from "@/components/admin/SubtitlesSelector";
 import { GenreSelector } from "@/components/admin/GenreSelector";
+import { IndieChannelSelector } from "@/components/admin/IndieChannelSelector";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +98,7 @@ const AddMovieForm = () => {
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [selectedIndieChannelId, setSelectedIndieChannelId] = useState<string | null>(null);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -227,6 +229,7 @@ const AddMovieForm = () => {
           audio_languages: selectedAudioLanguages.length > 0 ? selectedAudioLanguages : null,
           subtitle_languages: selectedSubtitleLanguages.length > 0 ? selectedSubtitleLanguages : null,
           channels: selectedChannels.length > 0 ? selectedChannels : [],
+          indie_channel_id: selectedIndieChannelId,
           vast_ad_preroll: data.vastAdPreroll || null,
           vast_ad_midroll: data.vastAdMidroll || null,
           vast_ad_postroll: data.vastAdPostroll || null,
@@ -503,6 +506,12 @@ const AddMovieForm = () => {
                           )}
                         />
                       </div>
+
+                      {/* Indie Channel Selector */}
+                      <IndieChannelSelector
+                        selectedChannelId={selectedIndieChannelId}
+                        onChannelChange={setSelectedIndieChannelId}
+                      />
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField

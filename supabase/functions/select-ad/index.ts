@@ -8,11 +8,12 @@ const corsHeaders = {
 
 interface SelectAdRequest {
   position: 'pre' | 'mid' | 'post';
-  podSize?: number; // Number of ads to return for the pod
+  podSize?: number;
   userId?: string;
   profileId?: string;
   contentId?: string;
   channelId?: string;
+  indieChannelId?: string;
   membershipTier?: string;
   deviceType?: string;
   geoCountry?: string;
@@ -48,11 +49,12 @@ serve(async (req) => {
     const request: SelectAdRequest = await req.json();
     const { 
       position, 
-      podSize = 1, // Default to 1 ad if not specified
+      podSize = 1,
       userId, 
       profileId, 
       contentId, 
-      channelId, 
+      channelId,
+      indieChannelId,
       membershipTier,
       deviceType,
       geoCountry,
@@ -62,7 +64,7 @@ serve(async (req) => {
       timeZone
     } = request;
 
-    console.log('Ad selection request:', { position, podSize, contentId, channelId, membershipTier, geoCountry });
+    console.log('Ad selection request:', { position, podSize, contentId, channelId, indieChannelId, membershipTier, geoCountry });
 
     const now = new Date().toISOString();
 
@@ -237,6 +239,7 @@ serve(async (req) => {
           
           if (placement.placement_type === 'content' && contentId && placement.content_id === contentId) return true;
           if (placement.placement_type === 'channel' && channelId && placement.channel_id === channelId) return true;
+          if (placement.indie_channel_id && indieChannelId && placement.indie_channel_id === indieChannelId) return true;
 
           return false;
         });

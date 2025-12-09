@@ -141,6 +141,7 @@ export type Database = {
           content_id: string | null
           created_at: string | null
           id: string
+          indie_channel_id: string | null
           mid_enabled: boolean | null
           placement_type: string
           post_enabled: boolean | null
@@ -153,6 +154,7 @@ export type Database = {
           content_id?: string | null
           created_at?: string | null
           id?: string
+          indie_channel_id?: string | null
           mid_enabled?: boolean | null
           placement_type?: string
           post_enabled?: boolean | null
@@ -165,6 +167,7 @@ export type Database = {
           content_id?: string | null
           created_at?: string | null
           id?: string
+          indie_channel_id?: string | null
           mid_enabled?: boolean | null
           placement_type?: string
           post_enabled?: boolean | null
@@ -190,6 +193,13 @@ export type Database = {
             columns: ["content_id"]
             isOneToOne: false
             referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_placements_indie_channel_id_fkey"
+            columns: ["indie_channel_id"]
+            isOneToOne: false
+            referencedRelation: "indie_channels"
             referencedColumns: ["id"]
           },
         ]
@@ -503,6 +513,7 @@ export type Database = {
           featured: boolean | null
           genre: string | null
           id: string
+          indie_channel_id: string | null
           is_affiliate_url: boolean | null
           is_coming_soon: boolean | null
           is_zoe_original: boolean | null
@@ -539,6 +550,7 @@ export type Database = {
           featured?: boolean | null
           genre?: string | null
           id?: string
+          indie_channel_id?: string | null
           is_affiliate_url?: boolean | null
           is_coming_soon?: boolean | null
           is_zoe_original?: boolean | null
@@ -575,6 +587,7 @@ export type Database = {
           featured?: boolean | null
           genre?: string | null
           id?: string
+          indie_channel_id?: string | null
           is_affiliate_url?: boolean | null
           is_coming_soon?: boolean | null
           is_zoe_original?: boolean | null
@@ -596,7 +609,15 @@ export type Database = {
           video_sources?: Json | null
           video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contents_indie_channel_id_fkey"
+            columns: ["indie_channel_id"]
+            isOneToOne: false
+            referencedRelation: "indie_channels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       episodes: {
         Row: {
@@ -680,6 +701,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      indie_channel_favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          indie_channel_id: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          indie_channel_id: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          indie_channel_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indie_channel_favorites_indie_channel_id_fkey"
+            columns: ["indie_channel_id"]
+            isOneToOne: false
+            referencedRelation: "indie_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indie_channel_favorites_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indie_channels: {
+        Row: {
+          backdrop_url: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          owner_id: string | null
+          slug: string
+          trailer_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          backdrop_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          owner_id?: string | null
+          slug: string
+          trailer_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          backdrop_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          owner_id?: string | null
+          slug?: string
+          trailer_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       likes: {
         Row: {

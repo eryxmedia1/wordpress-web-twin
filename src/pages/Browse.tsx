@@ -20,6 +20,7 @@ import WeThinkYoullLoveRow from "@/components/WeThinkYoullLoveRow";
 import NextToWatchRow from "@/components/NextToWatchRow";
 import ChannelRow from "@/components/ChannelRow";
 import LiveTVRow from "@/components/LiveTVRow";
+import IndieChannelsRow from "@/components/IndieChannelsRow";
 import MobileLayout from "@/components/mobile/MobileLayout";
 import MobileHeroCarousel from "@/components/mobile/MobileHeroCarousel";
 import MobileContentRow from "@/components/mobile/MobileContentRow";
@@ -29,6 +30,7 @@ import MobileTop10Row from "@/components/mobile/MobileTop10Row";
 import MobileChannelRow from "@/components/mobile/MobileChannelRow";
 import MobileContentDetailModal from "@/components/mobile/MobileContentDetailModal";
 import MobileLiveTVRow from "@/components/mobile/MobileLiveTVRow";
+import MobileIndieChannelsRow from "@/components/mobile/MobileIndieChannelsRow";
 
 interface Content {
   id: string;
@@ -260,6 +262,9 @@ const Browse = () => {
           {/* Live TV Row - Above TV Series */}
           <MobileLiveTVRow />
 
+          {/* Indie Channels Row */}
+          <MobileIndieChannelsRow />
+
           {/* TV Series */}
           {tvShows.length > 0 && (
             <MobileContentRow
@@ -355,6 +360,9 @@ const Browse = () => {
           )}
           {/* Live TV Row - Above TV Series */}
           <LiveTVRow />
+
+          {/* Indie Channels Row */}
+          <IndieChannelsRow />
 
           {/* TV Series */}
           {tvShows.length > 0 && (

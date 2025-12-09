@@ -38,6 +38,9 @@ import AdminLiveTVChannels from "./pages/AdminLiveTVChannels";
 import AdminLiveTVPlaylists from "./pages/AdminLiveTVPlaylists";
 import AdminLiveTVAds from "./pages/AdminLiveTVAds";
 import AdminAdReports from "./pages/AdminAdReports";
+import IndieChannels from "./pages/IndieChannels";
+import IndieChannelPage from "./pages/IndieChannelPage";
+import AdminIndieChannels from "./pages/AdminIndieChannels";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +78,8 @@ const App = () => (
                   <Route path="/producer/:id" element={<ProducerProfile />} />
                   <Route path="/live" element={<LiveTV />} />
                   <Route path="/live/:channelSlug" element={<LiveTV />} />
+                  <Route path="/indie-channels" element={<IndieChannels />} />
+                  <Route path="/indie-channel/:slug" element={<IndieChannelPage />} />
                 </Route>
               </Route>
               
@@ -97,6 +102,7 @@ const App = () => (
                 <Route path="/admin/livetv/playlists/:channelId" element={<AdminLiveTVPlaylists />} />
                 <Route path="/admin/livetv/ads" element={<AdminLiveTVAds />} />
                 <Route path="/admin/ad-reports" element={<AdminAdReports />} />
+                <Route path="/admin/indie-channels" element={<AdminIndieChannels />} />
               </Route>
               
               {/* Catch-all */}
