@@ -384,11 +384,11 @@ export default function MobileLiveTV() {
             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
             {isLiveStreaming ? '🔴 LIVE' : 'LIVE'}
           </span>
-          {/* Ad Break Countdown - only show for playlist-based streaming */}
-          {!isLiveStreaming && nextAdBreakIn > 0 && isPlaying && !isAdPlaying && (
+          {/* Ad Break Countdown - only show the 10-second pre-ad countdown */}
+          {showCountdown && countdownSeconds > 0 && (
             <span className="bg-black/70 text-white px-2 py-0.5 rounded text-xs flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              Ad in {Math.floor(nextAdBreakIn / 60)}:{String(nextAdBreakIn % 60).padStart(2, '0')}
+              Ad Break in {countdownSeconds}s
             </span>
           )}
         </div>
