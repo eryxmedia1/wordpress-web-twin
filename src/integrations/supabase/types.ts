@@ -286,6 +286,7 @@ export type Database = {
           created_at: string | null
           enabled: boolean | null
           id: string
+          max_midroll_count: number | null
           midroll_interval_minutes: number | null
           midroll_pod_size: number | null
           postroll_pod_size: number | null
@@ -298,6 +299,7 @@ export type Database = {
           created_at?: string | null
           enabled?: boolean | null
           id?: string
+          max_midroll_count?: number | null
           midroll_interval_minutes?: number | null
           midroll_pod_size?: number | null
           postroll_pod_size?: number | null
@@ -310,6 +312,7 @@ export type Database = {
           created_at?: string | null
           enabled?: boolean | null
           id?: string
+          max_midroll_count?: number | null
           midroll_interval_minutes?: number | null
           midroll_pod_size?: number | null
           postroll_pod_size?: number | null
