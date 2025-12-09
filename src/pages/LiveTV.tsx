@@ -60,10 +60,44 @@ export default function LiveTV() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
   const playerRef = useRef<ReactPlayer>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const muxPollRef = useRef<NodeJS.Timeout | null>(null);
   const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const targetOffsetRef = useRef<number>(0);
+
+  // Check Mux stream status for a channel
+  const checkMuxStreamStatus = useCallback(async (channel: Channel) => {
+    if (!channel.playback_url || !channel.id) return false;
+    
+    try {
+      const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/mux-live-stream`;
+      const session = await supabase.auth.getSession();
+      
+      const res = await fetch(funcUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.data.session?.access_token || ''}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRqdHZzbG9qeGtrY3JwY29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjUxNjcsImV4cCI6MjA2MjYwMTE2N30.TC4eACBOJsfggnuB3OyOK7x4O9yp7bjzOP5Tr9_jHds',
+        },
+        body: JSON.stringify({ action: 'status', channelId: channel.id }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Mux stream status:', data);
+        // Check if stream is active
+        const isActive = data.status === 'active' || data.isLive === true;
+        setIsLiveStreaming(isActive);
+        return isActive;
+      }
+    } catch (error) {
+      console.error('Error checking Mux stream status:', error);
+    }
+    return false;
+  }, []);
 
   // Fetch all channels
   useEffect(() => {
@@ -94,9 +128,14 @@ export default function LiveTV() {
     fetchChannels();
   }, [channelSlug]);
 
-  // Fetch current segment for selected channel
+  // Fetch current segment for selected channel (playlist-based fallback)
   const fetchLiveSegment = useCallback(async (isInitialLoad = false) => {
     if (!selectedChannel) return;
+    
+    // If we're live streaming via Mux, skip playlist segment fetch
+    if (isLiveStreaming && selectedChannel.playback_url) {
+      return;
+    }
 
     try {
       const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/get-live-segment?channel=${selectedChannel.slug}`;
@@ -135,7 +174,7 @@ export default function LiveTV() {
     } catch (error) {
       console.error('Error fetching live segment:', error);
     }
-  }, [selectedChannel]);
+  }, [selectedChannel, isLiveStreaming]);
 
   // Countdown timer
   useEffect(() => {
@@ -163,29 +202,63 @@ export default function LiveTV() {
     }
   }, [countdown, isSeeking]);
 
+  // Check for Mux stream first, then fall back to playlist
   useEffect(() => {
     if (selectedChannel) {
       // Reset player state when switching channels
       setIsPlaying(false);
       setIsSeeking(false);
       setCountdown(null);
+      setIsLiveStreaming(false);
       targetOffsetRef.current = 0;
       
-      fetchLiveSegment(true);
+      // First check if this channel has an active Mux stream
+      const initChannel = async () => {
+        if (selectedChannel.playback_url) {
+          const isLive = await checkMuxStreamStatus(selectedChannel);
+          if (isLive) {
+            // Channel is live streaming via Mux - play immediately
+            console.log('Mux stream is LIVE, playing HLS:', selectedChannel.playback_url);
+            setIsPlaying(true);
+          } else {
+            // Not live streaming, fall back to playlist
+            fetchLiveSegment(true);
+          }
+        } else {
+          // No Mux URL, use playlist
+          fetchLiveSegment(true);
+        }
+      };
       
-      // Poll every 30 seconds to stay in sync
-      pollIntervalRef.current = setInterval(() => fetchLiveSegment(false), 30000);
+      initChannel();
+      
+      // Poll Mux status every 10 seconds to detect when streaming starts/stops
+      if (selectedChannel.playback_url) {
+        muxPollRef.current = setInterval(() => {
+          checkMuxStreamStatus(selectedChannel);
+        }, 10000);
+      }
+      
+      // Poll playlist every 30 seconds (only if not live streaming)
+      pollIntervalRef.current = setInterval(() => {
+        if (!isLiveStreaming) {
+          fetchLiveSegment(false);
+        }
+      }, 30000);
     }
 
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
+      if (muxPollRef.current) {
+        clearInterval(muxPollRef.current);
+      }
       if (seekTimeoutRef.current) {
         clearTimeout(seekTimeoutRef.current);
       }
     };
-  }, [selectedChannel, fetchLiveSegment]);
+  }, [selectedChannel, fetchLiveSegment, checkMuxStreamStatus, isLiveStreaming]);
 
   const handleChannelSelect = (channel: Channel) => {
     setSelectedChannel(channel);
@@ -204,6 +277,12 @@ export default function LiveTV() {
 
   // Handle player ready
   const handlePlayerReady = () => {
+    // For live Mux streams, start playing immediately
+    if (isLiveStreaming && selectedChannel?.playback_url) {
+      setIsPlaying(true);
+      return;
+    }
+    
     if (isSeeking && countdown === null && targetOffsetRef.current > 0) {
       // Player is ready and countdown finished, perform seek
       playerRef.current?.seekTo(targetOffsetRef.current, 'seconds');
@@ -216,6 +295,16 @@ export default function LiveTV() {
       setIsPlaying(true);
     }
   };
+
+  // Get the video URL - prioritize Mux HLS playback URL if live streaming
+  const getVideoUrl = () => {
+    if (isLiveStreaming && selectedChannel?.playback_url) {
+      return selectedChannel.playback_url;
+    }
+    return liveSegment?.videoUrl;
+  };
+
+  const videoUrl = getVideoUrl();
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -271,21 +360,24 @@ export default function LiveTV() {
             <h2 className="text-2xl font-bold mb-2">No Channels Available</h2>
             <p className="text-muted-foreground">Check back later for live content</p>
           </div>
-        ) : liveSegment?.type === 'idle' ? (
+        ) : liveSegment?.type === 'idle' && !isLiveStreaming ? (
           <div className="flex flex-col items-center justify-center h-[60vh] text-center">
             <Radio className="h-16 w-16 text-muted-foreground mb-4" />
             <h2 className="text-2xl font-bold mb-2">{selectedChannel.name}</h2>
             <p className="text-muted-foreground">{liveSegment.message || 'No active broadcast'}</p>
           </div>
-        ) : (
+        ) : (videoUrl || isLiveStreaming) ? (
           <div className="space-y-6">
             {/* Video Player */}
             <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
               {/* LIVE Badge */}
               <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-                <span className="bg-red-600 text-white px-3 py-1 rounded text-sm font-bold flex items-center gap-1.5">
+                <span className={cn(
+                  "text-white px-3 py-1 rounded text-sm font-bold flex items-center gap-1.5",
+                  isLiveStreaming ? "bg-red-600" : "bg-red-600/80"
+                )}>
                   <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  LIVE
+                  {isLiveStreaming ? '🔴 LIVE STREAM' : 'LIVE'}
                 </span>
               </div>
 
@@ -308,8 +400,8 @@ export default function LiveTV() {
                 {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
               </Button>
 
-              {/* Countdown/Loading Overlay */}
-              {(isSeeking || (!isPlaying && liveSegment?.videoUrl)) && (
+              {/* Countdown/Loading Overlay - Don't show for live Mux streams */}
+              {!isLiveStreaming && (isSeeking || (!isPlaying && liveSegment?.videoUrl)) && (
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black">
                   {countdown !== null && countdown > 0 ? (
                     <>
@@ -328,17 +420,24 @@ export default function LiveTV() {
                 </div>
               )}
 
-              {liveSegment?.videoUrl ? (
+              {videoUrl ? (
                 <ReactPlayer
                   ref={playerRef}
-                  url={liveSegment.videoUrl}
+                  url={videoUrl}
                   playing={isPlaying}
                   muted={isMuted}
                   width="100%"
                   height="100%"
-                  onEnded={handleVideoEnd}
+                  onEnded={isLiveStreaming ? undefined : handleVideoEnd}
                   onReady={handlePlayerReady}
                   config={{
+                    file: {
+                      forceHLS: videoUrl.includes('.m3u8'),
+                      hlsOptions: {
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                      },
+                    },
                     vimeo: {
                       playerOptions: {
                         background: true,
@@ -360,24 +459,31 @@ export default function LiveTV() {
               {/* Now Playing */}
               <div className="md:col-span-2 bg-card rounded-xl p-5 border border-border">
                 <div className="flex items-start gap-4">
-                  {liveSegment?.nowPlaying?.thumbnail && (
+                  {!isLiveStreaming && liveSegment?.nowPlaying?.thumbnail && (
                     <img
                       src={liveSegment.nowPlaying.thumbnail}
                       alt={liveSegment.nowPlaying.title}
                       className="w-32 h-20 object-cover rounded-lg"
                     />
                   )}
+                  {isLiveStreaming && selectedChannel?.logo_url && (
+                    <img
+                      src={selectedChannel.logo_url}
+                      alt={selectedChannel.name}
+                      className="w-32 h-20 object-contain rounded-lg bg-muted p-2"
+                    />
+                  )}
                   <div className="flex-1">
                     <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">
-                      Now Playing
+                      {isLiveStreaming ? '🔴 Live Broadcast' : 'Now Playing'}
                     </p>
                     <h3 className="text-xl font-bold text-foreground mb-1">
-                      {liveSegment?.nowPlaying?.title || 'Loading...'}
+                      {isLiveStreaming ? selectedChannel.name : (liveSegment?.nowPlaying?.title || 'Loading...')}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {liveSegment?.nowPlaying?.type === 'ad' ? 'Advertisement' : selectedChannel.name}
+                      {isLiveStreaming ? 'Live from Switcher Studio' : (liveSegment?.nowPlaying?.type === 'ad' ? 'Advertisement' : selectedChannel.name)}
                     </p>
-                    {liveSegment?.nowPlaying?.duration && (
+                    {!isLiveStreaming && liveSegment?.nowPlaying?.duration && (
                       <p className="text-sm text-muted-foreground mt-1">
                         Duration: {formatTime(liveSegment.nowPlaying.duration)}
                       </p>
@@ -386,7 +492,8 @@ export default function LiveTV() {
                 </div>
               </div>
 
-              {/* Up Next */}
+              {/* Up Next - Hide for live Mux streams */}
+              {!isLiveStreaming && (
               <div className="bg-card rounded-xl p-5 border border-border">
                 <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-3">
                   Up Next
@@ -421,6 +528,7 @@ export default function LiveTV() {
                   )}
                 </div>
               </div>
+              )}
             </div>
 
             {/* Channel Info */}
@@ -431,7 +539,7 @@ export default function LiveTV() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
