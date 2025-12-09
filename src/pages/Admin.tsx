@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Film, Tv, Plus, Search, Megaphone } from "lucide-react";
+import { Film, Tv, Plus, Search, Megaphone, Store } from "lucide-react";
 import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate } from "react-router-dom";
 import { supabase, DbContent } from "@/integrations/supabase/client";
@@ -28,7 +28,6 @@ const Admin = () => {
     setLoading(true);
     
     try {
-      // Fetch movies and shows
       const { data, error } = await supabase
         .from('contents')
         .select(`
@@ -44,7 +43,6 @@ const Admin = () => {
         throw error;
       }
 
-      // Transform data to include season counts
       const transformedData: ContentWithSeasons[] = (data || []).map(item => ({
         ...item,
         seasons: Array.isArray(item.seasons) && item.seasons[0] ? item.seasons[0].count : 0
@@ -73,7 +71,6 @@ const Admin = () => {
   
   const handleDeleteContent = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this content?")) {
-      // Use type assertion to work with the contents table
       const { error } = await supabase
         .from('contents')
         .delete()
@@ -100,6 +97,10 @@ const Admin = () => {
     navigate('/admin/livetv/ads');
   };
 
+  const goToIndieChannels = () => {
+    navigate('/admin/indie-channels');
+  };
+
   return (
     <div className="min-h-screen bg-black text-white">
       <AdminNavbar />
@@ -107,7 +108,7 @@ const Admin = () => {
       <div className="container mx-auto px-4 pt-24 pb-10">
         <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition cursor-pointer" onClick={goToMoviesSection}>
             <CardContent className="p-6 flex flex-col items-center justify-center">
               <Film className="h-16 w-16 text-primary mb-4" />
@@ -143,6 +144,19 @@ const Admin = () => {
               </p>
               <Button className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground">
                 Go to Ad Manager
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-600/20 to-purple-600/5 border-purple-500/30 hover:border-purple-500/50 transition cursor-pointer" onClick={goToIndieChannels}>
+            <CardContent className="p-6 flex flex-col items-center justify-center">
+              <Store className="h-16 w-16 text-purple-400 mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Indie Channels</h2>
+              <p className="text-gray-400 text-center">
+                Manage indie channels, restrictions, and creator settings
+              </p>
+              <Button className="mt-4 bg-purple-600 hover:bg-purple-700 text-white">
+                Go to Indie Channels
               </Button>
             </CardContent>
           </Card>

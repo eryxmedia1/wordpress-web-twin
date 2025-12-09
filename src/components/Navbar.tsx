@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings, Shield, Crown } from "lucide-react";
+import { Search, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings, Shield, Crown, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -185,6 +185,16 @@ const Navbar = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Link 
+          to="/indie-channels" 
+          className={`flex items-center gap-1 px-4 py-2 text-sm font-semibold transition-colors hover:text-primary ${
+            location.pathname.startsWith('/indie-channel') ? 'text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Store className="w-4 h-4" />
+          CHANNELS
+        </Link>
 
         <Link 
           to="/live" 
