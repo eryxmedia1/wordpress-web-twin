@@ -318,9 +318,9 @@ export default function LiveTV() {
   };
 
   const content = (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       {/* Channel Selector Bar */}
-      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border">
+      <div className="sticky top-16 z-40 bg-background/95 backdrop-blur border-b border-border">
         <ScrollArea className="w-full">
           <div className="flex items-center gap-2 p-3">
             {channels.map((channel) => (
@@ -430,12 +430,18 @@ export default function LiveTV() {
                   height="100%"
                   onEnded={isLiveStreaming ? undefined : handleVideoEnd}
                   onReady={handlePlayerReady}
+                  onError={(e) => console.error('Player error:', e)}
                   config={{
                     file: {
                       forceHLS: videoUrl.includes('.m3u8'),
+                      attributes: {
+                        crossOrigin: 'anonymous',
+                      },
                       hlsOptions: {
                         enableWorker: true,
                         lowLatencyMode: true,
+                        liveSyncDurationCount: 3,
+                        liveMaxLatencyDurationCount: 10,
                       },
                     },
                     vimeo: {
