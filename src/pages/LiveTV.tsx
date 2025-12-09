@@ -64,10 +64,12 @@ export default function LiveTV() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isLiveStreaming, setIsLiveStreaming] = useState(false);
   const [preRollPlayed, setPreRollPlayed] = useState(false);
+  const [watchTimeSeconds, setWatchTimeSeconds] = useState(0);
   const playerRef = useRef<ReactPlayer>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const muxPollRef = useRef<NodeJS.Timeout | null>(null);
   const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const midrollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const targetOffsetRef = useRef<number>(0);
 
   // Ad system integration
@@ -78,7 +80,9 @@ export default function LiveTV() {
     countdownSeconds,
     showCountdown,
     adQueueLength,
+    podConfig,
     requestPreRoll,
+    requestMidRoll,
     onAdComplete,
     skipAd,
   } = useAds({
@@ -88,6 +92,45 @@ export default function LiveTV() {
     onAdStart: () => setIsPlaying(false),
     onAdEnd: () => setIsPlaying(true),
   });
+
+  // Mid-roll ad timer - triggers ad breaks at configured intervals
+  const midrollIntervalSeconds = (podConfig.midrollIntervalMinutes || 10) * 60;
+  
+  useEffect(() => {
+    // Don't run timer if not playing, ad is playing, or no video
+    if (!isPlaying || isAdPlaying || !selectedChannel) {
+      if (midrollTimerRef.current) {
+        clearInterval(midrollTimerRef.current);
+        midrollTimerRef.current = null;
+      }
+      return;
+    }
+    
+    // Start the watch time timer
+    midrollTimerRef.current = setInterval(() => {
+      setWatchTimeSeconds(prev => {
+        const newTime = prev + 1;
+        // Check if it's time for a mid-roll break
+        if (newTime > 0 && newTime % midrollIntervalSeconds === 0) {
+          console.log(`[LiveTV Ads] Mid-roll triggered at ${newTime}s (interval: ${midrollIntervalSeconds}s)`);
+          requestMidRoll(10); // 10 second countdown
+        }
+        return newTime;
+      });
+    }, 1000);
+    
+    return () => {
+      if (midrollTimerRef.current) {
+        clearInterval(midrollTimerRef.current);
+        midrollTimerRef.current = null;
+      }
+    };
+  }, [isPlaying, isAdPlaying, selectedChannel, midrollIntervalSeconds, requestMidRoll]);
+
+  // Reset watch time when changing channels
+  useEffect(() => {
+    setWatchTimeSeconds(0);
+  }, [selectedChannel?.id]);
 
   // Check Mux stream status for a channel
   const checkMuxStreamStatus = useCallback(async (channel: Channel) => {
@@ -338,6 +381,27 @@ export default function LiveTV() {
 
   const videoUrl = getVideoUrl();
 
+  // Request pre-roll on initial channel load (not just channel switch)
+  useEffect(() => {
+    if (selectedChannel && !preRollPlayed && isPlaying && !isAdPlaying) {
+      const requestInitialPreRoll = async () => {
+        console.log('[LiveTV Ads] Requesting pre-roll on initial load');
+        await requestPreRoll();
+        setPreRollPlayed(true);
+      };
+      requestInitialPreRoll();
+    }
+  }, [selectedChannel, preRollPlayed, isPlaying, isAdPlaying, requestPreRoll]);
+
+  // Calculate next ad break time
+  const getNextAdBreakIn = () => {
+    if (midrollIntervalSeconds <= 0) return null;
+    const remaining = midrollIntervalSeconds - (watchTimeSeconds % midrollIntervalSeconds);
+    return remaining;
+  };
+
+  const nextAdBreakIn = getNextAdBreakIn();
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -347,6 +411,12 @@ export default function LiveTV() {
       return `${hrs}h ${remainMins}m`;
     }
     return `${mins}m ${secs}s`;
+  };
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const content = (
@@ -414,8 +484,8 @@ export default function LiveTV() {
           <div className="space-y-6">
             {/* Video Player */}
             <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
-              {/* LIVE Badge */}
-              <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+              {/* LIVE Badge and Ad Break Timer */}
+              <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
                 <span className={cn(
                   "text-white px-3 py-1 rounded text-sm font-bold flex items-center gap-1.5",
                   isLiveStreaming ? "bg-red-600" : "bg-red-600/80"
@@ -423,6 +493,12 @@ export default function LiveTV() {
                   <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                   {isLiveStreaming ? '🔴 LIVE STREAM' : 'LIVE'}
                 </span>
+                {/* Next Ad Break Timer - only show for playlist mode (not live Mux streams) */}
+                {!isLiveStreaming && nextAdBreakIn && nextAdBreakIn > 0 && isPlaying && !isAdPlaying && (
+                  <span className="bg-black/70 text-white/80 px-2 py-1 rounded text-xs flex items-center gap-1.5">
+                    Ad Break in {formatCountdown(nextAdBreakIn)}
+                  </span>
+                )}
               </div>
 
               {/* Channel Logo */}
