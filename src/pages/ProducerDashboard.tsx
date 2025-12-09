@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
@@ -40,9 +39,14 @@ import {
   TrendingUp,
   Play,
   ExternalLink,
-  Power
+  Power,
+  Loader2,
+  Film,
+  FolderPlus
 } from "lucide-react";
 import { toast } from "sonner";
+import IndieVideoUploadForm from "@/components/indie/IndieVideoUploadForm";
+import IndieLimitReachedModal from "@/components/indie/IndieLimitReachedModal";
 
 interface IndieChannel {
   id: string;
@@ -59,6 +63,7 @@ interface IndieChannel {
   max_total_videos: number;
   max_rows: number;
   max_videos_per_row: number;
+  allow_ads: boolean;
 }
 
 interface ChannelContent {
@@ -69,6 +74,8 @@ interface ChannelContent {
   video_url: string | null;
   created_at: string;
   type: string;
+  duration: string | null;
+  genre: string | null;
 }
 
 interface AnalyticsData {
@@ -94,13 +101,10 @@ const ProducerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
 
-  // Upload form state
+  // Dialog states
   const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [uploadTitle, setUploadTitle] = useState("");
-  const [uploadDescription, setUploadDescription] = useState("");
-  const [uploadVideoUrl, setUploadVideoUrl] = useState("");
-  const [uploadPosterUrl, setUploadPosterUrl] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
+  const [limitType, setLimitType] = useState<"videos" | "rows">("videos");
 
   // Settings form state
   const [settingsName, setSettingsName] = useState("");
@@ -108,6 +112,9 @@ const ProducerDashboard = () => {
   const [settingsLogoUrl, setSettingsLogoUrl] = useState("");
   const [settingsBackdropUrl, setSettingsBackdropUrl] = useState("");
   const [settingsTrailerUrl, setSettingsTrailerUrl] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBackdrop, setUploadingBackdrop] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -151,7 +158,7 @@ const ProducerDashboard = () => {
     // Fetch channel content
     const { data: contentData } = await supabase
       .from("contents")
-      .select("id, title, description, poster_url, video_url, created_at, type")
+      .select("id, title, description, poster_url, video_url, created_at, type, duration, genre")
       .eq("indie_channel_id", channelData.id)
       .order("created_at", { ascending: false });
 
@@ -170,7 +177,7 @@ const ProducerDashboard = () => {
 
     setAnalytics({
       totalViews: viewCount || 0,
-      totalWatchTime: (viewCount || 0) * 15, // Estimate 15 min avg watch
+      totalWatchTime: (viewCount || 0) * 15,
       subscriberCount: subscriberCount || 0,
       contentCount: contentData?.length || 0
     });
@@ -178,45 +185,16 @@ const ProducerDashboard = () => {
     setLoading(false);
   };
 
-  const handleUpload = async () => {
-    if (!uploadTitle.trim() || !uploadVideoUrl.trim()) {
-      toast.error("Title and video URL are required");
-      return;
-    }
-
+  const handleUploadClick = () => {
     if (!channel) return;
-
-    // Check video limit
+    
     if (contents.length >= (channel.max_total_videos || 100)) {
-      toast.error(`You've reached the maximum limit of ${channel.max_total_videos} videos`);
+      setLimitType("videos");
+      setLimitModalOpen(true);
       return;
     }
-
-    setUploading(true);
-
-    const { error } = await (supabase.from("contents") as any).insert([{
-      title: uploadTitle.trim(),
-      description: uploadDescription.trim() || null,
-      video_url: uploadVideoUrl.trim(),
-      poster_url: uploadPosterUrl.trim() || null,
-      type: "movie",
-      indie_channel_id: channel.id
-    }]);
-
-    if (error) {
-      console.error("Error uploading:", error);
-      toast.error("Failed to upload video");
-    } else {
-      toast.success("Video uploaded successfully!");
-      setIsUploadOpen(false);
-      setUploadTitle("");
-      setUploadDescription("");
-      setUploadVideoUrl("");
-      setUploadPosterUrl("");
-      fetchChannel();
-    }
-
-    setUploading(false);
+    
+    setIsUploadOpen(true);
   };
 
   const handleDeleteContent = async (contentId: string) => {
@@ -235,9 +213,55 @@ const ProducerDashboard = () => {
     }
   };
 
+  const handleFileUpload = async (
+    file: File,
+    type: 'logo' | 'backdrop',
+    setUploading: (v: boolean) => void,
+    setUrl: (v: string) => void
+  ) => {
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return;
+    }
+
+    setUploading(true);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${type}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('channel-logos')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('channel-logos')
+        .getPublicUrl(fileName);
+
+      setUrl(publicUrl);
+      toast.success(`${type === 'logo' ? 'Logo' : 'Backdrop'} uploaded`);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(`Failed to upload ${type}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSaveSettings = async () => {
     if (!channel) return;
 
+    setSavingSettings(true);
+    
     const { error } = await supabase
       .from("indie_channels")
       .update({
@@ -255,22 +279,9 @@ const ProducerDashboard = () => {
       toast.success("Settings saved!");
       fetchChannel();
     }
+    
+    setSavingSettings(false);
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="pt-24 flex items-center justify-center">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!channel || !isOwner) {
-    return null;
-  }
 
   const toggleChannelActive = async () => {
     if (!channel) return;
@@ -288,6 +299,23 @@ const ProducerDashboard = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-24 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!channel || !isOwner) {
+    return null;
+  }
+
+  const videoLimitPercentage = Math.min((contents.length / (channel.max_total_videos || 100)) * 100, 100);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -295,7 +323,7 @@ const ProducerDashboard = () => {
       
       <div className="ml-16 container mx-auto px-4 pt-24 pb-12">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-8 flex-wrap">
           <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden flex-shrink-0">
             {channel.logo_url ? (
               <img src={channel.logo_url} alt={channel.name} className="w-full h-full object-cover" />
@@ -305,14 +333,32 @@ const ProducerDashboard = () => {
               </div>
             )}
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-foreground">{channel.name}</h1>
               <span className={`px-2 py-0.5 rounded text-xs ${channel.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                 {channel.is_active ? 'Active' : 'Inactive'}
               </span>
+              {channel.allow_ads && (
+                <span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400">
+                  Ads Enabled
+                </span>
+              )}
             </div>
             <p className="text-muted-foreground">Producer Dashboard</p>
+            {/* Usage bar */}
+            <div className="mt-2 max-w-xs">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                <span>Videos</span>
+                <span>{contents.length} / {channel.max_total_videos || 100}</span>
+              </div>
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${videoLimitPercentage >= 90 ? 'bg-destructive' : 'bg-primary'}`}
+                  style={{ width: `${videoLimitPercentage}%` }}
+                />
+              </div>
+            </div>
           </div>
           
           {/* Admin Controls */}
@@ -341,67 +387,14 @@ const ProducerDashboard = () => {
               View Channel
             </Link>
           </Button>
-          <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Upload className="w-4 h-4" />
-                Upload Video
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Upload New Video</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label>Title *</Label>
-                  <Input
-                    value={uploadTitle}
-                    onChange={(e) => setUploadTitle(e.target.value)}
-                    placeholder="Video title"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Description</Label>
-                  <Textarea
-                    value={uploadDescription}
-                    onChange={(e) => setUploadDescription(e.target.value)}
-                    placeholder="Video description..."
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Video URL *</Label>
-                  <Input
-                    value={uploadVideoUrl}
-                    onChange={(e) => setUploadVideoUrl(e.target.value)}
-                    placeholder="https://vimeo.com/..."
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Thumbnail URL</Label>
-                  <Input
-                    value={uploadPosterUrl}
-                    onChange={(e) => setUploadPosterUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="mt-1"
-                  />
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {contents.length} / {channel.max_total_videos || 100} videos uploaded
-                </div>
-                <Button onClick={handleUpload} disabled={uploading} className="w-full">
-                  {uploading ? "Uploading..." : "Upload Video"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={handleUploadClick} className="gap-2">
+            <Upload className="w-4 h-4" />
+            Upload Video
+          </Button>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -409,6 +402,10 @@ const ProducerDashboard = () => {
             <TabsTrigger value="content" className="gap-2">
               <Video className="w-4 h-4" />
               Content
+            </TabsTrigger>
+            <TabsTrigger value="upload" className="gap-2">
+              <Plus className="w-4 h-4" />
+              Add Video
             </TabsTrigger>
             {channel.analytics_access && (
               <TabsTrigger value="analytics" className="gap-2">
@@ -467,12 +464,54 @@ const ProducerDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <Play className="w-5 h-5 text-primary" />
+                    <Film className="w-5 h-5 text-primary" />
                     <span className="text-2xl font-bold">{analytics.contentCount}</span>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Limits Overview */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Channel Limits</CardTitle>
+                <CardDescription>Your current plan limits and usage</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-muted-foreground">Total Videos</span>
+                      <span className="font-medium">{contents.length} / {channel.max_total_videos}</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full ${videoLimitPercentage >= 90 ? 'bg-destructive' : 'bg-primary'}`}
+                        style={{ width: `${videoLimitPercentage}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-muted-foreground">Max Rows</span>
+                      <span className="font-medium">{channel.max_rows}</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-muted-foreground/30 rounded-full" style={{ width: '0%' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-muted-foreground">Videos Per Row</span>
+                      <span className="font-medium">{channel.max_videos_per_row}</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-muted-foreground/30 rounded-full" style={{ width: '0%' }} />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
@@ -510,15 +549,28 @@ const ProducerDashboard = () => {
           <TabsContent value="content">
             <Card>
               <CardHeader>
-                <CardTitle>All Content</CardTitle>
-                <CardDescription>
-                  {contents.length} / {channel.max_total_videos || 100} videos
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>All Content</CardTitle>
+                    <CardDescription>
+                      {contents.length} / {channel.max_total_videos || 100} videos
+                    </CardDescription>
+                  </div>
+                  <Button onClick={handleUploadClick} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Video
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {contents.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    No videos uploaded yet
+                    <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No videos uploaded yet</p>
+                    <Button onClick={handleUploadClick} variant="outline" className="mt-4 gap-2">
+                      <Upload className="w-4 h-4" />
+                      Upload Your First Video
+                    </Button>
                   </div>
                 ) : (
                   <Table>
@@ -526,6 +578,8 @@ const ProducerDashboard = () => {
                       <TableRow>
                         <TableHead>Video</TableHead>
                         <TableHead>Title</TableHead>
+                        <TableHead>Duration</TableHead>
+                        <TableHead>Genre</TableHead>
                         <TableHead>Uploaded</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -545,22 +599,73 @@ const ProducerDashboard = () => {
                             </div>
                           </TableCell>
                           <TableCell className="font-medium">{content.title}</TableCell>
+                          <TableCell className="text-muted-foreground">{content.duration || "-"}</TableCell>
+                          <TableCell className="text-muted-foreground">{content.genre || "-"}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {new Date(content.created_at).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteContent(content.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                asChild
+                              >
+                                <Link to={`/watch/${content.id}`} target="_blank">
+                                  <Play className="w-4 h-4" />
+                                </Link>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteContent(content.id)}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Upload Tab */}
+          <TabsContent value="upload">
+            <Card>
+              <CardHeader>
+                <CardTitle>Add New Video</CardTitle>
+                <CardDescription>
+                  Upload a new video to your channel. Paste a Vimeo URL to auto-fetch metadata.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {contents.length >= (channel.max_total_videos || 100) ? (
+                  <div className="text-center py-12">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-500/20">
+                      <Video className="h-6 w-6 text-yellow-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Video Limit Reached</h3>
+                    <p className="text-muted-foreground mb-4">
+                      You've reached your maximum limit of {channel.max_total_videos} videos.
+                    </p>
+                    <Button asChild>
+                      <a href="mailto:support@zoeratedtv.com">Contact Support to Upgrade</a>
+                    </Button>
+                  </div>
+                ) : (
+                  <IndieVideoUploadForm
+                    channelId={channel.id}
+                    onSuccess={() => {
+                      fetchChannel();
+                    }}
+                    onCancel={() => {}}
+                    currentVideoCount={contents.length}
+                    maxVideos={channel.max_total_videos || 100}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -613,8 +718,8 @@ const ProducerDashboard = () => {
                       <div className="space-y-4">
                         {contents.slice(0, 5).map((content, index) => (
                           <div key={content.id} className="flex items-center gap-3">
-                            <span className="text-muted-foreground font-bold">{index + 1}</span>
-                            <div className="w-12 h-8 bg-muted rounded overflow-hidden">
+                            <span className="text-muted-foreground font-bold w-4">{index + 1}</span>
+                            <div className="w-12 h-8 bg-muted rounded overflow-hidden flex-shrink-0">
                               {content.poster_url ? (
                                 <img src={content.poster_url} alt="" className="w-full h-full object-cover" />
                               ) : (
@@ -660,25 +765,66 @@ const ProducerDashboard = () => {
                   />
                 </div>
                 <div>
-                  <Label>Logo URL</Label>
-                  <Input
-                    value={settingsLogoUrl}
-                    onChange={(e) => setSettingsLogoUrl(e.target.value)}
-                    className="mt-1"
-                    placeholder="https://..."
-                  />
+                  <Label>Logo</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      value={settingsLogoUrl}
+                      onChange={(e) => setSettingsLogoUrl(e.target.value)}
+                      placeholder="https://... or upload"
+                      className="flex-1"
+                    />
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, 'logo', setUploadingLogo, setSettingsLogoUrl);
+                        }}
+                        disabled={uploadingLogo}
+                      />
+                      <Button type="button" variant="outline" size="icon" disabled={uploadingLogo} asChild>
+                        <span>
+                          {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
                   {settingsLogoUrl && (
                     <img src={settingsLogoUrl} alt="Logo" className="mt-2 h-16 w-16 object-cover rounded" />
                   )}
                 </div>
                 <div>
-                  <Label>Backdrop URL</Label>
-                  <Input
-                    value={settingsBackdropUrl}
-                    onChange={(e) => setSettingsBackdropUrl(e.target.value)}
-                    className="mt-1"
-                    placeholder="https://..."
-                  />
+                  <Label>Backdrop Image</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      value={settingsBackdropUrl}
+                      onChange={(e) => setSettingsBackdropUrl(e.target.value)}
+                      placeholder="https://... or upload"
+                      className="flex-1"
+                    />
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, 'backdrop', setUploadingBackdrop, setSettingsBackdropUrl);
+                        }}
+                        disabled={uploadingBackdrop}
+                      />
+                      <Button type="button" variant="outline" size="icon" disabled={uploadingBackdrop} asChild>
+                        <span>
+                          {uploadingBackdrop ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                  {settingsBackdropUrl && (
+                    <img src={settingsBackdropUrl} alt="Backdrop" className="mt-2 h-24 w-full object-cover rounded" />
+                  )}
                 </div>
                 <div>
                   <Label>Trailer URL</Label>
@@ -689,12 +835,47 @@ const ProducerDashboard = () => {
                     placeholder="https://..."
                   />
                 </div>
-                <Button onClick={handleSaveSettings}>Save Settings</Button>
+                <Button 
+                  onClick={handleSaveSettings} 
+                  disabled={savingSettings}
+                  className="gap-2"
+                >
+                  {savingSettings && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save Settings
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Upload Dialog */}
+      <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upload New Video</DialogTitle>
+          </DialogHeader>
+          <IndieVideoUploadForm
+            channelId={channel.id}
+            onSuccess={() => {
+              setIsUploadOpen(false);
+              fetchChannel();
+            }}
+            onCancel={() => setIsUploadOpen(false)}
+            currentVideoCount={contents.length}
+            maxVideos={channel.max_total_videos || 100}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Limit Reached Modal */}
+      <IndieLimitReachedModal
+        isOpen={limitModalOpen}
+        onClose={() => setLimitModalOpen(false)}
+        limitType={limitType}
+        currentCount={limitType === "videos" ? contents.length : 0}
+        maxCount={limitType === "videos" ? (channel.max_total_videos || 100) : (channel.max_rows || 5)}
+      />
     </div>
   );
 };

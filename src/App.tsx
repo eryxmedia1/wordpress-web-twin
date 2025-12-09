@@ -77,7 +77,7 @@ const App = () => (
                   <Route path="/profile" element={<UserProfile />} />
                   <Route path="/profile/:id" element={<UserProfile />} />
                   <Route path="/producers" element={<Producers />} />
-                  <Route path="/producer/:id" element={<ProducerProfile />} />
+                  <Route path="/producer-profile/:id" element={<ProducerProfile />} />
                   <Route path="/live" element={<LiveTV />} />
                   <Route path="/live/:channelSlug" element={<LiveTV />} />
                   <Route path="/indie-channels" element={<IndieChannels />} />
