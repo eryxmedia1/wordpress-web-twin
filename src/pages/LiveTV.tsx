@@ -11,6 +11,8 @@ import { Loader2, Radio, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useAds } from "@/hooks/useAds";
+import { AdBreakOverlay } from "@/components/AdBreakOverlay";
 
 interface Channel {
   id: string;
@@ -61,11 +63,31 @@ export default function LiveTV() {
   const [isSeeking, setIsSeeking] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isLiveStreaming, setIsLiveStreaming] = useState(false);
+  const [preRollPlayed, setPreRollPlayed] = useState(false);
   const playerRef = useRef<ReactPlayer>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const muxPollRef = useRef<NodeJS.Timeout | null>(null);
   const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const targetOffsetRef = useRef<number>(0);
+
+  // Ad system integration
+  const {
+    currentAd,
+    isAdPlaying,
+    adPosition,
+    countdownSeconds,
+    showCountdown,
+    adQueueLength,
+    requestPreRoll,
+    onAdComplete,
+    skipAd,
+  } = useAds({
+    channelId: selectedChannel?.id,
+    membershipTier: 'free', // Live TV uses free tier ads by default
+    deviceType: isMobile ? 'mobile' : 'desktop',
+    onAdStart: () => setIsPlaying(false),
+    onAdEnd: () => setIsPlaying(true),
+  });
 
   // Check Mux stream status for a channel
   const checkMuxStreamStatus = useCallback(async (channel: Channel) => {
@@ -260,14 +282,24 @@ export default function LiveTV() {
     };
   }, [selectedChannel, fetchLiveSegment, checkMuxStreamStatus, isLiveStreaming]);
 
-  const handleChannelSelect = (channel: Channel) => {
+  const handleChannelSelect = async (channel: Channel) => {
     setSelectedChannel(channel);
     setLiveSegment(null);
     setIsPlaying(false);
     setIsSeeking(false);
     setCountdown(null);
+    setPreRollPlayed(false); // Reset pre-roll for new channel
     targetOffsetRef.current = 0;
     navigate(`/live/${channel.slug}`, { replace: true });
+    
+    // Request pre-roll ad when switching channels
+    if (!isLiveStreaming) {
+      const hasPreRoll = await requestPreRoll();
+      setPreRollPlayed(true);
+      if (!hasPreRoll) {
+        setIsPlaying(true);
+      }
+    }
   };
 
   const handleVideoEnd = () => {
@@ -319,6 +351,18 @@ export default function LiveTV() {
 
   const content = (
     <div className="min-h-screen bg-background pt-16">
+      {/* Ad Break Overlay */}
+      <AdBreakOverlay
+        ad={currentAd}
+        position={adPosition}
+        countdownSeconds={countdownSeconds}
+        showCountdown={showCountdown}
+        adQueueLength={adQueueLength}
+        canSkip={false}
+        onAdComplete={onAdComplete}
+        onSkip={skipAd}
+      />
+      
       {/* Channel Selector Bar */}
       <div className="sticky top-16 z-40 bg-background/95 backdrop-blur border-b border-border">
         <ScrollArea className="w-full">
