@@ -46,6 +46,7 @@ import IndieChannels from "./pages/IndieChannels";
 import IndieChannelPage from "./pages/IndieChannelPage";
 import AdminIndieChannels from "./pages/AdminIndieChannels";
 import AdminChannelAnalytics from "./pages/AdminChannelAnalytics";
+import AdminCampaigns from "./pages/AdminCampaigns";
 import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
@@ -115,6 +116,7 @@ const App = () => (
                 <Route path="/admin/ad-reports" element={<AdminAdReports />} />
                 <Route path="/admin/indie-channels" element={<AdminIndieChannels />} />
                 <Route path="/admin/channel-analytics" element={<AdminChannelAnalytics />} />
+                <Route path="/admin/campaigns" element={<AdminCampaigns />} />
               </Route>
               
               {/* Catch-all */}

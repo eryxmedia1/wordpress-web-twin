@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_campaigns: {
+        Row: {
+          allowed_membership_tiers: string[] | null
+          allowed_positions: string[] | null
+          created_at: string | null
+          current_impressions: number | null
+          current_impressions_today: number | null
+          end_at: string | null
+          id: string
+          last_impression_date: string | null
+          max_impressions: number | null
+          max_impressions_per_day: number | null
+          max_impressions_per_user_per_day: number | null
+          name: string
+          notes: string | null
+          priority: number
+          start_at: string | null
+          status: string
+          target_cities: string[] | null
+          target_countries: string[] | null
+          target_devices: string[] | null
+          target_postal_codes: string[] | null
+          target_regions: string[] | null
+          target_timezones: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          allowed_membership_tiers?: string[] | null
+          allowed_positions?: string[] | null
+          created_at?: string | null
+          current_impressions?: number | null
+          current_impressions_today?: number | null
+          end_at?: string | null
+          id?: string
+          last_impression_date?: string | null
+          max_impressions?: number | null
+          max_impressions_per_day?: number | null
+          max_impressions_per_user_per_day?: number | null
+          name: string
+          notes?: string | null
+          priority?: number
+          start_at?: string | null
+          status?: string
+          target_cities?: string[] | null
+          target_countries?: string[] | null
+          target_devices?: string[] | null
+          target_postal_codes?: string[] | null
+          target_regions?: string[] | null
+          target_timezones?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          allowed_membership_tiers?: string[] | null
+          allowed_positions?: string[] | null
+          created_at?: string | null
+          current_impressions?: number | null
+          current_impressions_today?: number | null
+          end_at?: string | null
+          id?: string
+          last_impression_date?: string | null
+          max_impressions?: number | null
+          max_impressions_per_day?: number | null
+          max_impressions_per_user_per_day?: number | null
+          name?: string
+          notes?: string | null
+          priority?: number
+          start_at?: string | null
+          status?: string
+          target_cities?: string[] | null
+          target_countries?: string[] | null
+          target_devices?: string[] | null
+          target_postal_codes?: string[] | null
+          target_regions?: string[] | null
+          target_timezones?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ad_global_config: {
         Row: {
           created_at: string | null
@@ -47,9 +125,11 @@ export type Database = {
       ad_impressions: {
         Row: {
           ad_id: string
+          campaign_id: string | null
           channel_id: string | null
           completed: boolean | null
           content_id: string | null
+          creative_id: string | null
           device_type: string | null
           duration_ms: number | null
           geo_city: string | null
@@ -66,9 +146,11 @@ export type Database = {
         }
         Insert: {
           ad_id: string
+          campaign_id?: string | null
           channel_id?: string | null
           completed?: boolean | null
           content_id?: string | null
+          creative_id?: string | null
           device_type?: string | null
           duration_ms?: number | null
           geo_city?: string | null
@@ -85,9 +167,11 @@ export type Database = {
         }
         Update: {
           ad_id?: string
+          campaign_id?: string | null
           channel_id?: string | null
           completed?: boolean | null
           content_id?: string | null
+          creative_id?: string | null
           device_type?: string | null
           duration_ms?: number | null
           geo_city?: string | null
@@ -111,6 +195,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ad_impressions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ad_impressions_channel_id_fkey"
             columns: ["channel_id"]
             isOneToOne: false
@@ -129,6 +220,13 @@ export type Database = {
             columns: ["content_id"]
             isOneToOne: false
             referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_impressions_creative_id_fkey"
+            columns: ["creative_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
             referencedColumns: ["id"]
           },
           {
@@ -396,6 +494,7 @@ export type Database = {
       ads: {
         Row: {
           ad_type: string
+          click_through_url: string | null
           created_at: string | null
           current_impressions: number | null
           duration_seconds: number
@@ -417,6 +516,7 @@ export type Database = {
         }
         Insert: {
           ad_type: string
+          click_through_url?: string | null
           created_at?: string | null
           current_impressions?: number | null
           duration_seconds: number
@@ -438,6 +538,7 @@ export type Database = {
         }
         Update: {
           ad_type?: string
+          click_through_url?: string | null
           created_at?: string | null
           current_impressions?: number | null
           duration_seconds?: number
@@ -482,6 +583,113 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      campaign_channels: {
+        Row: {
+          campaign_id: string
+          channel_id: string
+          channel_type: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          campaign_id: string
+          channel_id: string
+          channel_type?: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          campaign_id?: string
+          channel_id?: string
+          channel_type?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_channels_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_content_items: {
+        Row: {
+          campaign_id: string
+          content_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          campaign_id: string
+          content_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          campaign_id?: string
+          content_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_content_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_content_items_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_creatives: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          creative_id: string
+          id: string
+          weight: number
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          creative_id: string
+          id?: string
+          weight?: number
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          creative_id?: string
+          id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_creatives_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_creatives_creative_id_fkey"
+            columns: ["creative_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {

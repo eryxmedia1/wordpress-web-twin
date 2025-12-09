@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, User, Film, Tv, Search, LogOut, Home, Tag, Crown, Trophy, ImageIcon, Users, Radio, BarChart3, Store } from "lucide-react";
+import { ChevronDown, User, Film, Tv, Search, LogOut, Home, Tag, Crown, Trophy, ImageIcon, Users, Radio, BarChart3, Store, Target } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const AdminNavbar = () => {
@@ -132,6 +132,10 @@ const AdminNavbar = () => {
           <Link to="/admin/indie-channels" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 hover:text-purple-300 transition-all duration-200">
             <Store className="h-4 w-4" />
             Indie Channels
+          </Link>
+          <Link to="/admin/campaigns" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 hover:text-orange-300 transition-all duration-200">
+            <Target className="h-4 w-4" />
+            Campaigns
           </Link>
           <Link to="/admin/ad-reports" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-all duration-200">
             <BarChart3 className="h-4 w-4" />
