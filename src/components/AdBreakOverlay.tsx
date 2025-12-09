@@ -149,10 +149,23 @@ export function AdBreakOverlay({
 
   // No ad to show
   if (!ad || !ad.video_url) {
+    console.log('AdBreakOverlay: No ad or video URL', { ad });
     return null;
   }
 
-  // Calculate remaining time in current ad
+  // Transform Vimeo URL to playable format (fallback if edge function didn't transform)
+  const getPlayableUrl = (url: string): string => {
+    if (url.includes('player.vimeo.com')) return url;
+    
+    const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (vimeoMatch && vimeoMatch[1]) {
+      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+    return url;
+  };
+
+  const playableUrl = getPlayableUrl(ad.video_url);
+  console.log('AdBreakOverlay: Playing ad', { name: ad.name, originalUrl: ad.video_url, playableUrl });
   const currentAdRemaining = Math.max(0, Math.ceil((ad?.duration_seconds || 30) - playedSeconds));
   
   // Format time as MM:SS
@@ -248,15 +261,16 @@ export function AdBreakOverlay({
       {/* Video player */}
       <ReactPlayer
         ref={playerRef}
-        url={ad.video_url}
+        url={playableUrl}
         playing={true}
         muted={isMuted}
         width="100%"
         height="100%"
         onProgress={handleProgress}
         onEnded={handleEnded}
+        onReady={() => console.log('AdBreakOverlay: ReactPlayer ready for', ad.name)}
         onError={(e) => {
-          console.error('Ad playback error:', e);
+          console.error('Ad playback error:', e, 'URL:', playableUrl);
           onAdComplete();
         }}
         config={{
