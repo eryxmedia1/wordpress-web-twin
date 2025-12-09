@@ -6,15 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface Segment {
-  type: 'show' | 'ad';
+interface PlaylistItem {
+  id: string;
   videoUrl: string;
   videoId?: string;
   episodeId?: string;
   title: string;
   thumbnail?: string;
-  duration: number;
-  startOffset?: number;
+  duration: number; // Full video duration in seconds
 }
 
 interface ScheduleResult {
@@ -102,9 +101,7 @@ serve(async (req) => {
       .select(`
         *,
         video:contents(id, title, poster_url, video_url, trailer_url, duration),
-        episode:episodes(id, title, thumbnail_url, video_url, duration),
-        preroll_ad:ads!live_playlist_items_preroll_ad_id_fkey(id, name, video_url, duration_seconds),
-        postroll_ad:ads!live_playlist_items_postroll_ad_id_fkey(id, name, video_url, duration_seconds)
+        episode:episodes(id, title, thumbnail_url, video_url, duration)
       `)
       .eq('channel_playlist_id', playlist.id)
       .order('order_index', { ascending: true });
@@ -121,30 +118,8 @@ serve(async (req) => {
       );
     }
 
-    // Fetch active ads for midroll breaks
-    const { data: activeAds } = await supabase
-      .from('ads')
-      .select('*')
-      .eq('is_active', true)
-      .eq('ad_type', 'midroll');
-
-    // Get hourly ad breaks settings from playlist
-    const adBreaksPerHour = playlist.ad_breaks_per_hour || 2;
-    const adBreakDurationSeconds = playlist.ad_break_duration_seconds || 30;
-    
-    // Calculate ad break interval in seconds
-    const adBreakIntervalSeconds = adBreaksPerHour > 0 ? Math.floor(3600 / adBreaksPerHour) : 0;
-
-    console.log('Ad break config:', { 
-      adBreaksPerHour, 
-      adBreakDurationSeconds, 
-      adBreakIntervalSeconds 
-    });
-
-    // Build segments array (shows + ads) with hourly ad breaks
-    const segments: Segment[] = [];
-    let totalElapsedBeforeAds = 0; // Track cumulative time without ads
-    let lastAdBreakTime = 0; // Track when last ad break was inserted
+    // Build playlist items array - each video plays its FULL duration
+    const playlistItems: PlaylistItem[] = [];
     
     for (const item of items) {
       // Determine if this is an episode or a content item
@@ -164,115 +139,49 @@ serve(async (req) => {
         continue;
       }
 
-      // Parse duration
+      // Parse duration - use stored duration_seconds first, then parse from string
       let videoDuration = item.duration_seconds;
       if (!videoDuration && video.duration) {
         videoDuration = parseDuration(video.duration);
       }
-      if (!videoDuration) videoDuration = 1800; // Default 30 min
-
-      // Add preroll if exists
-      if (item.preroll_ad) {
-        segments.push({
-          type: 'ad',
-          videoUrl: item.preroll_ad.video_url,
-          title: item.preroll_ad.name,
-          duration: item.preroll_ad.duration_seconds || 30,
-        });
+      // Default to 30 minutes if no duration found
+      if (!videoDuration || videoDuration <= 0) {
+        videoDuration = 1800;
+        console.log('No duration found for', video.title, '- defaulting to 30 min');
       }
 
-      // Check if we need to insert hourly ad breaks during this video
-      if (adBreakIntervalSeconds > 0 && activeAds && activeAds.length > 0) {
-        let videoPlayedSoFar = 0;
-        
-        while (videoPlayedSoFar < videoDuration) {
-          const timeToNextAdBreak = adBreakIntervalSeconds - ((totalElapsedBeforeAds + videoPlayedSoFar) % adBreakIntervalSeconds);
-          
-          if (timeToNextAdBreak <= (videoDuration - videoPlayedSoFar) && timeToNextAdBreak < adBreakIntervalSeconds) {
-            // Add show segment up to ad break
-            if (timeToNextAdBreak > 0) {
-              segments.push({
-                type: 'show',
-                videoUrl,
-                videoId: item.video?.id,
-                episodeId: item.episode_id,
-                title: video.title,
-                thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
-                duration: timeToNextAdBreak,
-                startOffset: videoPlayedSoFar,
-              });
-              videoPlayedSoFar += timeToNextAdBreak;
-            }
-            
-            // Insert ad break
-            const randomAd = activeAds[Math.floor(Math.random() * activeAds.length)];
-            segments.push({
-              type: 'ad',
-              videoUrl: randomAd.video_url,
-              title: randomAd.name,
-              duration: adBreakDurationSeconds,
-            });
-            
-            lastAdBreakTime = totalElapsedBeforeAds + videoPlayedSoFar;
-          } else {
-            // Add remaining video as one segment
-            const remaining = videoDuration - videoPlayedSoFar;
-            if (remaining > 0) {
-              segments.push({
-                type: 'show',
-                videoUrl,
-                videoId: item.video?.id,
-                episodeId: item.episode_id,
-                title: video.title,
-                thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
-                duration: remaining,
-                startOffset: videoPlayedSoFar,
-              });
-            }
-            videoPlayedSoFar = videoDuration;
-          }
-        }
-        
-        totalElapsedBeforeAds += videoDuration;
-      } else {
-        // No hourly ads configured, add whole show as one segment
-        segments.push({
-          type: 'show',
-          videoUrl,
-          videoId: item.video?.id,
-          episodeId: item.episode_id,
-          title: video.title,
-          thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
-          duration: videoDuration,
-          startOffset: 0,
-        });
-        totalElapsedBeforeAds += videoDuration;
-      }
-
-      // Add postroll if exists
-      if (item.postroll_ad) {
-        segments.push({
-          type: 'ad',
-          videoUrl: item.postroll_ad.video_url,
-          title: item.postroll_ad.name,
-          duration: item.postroll_ad.duration_seconds || 30,
-        });
-      }
+      playlistItems.push({
+        id: item.id,
+        videoUrl,
+        videoId: item.video?.id,
+        episodeId: item.episode_id,
+        title: video.title,
+        thumbnail: isEpisode ? video.thumbnail_url : video.poster_url,
+        duration: videoDuration,
+      });
     }
 
-    if (segments.length === 0) {
+    if (playlistItems.length === 0) {
       return new Response(
         JSON.stringify({ 
           type: 'idle', 
-          message: 'No valid segments (all items missing video_url)',
+          message: 'No valid items (all items missing video_url)',
           channel: { name: channel.name, logo: channel.logo_url, slug: channel.slug }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Calculate total cycle duration
-    const totalDuration = segments.reduce((sum, seg) => sum + seg.duration, 0);
+    // Calculate total playlist duration (sum of all video durations)
+    const totalDuration = playlistItems.reduce((sum, item) => sum + item.duration, 0);
+
+    console.log('Playlist summary:', {
+      channel: channel.slug,
+      itemCount: playlistItems.length,
+      totalDuration: totalDuration,
+      totalDurationFormatted: `${Math.floor(totalDuration / 3600)}h ${Math.floor((totalDuration % 3600) / 60)}m`,
+      items: playlistItems.map(i => ({ title: i.title, duration: i.duration }))
+    });
 
     // Get current time in UTC
     const nowUtc = Date.now();
@@ -293,7 +202,7 @@ serve(async (req) => {
     // Calculate elapsed seconds since playlist start
     let elapsedSeconds = Math.floor((nowUtc - playlistStartMs) / 1000);
 
-    console.log('Timezone calculation:', {
+    console.log('Time calculation:', {
       timezone,
       tzOffsetHours,
       startDate: startDateStr,
@@ -308,9 +217,11 @@ serve(async (req) => {
       if (elapsedSeconds < 0) {
         elapsedSeconds = 0;
       } else {
+        // Loop around when playlist ends
         elapsedSeconds = elapsedSeconds % totalDuration;
       }
     } else {
+      // Non-looping mode
       if (elapsedSeconds < 0 || elapsedSeconds >= totalDuration) {
         return new Response(
           JSON.stringify({ 
@@ -323,68 +234,70 @@ serve(async (req) => {
       }
     }
 
-    // Find current segment
+    // Find current video based on elapsed time
     let cumulative = 0;
     let currentIndex = 0;
-    let offsetInSegment = 0;
+    let offsetInCurrentVideo = 0;
 
-    for (let i = 0; i < segments.length; i++) {
-      if (cumulative + segments[i].duration > elapsedSeconds) {
+    for (let i = 0; i < playlistItems.length; i++) {
+      const itemDuration = playlistItems[i].duration;
+      if (cumulative + itemDuration > elapsedSeconds) {
         currentIndex = i;
-        offsetInSegment = elapsedSeconds - cumulative;
+        offsetInCurrentVideo = elapsedSeconds - cumulative;
         break;
       }
-      cumulative += segments[i].duration;
+      cumulative += itemDuration;
     }
 
-    const currentSegment = segments[currentIndex];
+    const currentItem = playlistItems[currentIndex];
+    const remainingInCurrent = currentItem.duration - offsetInCurrentVideo;
 
-    // Build up next list (next 3 shows, skip ads)
+    // Build up next list (next 3 UNIQUE videos)
     const upNext: Array<{ title: string; thumbnail: string | null; startsIn: number }> = [];
-    let timeUntilNext = currentSegment.duration - offsetInSegment;
+    const seenTitles = new Set<string>();
+    seenTitles.add(currentItem.title); // Don't show current video in up next
     
-    for (let i = currentIndex + 1; i < segments.length && upNext.length < 3; i++) {
-      const seg = segments[i];
-      if (seg.type === 'show') {
+    let timeUntilNext = remainingInCurrent;
+    
+    // Look at items after current
+    for (let i = currentIndex + 1; i < playlistItems.length && upNext.length < 3; i++) {
+      const item = playlistItems[i];
+      if (!seenTitles.has(item.title)) {
         upNext.push({
-          title: seg.title,
-          thumbnail: seg.thumbnail || null,
+          title: item.title,
+          thumbnail: item.thumbnail || null,
           startsIn: timeUntilNext,
         });
+        seenTitles.add(item.title);
       }
-      timeUntilNext += seg.duration;
+      timeUntilNext += item.duration;
     }
 
-    // If loop mode and we need more items, wrap around
+    // If loop mode and we need more items, wrap around to beginning
     if (playlist.loop_mode === 'continuous_loop' && upNext.length < 3) {
-      for (let i = 0; i < segments.length && upNext.length < 3; i++) {
-        const seg = segments[i];
-        if (seg.type === 'show') {
+      for (let i = 0; i < playlistItems.length && upNext.length < 3; i++) {
+        const item = playlistItems[i];
+        if (!seenTitles.has(item.title)) {
           upNext.push({
-            title: seg.title,
-            thumbnail: seg.thumbnail || null,
+            title: item.title,
+            thumbnail: item.thumbnail || null,
             startsIn: timeUntilNext,
           });
+          seenTitles.add(item.title);
         }
-        timeUntilNext += seg.duration;
+        timeUntilNext += item.duration;
       }
-    }
-
-    // Calculate actual video offset (for shows with splits)
-    let actualVideoOffset = offsetInSegment;
-    if (currentSegment.startOffset !== undefined) {
-      actualVideoOffset = currentSegment.startOffset + offsetInSegment;
     }
 
     const result: ScheduleResult = {
-      type: currentSegment.type,
-      videoUrl: currentSegment.videoUrl,
-      offsetSeconds: actualVideoOffset,
+      type: 'show',
+      videoUrl: currentItem.videoUrl,
+      offsetSeconds: offsetInCurrentVideo,
       nowPlaying: {
-        title: currentSegment.title,
-        thumbnail: currentSegment.thumbnail || null,
-        duration: currentSegment.duration,
-        type: currentSegment.type,
+        title: currentItem.title,
+        thumbnail: currentItem.thumbnail || null,
+        duration: currentItem.duration,
+        type: 'show',
       },
       upNext,
       channel: {
@@ -396,11 +309,14 @@ serve(async (req) => {
 
     console.log('Returning live segment:', {
       channel: channel.slug,
-      segment: currentSegment.title,
-      offset: actualVideoOffset,
-      elapsed: elapsedSeconds,
-      totalDuration,
-      adBreaksPerHour,
+      currentVideo: currentItem.title,
+      currentIndex: currentIndex + 1,
+      totalVideos: playlistItems.length,
+      offsetInVideo: offsetInCurrentVideo,
+      videoDuration: currentItem.duration,
+      remainingInVideo: remainingInCurrent,
+      elapsedTotal: elapsedSeconds,
+      totalPlaylistDuration: totalDuration,
     });
 
     return new Response(
@@ -445,12 +361,14 @@ function getTimezoneOffsetHours(timezone: string, date: Date): number {
 function parseDuration(duration: string): number {
   if (!duration) return 0;
   
+  // If it's just a number, assume seconds
   if (/^\d+$/.test(duration)) {
     return parseInt(duration, 10);
   }
   
   let totalSeconds = 0;
   
+  // Handle "1h 30m 45s" format
   const hourMatch = duration.match(/(\d+)\s*h/i);
   if (hourMatch) {
     totalSeconds += parseInt(hourMatch[1], 10) * 3600;
@@ -466,14 +384,17 @@ function parseDuration(duration: string): number {
     totalSeconds += parseInt(secMatch[1], 10);
   }
   
+  // Handle "HH:MM:SS" or "MM:SS" format
   const colonMatch = duration.match(/^(\d+):(\d+)(?::(\d+))?$/);
   if (colonMatch) {
     if (colonMatch[3]) {
+      // HH:MM:SS
       totalSeconds = parseInt(colonMatch[1], 10) * 3600 + parseInt(colonMatch[2], 10) * 60 + parseInt(colonMatch[3], 10);
     } else {
+      // MM:SS
       totalSeconds = parseInt(colonMatch[1], 10) * 60 + parseInt(colonMatch[2], 10);
     }
   }
   
-  return totalSeconds || 1800;
+  return totalSeconds || 0;
 }
