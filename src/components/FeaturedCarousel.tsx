@@ -75,18 +75,22 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
     }
   }, [currentIndex]);
 
-  // 60-second limit for full videos (no trailer) with countdown
+  // 30-second countdown for all videos - runs immediately when video is ready
   useEffect(() => {
     if (!isVideoReady || !isPlaying || previewEnded) return;
     
-    // Only apply 60-second limit if using full video (no trailer)
-    if (!hasTrailer && videoUrl) {
-      // Start countdown timer
+    // Start countdown timer for ALL videos (both trailers and full videos)
+    if (videoUrl) {
       countdownRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
-            setIsPlaying(false);
-            setPreviewEnded(true);
+            // When countdown ends, auto-advance to next video
+            if (hasMultiple) {
+              setCurrentIndex((prevIndex) => (prevIndex + 1) % shuffledContents.length);
+            } else {
+              setIsPlaying(false);
+              setPreviewEnded(true);
+            }
             if (countdownRef.current) clearInterval(countdownRef.current);
             return 0;
           }
@@ -98,20 +102,13 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
     return () => {
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
+        countdownRef.current = null;
       }
     };
-  }, [isVideoReady, isPlaying, hasTrailer, videoUrl, previewEnded]);
+  }, [isVideoReady, isPlaying, videoUrl, previewEnded, hasMultiple, shuffledContents.length]);
 
-  // Auto-advance every 30 seconds if multiple items (matches PREVIEW_DURATION)
-  useEffect(() => {
-    if (!hasMultiple) return;
-    
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % shuffledContents.length);
-    }, PREVIEW_DURATION * 1000); // 30 seconds
-
-    return () => clearInterval(timer);
-  }, [shuffledContents.length, hasMultiple]);
+  // Remove the auto-advance timer since countdown handles it now
+  // This prevents double-advancing
 
   // Cleanup on unmount
   useEffect(() => {

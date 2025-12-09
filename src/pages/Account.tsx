@@ -36,8 +36,7 @@ const Account = () => {
       title: "Security",
       description: "Password and security settings",
       icon: Shield,
-      link: "#",
-      onClick: () => toast.info("Security settings coming soon"),
+      link: "/account/security",
     },
     {
       title: "Preferences",
