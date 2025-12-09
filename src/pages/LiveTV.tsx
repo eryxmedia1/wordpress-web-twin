@@ -494,10 +494,10 @@ export default function LiveTV() {
                   <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                   {isLiveStreaming ? '🔴 LIVE STREAM' : 'LIVE'}
                 </span>
-                {/* Next Ad Break Timer - only show for playlist mode (not live Mux streams) */}
-                {!isLiveStreaming && nextAdBreakIn && nextAdBreakIn > 0 && isPlaying && !isAdPlaying && (
+                {/* Ad Break Countdown - only show the 10-second pre-ad countdown */}
+                {showCountdown && countdownSeconds > 0 && (
                   <span className="bg-black/70 text-white/80 px-2 py-1 rounded text-xs flex items-center gap-1.5">
-                    Ad Break in {formatCountdown(nextAdBreakIn)}
+                    Ad Break in {countdownSeconds}s
                   </span>
                 )}
               </div>
