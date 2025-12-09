@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNavbar from "@/components/AdminNavbar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -28,12 +28,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { 
   Film, Plus, Pencil, Trash2, ArrowLeft, Loader2, PlayCircle, 
-  CalendarIcon, Globe, Target, Settings, Video, Layers, Tv
+  CalendarIcon, Globe, Target, Settings, Video, Layers, Tv,
+  HelpCircle, Info, BookOpen, Zap, Users, MapPin, Clock, BarChart3
 } from "lucide-react";
 
 interface Ad {
@@ -75,6 +82,17 @@ interface Content {
   type: string;
 }
 
+interface PodConfig {
+  id: string;
+  content_id: string | null;
+  channel_id: string | null;
+  preroll_pod_size: number;
+  midroll_pod_size: number;
+  postroll_pod_size: number;
+  midroll_interval_minutes: number;
+  enabled: boolean;
+}
+
 const COUNTRIES = ['US', 'CA', 'UK', 'AU', 'DE', 'FR', 'JP', 'BR', 'MX', 'IN'];
 const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo'];
 const MEMBERSHIP_TIERS = ['free', 'standard', 'premium'];
@@ -88,7 +106,15 @@ export default function AdminLiveTVAds() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeMainTab, setActiveMainTab] = useState("ads");
+  const [activeMainTab, setActiveMainTab] = useState("guide");
+
+  // Pod config states
+  const [contentPodConfigs, setContentPodConfigs] = useState<PodConfig[]>([]);
+  const [channelPodConfigs, setChannelPodConfigs] = useState<PodConfig[]>([]);
+  const [selectedContentForConfig, setSelectedContentForConfig] = useState<string>("");
+  const [selectedChannelForConfig, setSelectedChannelForConfig] = useState<string>("");
+  const [newContentConfig, setNewContentConfig] = useState({ preroll: 1, midroll: 1, postroll: 1, interval: 10 });
+  const [newChannelConfig, setNewChannelConfig] = useState({ preroll: 1, midroll: 1, postroll: 1, interval: 10 });
 
   // Global config state
   const [globalConfig, setGlobalConfig] = useState<GlobalConfig>({
@@ -156,11 +182,12 @@ export default function AdminLiveTVAds() {
   });
 
   const fetchData = async () => {
-    const [adsRes, channelsRes, contentsRes, globalRes] = await Promise.all([
+    const [adsRes, channelsRes, contentsRes, globalRes, podConfigsRes] = await Promise.all([
       supabase.from('ads').select('*').order('name'),
       supabase.from('live_channels').select('id, name').order('name'),
       supabase.from('contents').select('id, title, type').order('title').limit(100),
       supabase.from('ad_global_config').select('*').limit(1).maybeSingle(),
+      supabase.from('ad_pod_config').select('*'),
     ]);
 
     if (adsRes.data) setAds(adsRes.data);
@@ -175,12 +202,95 @@ export default function AdminLiveTVAds() {
         midroll_interval_minutes: globalRes.data.midroll_interval_minutes || 10,
       });
     }
+    if (podConfigsRes.data) {
+      setContentPodConfigs(podConfigsRes.data.filter(c => c.content_id));
+      setChannelPodConfigs(podConfigsRes.data.filter(c => c.channel_id));
+    }
     setIsLoading(false);
   };
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Save content-specific pod config
+  const handleSaveContentPodConfig = async () => {
+    if (!selectedContentForConfig) {
+      toast.error('Please select a content item');
+      return;
+    }
+    try {
+      // Check if config already exists
+      const existing = contentPodConfigs.find(c => c.content_id === selectedContentForConfig);
+      if (existing) {
+        await supabase.from('ad_pod_config').update({
+          preroll_pod_size: newContentConfig.preroll,
+          midroll_pod_size: newContentConfig.midroll,
+          postroll_pod_size: newContentConfig.postroll,
+          midroll_interval_minutes: newContentConfig.interval,
+          updated_at: new Date().toISOString(),
+        }).eq('id', existing.id);
+      } else {
+        await supabase.from('ad_pod_config').insert({
+          content_id: selectedContentForConfig,
+          preroll_pod_size: newContentConfig.preroll,
+          midroll_pod_size: newContentConfig.midroll,
+          postroll_pod_size: newContentConfig.postroll,
+          midroll_interval_minutes: newContentConfig.interval,
+        });
+      }
+      toast.success('Content ad config saved');
+      fetchData();
+      setSelectedContentForConfig("");
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save');
+    }
+  };
+
+  // Save channel-specific pod config
+  const handleSaveChannelPodConfig = async () => {
+    if (!selectedChannelForConfig) {
+      toast.error('Please select a channel');
+      return;
+    }
+    try {
+      const existing = channelPodConfigs.find(c => c.channel_id === selectedChannelForConfig);
+      if (existing) {
+        await supabase.from('ad_pod_config').update({
+          preroll_pod_size: newChannelConfig.preroll,
+          midroll_pod_size: newChannelConfig.midroll,
+          postroll_pod_size: newChannelConfig.postroll,
+          midroll_interval_minutes: newChannelConfig.interval,
+          updated_at: new Date().toISOString(),
+        }).eq('id', existing.id);
+      } else {
+        await supabase.from('ad_pod_config').insert({
+          channel_id: selectedChannelForConfig,
+          preroll_pod_size: newChannelConfig.preroll,
+          midroll_pod_size: newChannelConfig.midroll,
+          postroll_pod_size: newChannelConfig.postroll,
+          midroll_interval_minutes: newChannelConfig.interval,
+        });
+      }
+      toast.success('Channel ad config saved');
+      fetchData();
+      setSelectedChannelForConfig("");
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save');
+    }
+  };
+
+  // Delete pod config
+  const handleDeletePodConfig = async (id: string) => {
+    if (!confirm('Delete this ad configuration?')) return;
+    try {
+      await supabase.from('ad_pod_config').delete().eq('id', id);
+      toast.success('Config deleted');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete');
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -523,20 +633,288 @@ export default function AdminLiveTVAds() {
 
         {/* Main Tabs */}
         <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-6">
-          <TabsList className="grid grid-cols-3 w-full max-w-lg">
+          <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+            <TabsTrigger value="guide" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Guide
+            </TabsTrigger>
             <TabsTrigger value="ads" className="flex items-center gap-2">
               <Film className="h-4 w-4" />
               Ads
             </TabsTrigger>
             <TabsTrigger value="global" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Global Settings
+              Global
             </TabsTrigger>
-            <TabsTrigger value="config" className="flex items-center gap-2">
-              <Layers className="h-4 w-4" />
-              Pod Config
+            <TabsTrigger value="content-config" className="flex items-center gap-2">
+              <Video className="h-4 w-4" />
+              Content
+            </TabsTrigger>
+            <TabsTrigger value="channel-config" className="flex items-center gap-2">
+              <Tv className="h-4 w-4" />
+              Channels
             </TabsTrigger>
           </TabsList>
+
+          {/* Guide Tab - Detailed Instructions */}
+          <TabsContent value="guide">
+            <div className="space-y-6">
+              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-2xl">
+                    <BookOpen className="h-6 w-6 text-primary" />
+                    ZoeRatedTV Ad Network Guide
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    Complete guide to managing ads across all your content and live channels
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    This comprehensive ad system allows you to monetize your streaming platform with targeted advertisements. 
+                    Ads can be shown before (pre-roll), during (mid-roll), and after (post-roll) content on both VOD and Live TV.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Accordion type="multiple" className="space-y-4" defaultValue={["overview", "ad-pods", "targeting", "placements", "examples"]}>
+                {/* Overview */}
+                <AccordionItem value="overview" className="border rounded-lg px-4 bg-card">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-3">
+                      <Info className="h-5 w-5 text-primary" />
+                      System Overview
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4 pt-2">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <h4 className="font-medium flex items-center gap-2 mb-2">
+                          <Zap className="h-4 w-4 text-yellow-500" />
+                          Key Features
+                        </h4>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                          <li>Pre-roll, Mid-roll, and Post-roll ad positions</li>
+                          <li>Ad pods (multiple ads per break)</li>
+                          <li>10-second countdown before ad breaks</li>
+                          <li>Geo-targeting by country, region, city, postal code</li>
+                          <li>Device targeting (mobile, desktop, TV)</li>
+                          <li>Membership tier targeting</li>
+                          <li>Weight-based rotation for ad selection</li>
+                          <li>Impression caps and frequency caps</li>
+                          <li>Flight dates (start/end scheduling)</li>
+                        </ul>
+                      </div>
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <h4 className="font-medium flex items-center gap-2 mb-2">
+                          <PlayCircle className="h-4 w-4 text-green-500" />
+                          Supported Content Types
+                        </h4>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                          <li><strong>Movies:</strong> Single video with pre/mid/post ads</li>
+                          <li><strong>TV Shows:</strong> Each episode has its own ad breaks</li>
+                          <li><strong>Live TV:</strong> Scheduled ad breaks on all channels</li>
+                          <li><strong>VOD:</strong> On-demand content with configurable breaks</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Ad Pods */}
+                <AccordionItem value="ad-pods" className="border rounded-lg px-4 bg-card">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-3">
+                      <Layers className="h-5 w-5 text-primary" />
+                      Ad Pods Explained
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4 pt-2">
+                    <p className="text-muted-foreground">
+                      Ad pods allow you to show multiple ads back-to-back in a single break. This mimics traditional TV commercial breaks.
+                    </p>
+                    
+                    <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                      <h4 className="font-medium mb-3">How Ad Pods Work:</h4>
+                      <ol className="text-sm space-y-2 list-decimal list-inside text-muted-foreground">
+                        <li>When a break is triggered, a 10-second countdown appears: <span className="text-primary">"AD BREAK in 10... (3 ads)"</span></li>
+                        <li>The system selects multiple ads based on targeting and weight</li>
+                        <li>Ads play back-to-back with indicator: <span className="text-primary">"Ad 1 of 3 — Your show will resume shortly"</span></li>
+                        <li>After the last ad, content automatically resumes</li>
+                      </ol>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="p-4 bg-muted/30 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-primary mb-1">Pre-roll</div>
+                        <p className="text-sm text-muted-foreground">Ads shown BEFORE content starts playing</p>
+                      </div>
+                      <div className="p-4 bg-muted/30 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-yellow-500 mb-1">Mid-roll</div>
+                        <p className="text-sm text-muted-foreground">Ads shown DURING content at intervals</p>
+                      </div>
+                      <div className="p-4 bg-muted/30 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-green-500 mb-1">Post-roll</div>
+                        <p className="text-sm text-muted-foreground">Ads shown AFTER content ends</p>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <h4 className="font-medium mb-2">Pod Size Configuration:</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                        <li><strong>Global Settings:</strong> Default pod sizes for all content (see "Global" tab)</li>
+                        <li><strong>Per-Content Override:</strong> Custom pod sizes for specific movies/shows (see "Content" tab)</li>
+                        <li><strong>Per-Channel Override:</strong> Custom pod sizes for specific live channels (see "Channels" tab)</li>
+                      </ul>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Targeting */}
+                <AccordionItem value="targeting" className="border rounded-lg px-4 bg-card">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-3">
+                      <Target className="h-5 w-5 text-primary" />
+                      Targeting Options
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4 pt-2">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <h4 className="font-medium flex items-center gap-2 mb-2">
+                          <MapPin className="h-4 w-4 text-blue-500" />
+                          Geographic Targeting
+                        </h4>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                          <li><strong>Countries:</strong> US, CA, UK, AU, etc.</li>
+                          <li><strong>Regions:</strong> States or provinces</li>
+                          <li><strong>Cities:</strong> New York, Los Angeles, etc.</li>
+                          <li><strong>Postal Codes:</strong> Zip codes for hyper-local targeting</li>
+                          <li><strong>Time Zones:</strong> Show ads during specific hours</li>
+                        </ul>
+                        <p className="text-xs text-muted-foreground mt-2 italic">
+                          Leave empty to target all locations
+                        </p>
+                      </div>
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <h4 className="font-medium flex items-center gap-2 mb-2">
+                          <Users className="h-4 w-4 text-purple-500" />
+                          Audience Targeting
+                        </h4>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                          <li><strong>Membership Tiers:</strong> Free, Standard, Premium</li>
+                          <li><strong>Device Types:</strong> Mobile, Desktop, Smart TV</li>
+                        </ul>
+                        <p className="text-xs text-muted-foreground mt-2 italic">
+                          Example: Show premium ads only to free users to encourage upgrades
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <h4 className="font-medium flex items-center gap-2 mb-2">
+                        <Clock className="h-4 w-4 text-orange-500" />
+                        Delivery Controls
+                      </h4>
+                      <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                        <li><strong>Weight (1-100):</strong> Higher weight = more likely to be shown</li>
+                        <li><strong>Max Impressions:</strong> Ad automatically pauses after reaching limit</li>
+                        <li><strong>Frequency Cap:</strong> Limit how many times one user sees the ad per day</li>
+                        <li><strong>Flight Dates:</strong> Schedule ads to run only during specific periods</li>
+                      </ul>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Placements */}
+                <AccordionItem value="placements" className="border rounded-lg px-4 bg-card">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-3">
+                      <Globe className="h-5 w-5 text-primary" />
+                      Placement Types
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4 pt-2">
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <h4 className="font-medium text-green-400 mb-2">Global Placement</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Ad runs everywhere — all movies, shows, episodes, and live channels.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2 italic">
+                          Best for: Brand awareness campaigns
+                        </p>
+                      </div>
+                      <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <h4 className="font-medium text-blue-400 mb-2">Content-Specific</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Ad runs only on selected movies or TV shows.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2 italic">
+                          Best for: Targeted product placement
+                        </p>
+                      </div>
+                      <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                        <h4 className="font-medium text-purple-400 mb-2">Channel-Specific</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Ad runs only on selected live channels (MadFaceTV, MyPureTV, etc.)
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2 italic">
+                          Use "Apply to ALL channels" for full live TV coverage
+                        </p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Examples */}
+                <AccordionItem value="examples" className="border rounded-lg px-4 bg-card">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-3">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                      Example Configurations
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4 pt-2">
+                    <div className="space-y-4">
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <h4 className="font-medium text-primary mb-2">Example 1: National Brand Campaign</h4>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                          <li><strong>Placement:</strong> Global</li>
+                          <li><strong>Positions:</strong> Pre-roll + Mid-roll</li>
+                          <li><strong>Weight:</strong> 80 (high priority)</li>
+                          <li><strong>Targeting:</strong> US only, all membership tiers</li>
+                          <li><strong>Max Impressions:</strong> 100,000</li>
+                        </ul>
+                      </div>
+
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <h4 className="font-medium text-primary mb-2">Example 2: Local Business Ad</h4>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                          <li><strong>Placement:</strong> Channel-specific (MadFaceTV only)</li>
+                          <li><strong>Positions:</strong> Mid-roll only</li>
+                          <li><strong>Weight:</strong> 50 (normal)</li>
+                          <li><strong>Targeting:</strong> Cities: New York, Brooklyn; Postal: 10001, 10002</li>
+                          <li><strong>Frequency Cap:</strong> 3 per user per day</li>
+                        </ul>
+                      </div>
+
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <h4 className="font-medium text-primary mb-2">Example 3: Free Tier Upgrade Promo</h4>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                          <li><strong>Placement:</strong> Global</li>
+                          <li><strong>Positions:</strong> All (Pre, Mid, Post)</li>
+                          <li><strong>Weight:</strong> 100 (highest priority)</li>
+                          <li><strong>Targeting:</strong> Membership Tier: Free only</li>
+                          <li><strong>Flight Dates:</strong> Holiday sale period only</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </TabsContent>
 
           {/* Global Settings Tab */}
           <TabsContent value="global">
@@ -638,48 +1016,280 @@ export default function AdminLiveTVAds() {
             </Card>
           </TabsContent>
 
-          {/* Pod Config Tab - Per Content/Channel */}
-          <TabsContent value="config">
+          {/* Content-Specific Pod Config Tab */}
+          <TabsContent value="content-config">
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Layers className="h-5 w-5 text-primary" />
-                  Content & Channel Ad Config
+                  <Video className="h-5 w-5 text-primary" />
+                  Per-Content Ad Pod Configuration
                 </CardTitle>
+                <CardDescription>
+                  Override global ad settings for specific movies or TV shows. These settings take priority over global defaults.
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Override global settings for specific content or channels. These take priority over global defaults.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="bg-muted/30 border-border">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Video className="h-4 w-4" />
-                        Content Config
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        Set custom pod sizes for specific movies or shows. Coming soon.
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-muted/30 border-border">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Tv className="h-4 w-4" />
-                        Channel Config
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        Set custom pod sizes for specific live channels. Coming soon.
-                      </p>
-                    </CardContent>
-                  </Card>
+              <CardContent className="space-y-6">
+                {/* Add New Content Config */}
+                <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                  <h4 className="font-medium mb-4">Add Content-Specific Config</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="lg:col-span-2">
+                      <Label>Select Content</Label>
+                      <Select value={selectedContentForConfig} onValueChange={setSelectedContentForConfig}>
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue placeholder="Choose a movie or show..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover max-h-60">
+                          {contents.map(content => (
+                            <SelectItem key={content.id} value={content.id}>
+                              {content.title} ({content.type})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Pre-roll</Label>
+                      <Select 
+                        value={String(newContentConfig.preroll)} 
+                        onValueChange={(v) => setNewContentConfig(prev => ({ ...prev, preroll: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[0, 1, 2, 3, 4, 5].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n !== 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Mid-roll</Label>
+                      <Select 
+                        value={String(newContentConfig.midroll)} 
+                        onValueChange={(v) => setNewContentConfig(prev => ({ ...prev, midroll: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[0, 1, 2, 3, 4, 5].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n !== 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Post-roll</Label>
+                      <Select 
+                        value={String(newContentConfig.postroll)} 
+                        onValueChange={(v) => setNewContentConfig(prev => ({ ...prev, postroll: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[0, 1, 2, 3, 4, 5].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n !== 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-end gap-4 mt-4">
+                    <div className="flex-1">
+                      <Label>Mid-roll Interval</Label>
+                      <Select 
+                        value={String(newContentConfig.interval)} 
+                        onValueChange={(v) => setNewContentConfig(prev => ({ ...prev, interval: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[5, 10, 15, 20, 30].map(n => (
+                            <SelectItem key={n} value={String(n)}>Every {n} minutes</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleSaveContentPodConfig} disabled={!selectedContentForConfig}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Config
+                    </Button>
+                  </div>
                 </div>
+
+                {/* Existing Content Configs */}
+                {contentPodConfigs.length > 0 ? (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Active Content Configurations</h4>
+                    <div className="grid gap-3">
+                      {contentPodConfigs.map(config => {
+                        const content = contents.find(c => c.id === config.content_id);
+                        return (
+                          <div key={config.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                            <div className="flex-1">
+                              <h5 className="font-medium">{content?.title || 'Unknown Content'}</h5>
+                              <p className="text-sm text-muted-foreground">
+                                Pre: {config.preroll_pod_size} • Mid: {config.midroll_pod_size} • Post: {config.postroll_pod_size} • Interval: {config.midroll_interval_minutes}min
+                              </p>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeletePodConfig(config.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Video className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No content-specific configurations yet.</p>
+                    <p className="text-sm">All content will use global settings.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Channel-Specific Pod Config Tab */}
+          <TabsContent value="channel-config">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tv className="h-5 w-5 text-primary" />
+                  Per-Channel Ad Pod Configuration
+                </CardTitle>
+                <CardDescription>
+                  Override global ad settings for specific live channels like MadFaceTV or MyPureTV. These settings take priority over global defaults.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Add New Channel Config */}
+                <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                  <h4 className="font-medium mb-4">Add Channel-Specific Config</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="lg:col-span-2">
+                      <Label>Select Channel</Label>
+                      <Select value={selectedChannelForConfig} onValueChange={setSelectedChannelForConfig}>
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue placeholder="Choose a live channel..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {channels.map(channel => (
+                            <SelectItem key={channel.id} value={channel.id}>
+                              {channel.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Pre-roll</Label>
+                      <Select 
+                        value={String(newChannelConfig.preroll)} 
+                        onValueChange={(v) => setNewChannelConfig(prev => ({ ...prev, preroll: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[0, 1, 2, 3, 4, 5].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n !== 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Mid-roll</Label>
+                      <Select 
+                        value={String(newChannelConfig.midroll)} 
+                        onValueChange={(v) => setNewChannelConfig(prev => ({ ...prev, midroll: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[0, 1, 2, 3, 4, 5].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n !== 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Post-roll</Label>
+                      <Select 
+                        value={String(newChannelConfig.postroll)} 
+                        onValueChange={(v) => setNewChannelConfig(prev => ({ ...prev, postroll: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[0, 1, 2, 3, 4, 5].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n !== 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-end gap-4 mt-4">
+                    <div className="flex-1">
+                      <Label>Mid-roll Interval</Label>
+                      <Select 
+                        value={String(newChannelConfig.interval)} 
+                        onValueChange={(v) => setNewChannelConfig(prev => ({ ...prev, interval: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[5, 10, 15, 20, 30].map(n => (
+                            <SelectItem key={n} value={String(n)}>Every {n} minutes</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleSaveChannelPodConfig} disabled={!selectedChannelForConfig}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Config
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Existing Channel Configs */}
+                {channelPodConfigs.length > 0 ? (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Active Channel Configurations</h4>
+                    <div className="grid gap-3">
+                      {channelPodConfigs.map(config => {
+                        const channel = channels.find(c => c.id === config.channel_id);
+                        return (
+                          <div key={config.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                            <div className="flex-1">
+                              <h5 className="font-medium">{channel?.name || 'Unknown Channel'}</h5>
+                              <p className="text-sm text-muted-foreground">
+                                Pre: {config.preroll_pod_size} • Mid: {config.midroll_pod_size} • Post: {config.postroll_pod_size} • Interval: {config.midroll_interval_minutes}min
+                              </p>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeletePodConfig(config.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Tv className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No channel-specific configurations yet.</p>
+                    <p className="text-sm">All live channels will use global settings.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
