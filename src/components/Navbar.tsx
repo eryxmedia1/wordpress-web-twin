@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Bell, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings, Shield, Crown } from "lucide-react";
+import { Search, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings, Shield, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useProfile, UserProfile } from "@/context/ProfileContext";
 import { useAuth } from "@/context/AuthContext";
+import NotificationBell from "@/components/NotificationBell";
 
 const Navbar = () => {
   const location = useLocation();
@@ -23,7 +24,6 @@ const Navbar = () => {
   const { user, logout, isAdmin } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [notificationCount] = useState(12);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -247,14 +247,7 @@ const Navbar = () => {
         </form>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative text-foreground">
-          <Bell className="h-5 w-5" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-              {notificationCount}
-            </span>
-          )}
-        </Button>
+        <NotificationBell />
         
         {/* Profile Dropdown */}
         <DropdownMenu>

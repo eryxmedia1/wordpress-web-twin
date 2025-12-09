@@ -425,6 +425,58 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_notifications: {
+        Row: {
+          content_id: string | null
+          created_at: string | null
+          id: string
+          indie_channel_id: string
+          is_read: boolean | null
+          message: string
+          profile_id: string
+        }
+        Insert: {
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          indie_channel_id: string
+          is_read?: boolean | null
+          message: string
+          profile_id: string
+        }
+        Update: {
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          indie_channel_id?: string
+          is_read?: boolean | null
+          message?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_notifications_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_notifications_indie_channel_id_fkey"
+            columns: ["indie_channel_id"]
+            isOneToOne: false
+            referencedRelation: "indie_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_notifications_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_membership_plans: {
         Row: {
           content_id: string

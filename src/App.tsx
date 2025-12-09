@@ -41,6 +41,7 @@ import AdminAdReports from "./pages/AdminAdReports";
 import IndieChannels from "./pages/IndieChannels";
 import IndieChannelPage from "./pages/IndieChannelPage";
 import AdminIndieChannels from "./pages/AdminIndieChannels";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
                   <Route path="/live/:channelSlug" element={<LiveTV />} />
                   <Route path="/indie-channels" element={<IndieChannels />} />
                   <Route path="/indie-channel/:slug" element={<IndieChannelPage />} />
+                  <Route path="/notifications" element={<Notifications />} />
                 </Route>
               </Route>
               
