@@ -11,9 +11,9 @@ interface Ad {
   duration_seconds: number;
 }
 
-interface AdResponse {
-  ad: Ad | null;
-  trackingId: string;
+interface AdPodResponse {
+  ads: Ad[];
+  trackingIds: string[];
   reason?: string;
 }
 
@@ -25,6 +25,13 @@ interface GeoData {
   timezone: string;
 }
 
+interface PodConfig {
+  prerollPodSize: number;
+  midrollPodSize: number;
+  postrollPodSize: number;
+  midrollIntervalMinutes: number;
+}
+
 interface UseAdsOptions {
   contentId?: string;
   channelId?: string;
@@ -34,10 +41,18 @@ interface UseAdsOptions {
   onAdEnd?: () => void;
 }
 
+const DEFAULT_POD_CONFIG: PodConfig = {
+  prerollPodSize: 1,
+  midrollPodSize: 1,
+  postrollPodSize: 1,
+  midrollIntervalMinutes: 10,
+};
+
 export function useAds(options: UseAdsOptions = {}) {
   const { currentProfile } = useProfile();
   const [currentAd, setCurrentAd] = useState<Ad | null>(null);
-  const [trackingId, setTrackingId] = useState<string | null>(null);
+  const [trackingIds, setTrackingIds] = useState<string[]>([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
   const [adQueue, setAdQueue] = useState<Ad[]>([]);
   const [adPosition, setAdPosition] = useState<'pre' | 'mid' | 'post' | null>(null);
@@ -45,6 +60,8 @@ export function useAds(options: UseAdsOptions = {}) {
   const [showCountdown, setShowCountdown] = useState(false);
   const [geoData, setGeoData] = useState<GeoData | null>(null);
   const [geoFetched, setGeoFetched] = useState(false);
+  const [podConfig, setPodConfig] = useState<PodConfig>(DEFAULT_POD_CONFIG);
+  const [podConfigFetched, setPodConfigFetched] = useState(false);
 
   // Detect device type
   const getDeviceType = useCallback((): 'mobile' | 'desktop' | 'tv' => {
@@ -96,14 +113,87 @@ export function useAds(options: UseAdsOptions = {}) {
     fetchGeo();
   }, [geoFetched]);
 
-  // Fetch an ad from the select-ad edge function
-  const fetchAd = useCallback(async (position: 'pre' | 'mid' | 'post'): Promise<AdResponse | null> => {
+  // Fetch pod configuration
+  useEffect(() => {
+    if (podConfigFetched) return;
+    
+    const fetchPodConfig = async () => {
+      try {
+        // First try content-specific config
+        if (options.contentId) {
+          const { data: contentConfig } = await supabase
+            .from('ad_pod_config')
+            .select('*')
+            .eq('content_id', options.contentId)
+            .eq('enabled', true)
+            .maybeSingle();
+          
+          if (contentConfig) {
+            setPodConfig({
+              prerollPodSize: contentConfig.preroll_pod_size || 1,
+              midrollPodSize: contentConfig.midroll_pod_size || 1,
+              postrollPodSize: contentConfig.postroll_pod_size || 1,
+              midrollIntervalMinutes: contentConfig.midroll_interval_minutes || 10,
+            });
+            setPodConfigFetched(true);
+            return;
+          }
+        }
+
+        // Then try channel-specific config
+        if (options.channelId) {
+          const { data: channelConfig } = await supabase
+            .from('ad_pod_config')
+            .select('*')
+            .eq('channel_id', options.channelId)
+            .eq('enabled', true)
+            .maybeSingle();
+          
+          if (channelConfig) {
+            setPodConfig({
+              prerollPodSize: channelConfig.preroll_pod_size || 1,
+              midrollPodSize: channelConfig.midroll_pod_size || 1,
+              postrollPodSize: channelConfig.postroll_pod_size || 1,
+              midrollIntervalMinutes: channelConfig.midroll_interval_minutes || 10,
+            });
+            setPodConfigFetched(true);
+            return;
+          }
+        }
+
+        // Fall back to global config
+        const { data: globalConfig } = await supabase
+          .from('ad_global_config')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+        
+        if (globalConfig) {
+          setPodConfig({
+            prerollPodSize: globalConfig.preroll_pod_size || 1,
+            midrollPodSize: globalConfig.midroll_pod_size || 1,
+            postrollPodSize: globalConfig.postroll_pod_size || 1,
+            midrollIntervalMinutes: globalConfig.midroll_interval_minutes || 10,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching pod config:', error);
+      }
+      setPodConfigFetched(true);
+    };
+
+    fetchPodConfig();
+  }, [options.contentId, options.channelId, podConfigFetched]);
+
+  // Fetch ads from the select-ad edge function
+  const fetchAdPod = useCallback(async (position: 'pre' | 'mid' | 'post', podSize: number): Promise<AdPodResponse | null> => {
     try {
       const session = await supabase.auth.getSession();
       const funcUrl = 'https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/select-ad';
       
       const requestBody = {
         position,
+        podSize,
         userId: session.data.session?.user?.id || null,
         profileId: currentProfile?.id || null,
         contentId: options.contentId || null,
@@ -129,13 +219,13 @@ export function useAds(options: UseAdsOptions = {}) {
 
       if (res.ok) {
         const data = await res.json();
-        return data as AdResponse;
+        return data as AdPodResponse;
       }
       
-      console.log('No ad available:', res.status);
+      console.log('No ads available:', res.status);
       return null;
     } catch (error) {
-      console.error('Error fetching ad:', error);
+      console.error('Error fetching ads:', error);
       return null;
     }
   }, [currentProfile?.id, options.contentId, options.channelId, options.membershipTier, getDeviceType, geoData]);
@@ -177,50 +267,56 @@ export function useAds(options: UseAdsOptions = {}) {
     }
   }, [currentProfile?.id, options.contentId, options.channelId, options.membershipTier, getDeviceType, geoData]);
 
-  // Request pre-roll ad
+  // Start playing the first ad in the queue
+  const startAdPod = useCallback((ads: Ad[], ids: string[], position: 'pre' | 'mid' | 'post') => {
+    if (ads.length === 0) return false;
+    
+    setAdQueue(ads);
+    setTrackingIds(ids);
+    setCurrentAdIndex(0);
+    setCurrentAd(ads[0]);
+    setAdPosition(position);
+    setIsAdPlaying(true);
+    setShowCountdown(false);
+    options.onAdStart?.();
+    
+    // Track first ad impression
+    trackImpression(ads[0].id, ids[0], position);
+    return true;
+  }, [trackImpression, options]);
+
+  // Request pre-roll ad pod
   const requestPreRoll = useCallback(async (): Promise<boolean> => {
-    const response = await fetchAd('pre');
-    if (response?.ad) {
-      setCurrentAd(response.ad);
-      setTrackingId(response.trackingId);
-      setAdPosition('pre');
-      setIsAdPlaying(true);
-      options.onAdStart?.();
-      // Track impression when ad starts
-      trackImpression(response.ad.id, response.trackingId, 'pre');
-      return true;
+    const response = await fetchAdPod('pre', podConfig.prerollPodSize);
+    if (response?.ads && response.ads.length > 0) {
+      return startAdPod(response.ads, response.trackingIds, 'pre');
     }
     return false;
-  }, [fetchAd, trackImpression, options]);
+  }, [fetchAdPod, podConfig.prerollPodSize, startAdPod]);
 
-  // Request mid-roll ad with countdown
+  // Request mid-roll ad pod with countdown
   const requestMidRoll = useCallback(async (countdownDuration: number = 10): Promise<boolean> => {
-    const response = await fetchAd('mid');
-    if (response?.ad) {
+    const response = await fetchAdPod('mid', podConfig.midrollPodSize);
+    if (response?.ads && response.ads.length > 0) {
       // Start countdown
       setCountdownSeconds(countdownDuration);
       setShowCountdown(true);
-      setAdQueue([response.ad]);
+      setAdQueue(response.ads);
+      setTrackingIds(response.trackingIds);
       setAdPosition('mid');
       return true;
     }
     return false;
-  }, [fetchAd]);
+  }, [fetchAdPod, podConfig.midrollPodSize]);
 
-  // Request post-roll ad
+  // Request post-roll ad pod
   const requestPostRoll = useCallback(async (): Promise<boolean> => {
-    const response = await fetchAd('post');
-    if (response?.ad) {
-      setCurrentAd(response.ad);
-      setTrackingId(response.trackingId);
-      setAdPosition('post');
-      setIsAdPlaying(true);
-      options.onAdStart?.();
-      trackImpression(response.ad.id, response.trackingId, 'post');
-      return true;
+    const response = await fetchAdPod('post', podConfig.postrollPodSize);
+    if (response?.ads && response.ads.length > 0) {
+      return startAdPod(response.ads, response.trackingIds, 'post');
     }
     return false;
-  }, [fetchAd, trackImpression, options]);
+  }, [fetchAdPod, podConfig.postrollPodSize, startAdPod]);
 
   // Countdown timer
   useEffect(() => {
@@ -230,43 +326,43 @@ export function useAds(options: UseAdsOptions = {}) {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (countdownSeconds === 0 && showCountdown && adQueue.length > 0) {
-      // Countdown finished, start playing ad
-      const ad = adQueue[0];
-      setCurrentAd(ad);
+      // Countdown finished, start playing ad pod
+      setCurrentAdIndex(0);
+      setCurrentAd(adQueue[0]);
       setShowCountdown(false);
       setIsAdPlaying(true);
       options.onAdStart?.();
-      // Generate tracking ID and track impression
-      const newTrackingId = crypto.randomUUID();
-      setTrackingId(newTrackingId);
-      trackImpression(ad.id, newTrackingId, adPosition || 'mid');
+      // Track first ad impression
+      if (trackingIds[0]) {
+        trackImpression(adQueue[0].id, trackingIds[0], adPosition || 'mid');
+      }
     }
-  }, [countdownSeconds, showCountdown, adQueue, adPosition, options, trackImpression]);
+  }, [countdownSeconds, showCountdown, adQueue, adPosition, options, trackImpression, trackingIds]);
 
-  // Called when ad finishes playing
+  // Called when current ad finishes playing
   const onAdComplete = useCallback(() => {
-    if (currentAd && trackingId && adPosition) {
-      trackImpression(currentAd.id, trackingId, adPosition, currentAd.duration_seconds * 1000, true);
+    if (currentAd && trackingIds[currentAdIndex] && adPosition) {
+      trackImpression(currentAd.id, trackingIds[currentAdIndex], adPosition, currentAd.duration_seconds * 1000, true);
     }
     
-    // Check if there are more ads in queue
-    if (adQueue.length > 1) {
-      setAdQueue(prev => prev.slice(1));
-      const nextAd = adQueue[1];
-      setCurrentAd(nextAd);
-      const newTrackingId = crypto.randomUUID();
-      setTrackingId(newTrackingId);
-      trackImpression(nextAd.id, newTrackingId, adPosition || 'mid');
+    // Check if there are more ads in the pod
+    const nextIndex = currentAdIndex + 1;
+    if (nextIndex < adQueue.length) {
+      setCurrentAdIndex(nextIndex);
+      setCurrentAd(adQueue[nextIndex]);
+      // Track next ad impression
+      trackImpression(adQueue[nextIndex].id, trackingIds[nextIndex], adPosition || 'mid');
     } else {
-      // No more ads
+      // Pod complete
       setCurrentAd(null);
-      setTrackingId(null);
+      setTrackingIds([]);
+      setCurrentAdIndex(0);
       setIsAdPlaying(false);
       setAdQueue([]);
       setAdPosition(null);
       options.onAdEnd?.();
     }
-  }, [currentAd, trackingId, adPosition, adQueue, trackImpression, options]);
+  }, [currentAd, currentAdIndex, trackingIds, adPosition, adQueue, trackImpression, options]);
 
   // Skip ad (for premium users)
   const skipAd = useCallback(() => {
@@ -280,6 +376,8 @@ export function useAds(options: UseAdsOptions = {}) {
     countdownSeconds,
     showCountdown,
     adQueueLength: adQueue.length,
+    currentAdIndex: currentAdIndex + 1, // 1-indexed for display
+    podConfig,
     requestPreRoll,
     requestMidRoll,
     requestPostRoll,

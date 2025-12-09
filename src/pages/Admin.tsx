@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Film, Tv, Plus, Search } from "lucide-react";
+import { Film, Tv, Plus, Search, Megaphone } from "lucide-react";
 import AdminNavbar from "@/components/AdminNavbar";
 import { useNavigate } from "react-router-dom";
 import { supabase, DbContent } from "@/integrations/supabase/client";
@@ -96,6 +96,10 @@ const Admin = () => {
     navigate('/admin/tvshows');
   };
 
+  const goToAdManager = () => {
+    navigate('/admin/livetv/ads');
+  };
+
   return (
     <div className="min-h-screen bg-black text-white">
       <AdminNavbar />
@@ -103,7 +107,7 @@ const Admin = () => {
       <div className="container mx-auto px-4 pt-24 pb-10">
         <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="bg-gray-800 border-gray-700 hover:bg-gray-700 transition cursor-pointer" onClick={goToMoviesSection}>
             <CardContent className="p-6 flex flex-col items-center justify-center">
               <Film className="h-16 w-16 text-primary mb-4" />
@@ -126,6 +130,19 @@ const Admin = () => {
               </p>
               <Button className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground">
                 Go to TV Shows
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 hover:border-primary/50 transition cursor-pointer" onClick={goToAdManager}>
+            <CardContent className="p-6 flex flex-col items-center justify-center">
+              <Megaphone className="h-16 w-16 text-primary mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Ad Manager</h2>
+              <p className="text-gray-400 text-center">
+                Manage ad pods, targeting, placements, and campaigns
+              </p>
+              <Button className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground">
+                Go to Ad Manager
               </Button>
             </CardContent>
           </Card>

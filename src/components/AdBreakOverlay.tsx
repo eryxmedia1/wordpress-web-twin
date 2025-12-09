@@ -70,48 +70,77 @@ export function AdBreakOverlay({
     }
   };
 
-  // Countdown overlay before ad
+  // Countdown overlay bar before ad pod
   if (showCountdown && countdownSeconds > 0) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95">
-        <div className="text-center space-y-6">
-          {/* Countdown circle */}
-          <div className="relative">
-            <svg className="w-32 h-32 transform -rotate-90">
-              <circle
-                cx="64"
-                cy="64"
-                r="56"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="none"
-                className="text-muted"
-              />
-              <circle
-                cx="64"
-                cy="64"
-                r="56"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="none"
-                className="text-primary"
-                strokeDasharray={351.86}
-                strokeDashoffset={351.86 * (1 - countdownSeconds / 10)}
-                strokeLinecap="round"
-              />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-5xl font-bold text-white">
-              {countdownSeconds}
-            </span>
+      <div className="fixed top-0 left-0 right-0 z-50 animate-in slide-in-from-top duration-300">
+        <div className="bg-gradient-to-r from-black/95 via-black/90 to-black/95 backdrop-blur-sm border-b border-primary/30 px-4 py-3 shadow-lg">
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* Countdown badge */}
+              <div className="relative">
+                <div className="w-12 h-12 rounded-full border-2 border-primary flex items-center justify-center bg-primary/10">
+                  <span className="text-2xl font-bold text-primary animate-pulse">
+                    {countdownSeconds}
+                  </span>
+                </div>
+                {/* Rotating progress indicator */}
+                <svg 
+                  className="absolute inset-0 w-12 h-12 transform -rotate-90"
+                  viewBox="0 0 48 48"
+                >
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="22"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    fill="none"
+                    className="text-primary/20"
+                  />
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="22"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    fill="none"
+                    className="text-primary"
+                    strokeDasharray={138.23}
+                    strokeDashoffset={138.23 * (1 - countdownSeconds / 10)}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 1s linear' }}
+                  />
+                </svg>
+              </div>
+              
+              <div className="flex flex-col">
+                <span className="text-lg font-semibold text-white">
+                  AD BREAK in {countdownSeconds}...
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {adQueueLength} ad{adQueueLength > 1 ? 's' : ''} will play
+                </span>
+              </div>
+            </div>
+            
+            {/* Visual indicator */}
+            <div className="hidden sm:flex items-center gap-2">
+              {Array.from({ length: adQueueLength }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="w-2 h-2 rounded-full bg-primary/50"
+                />
+              ))}
+            </div>
           </div>
           
-          <div className="space-y-2">
-            <p className="text-xl text-white font-medium">
-              Commercial break in {countdownSeconds} seconds
-            </p>
-            <p className="text-muted-foreground">
-              {adQueueLength} ad{adQueueLength > 1 ? 's' : ''} will play
-            </p>
+          {/* Progress bar at bottom of countdown bar */}
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+            <div 
+              className="h-full bg-primary transition-all duration-1000 ease-linear"
+              style={{ width: `${(countdownSeconds / 10) * 100}%` }}
+            />
           </div>
         </div>
       </div>
@@ -123,17 +152,20 @@ export function AdBreakOverlay({
     return null;
   }
 
-  // Ad playing overlay
+  // Ad playing overlay - fullscreen
   return (
     <div className="fixed inset-0 z-50 bg-black">
       {/* Top bar with ad info */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center gap-3">
-          <span className="bg-primary/90 text-primary-foreground text-xs font-bold px-2 py-1 rounded">
+          <span className="bg-primary/90 text-primary-foreground text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wider">
             AD
           </span>
-          <span className="text-white text-sm">
+          <span className="text-white text-sm font-medium">
             Ad {currentAdIndex} of {adQueueLength}
+          </span>
+          <span className="text-white/60 text-sm hidden sm:block">
+            — Your show will resume shortly
           </span>
         </div>
         
@@ -154,8 +186,8 @@ export function AdBreakOverlay({
               onClick={handleSkip}
               disabled={!canSkipNow}
               className={cn(
-                "text-white border-white/50 hover:bg-white/20",
-                !canSkipNow && "opacity-50"
+                "text-white border-white/50 hover:bg-white/20 transition-all",
+                !canSkipNow && "opacity-50 cursor-not-allowed"
               )}
             >
               {canSkipNow ? (
@@ -170,14 +202,19 @@ export function AdBreakOverlay({
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 h-1 bg-white/20">
-        <div 
-          className="h-full bg-primary transition-all duration-100"
-          style={{ 
-            width: `${(playedSeconds / (ad.duration_seconds || 30)) * 100}%` 
-          }}
-        />
+      {/* Ad progress indicators - show which ad in pod */}
+      <div className="absolute top-16 left-4 z-10 flex items-center gap-1.5">
+        {Array.from({ length: adQueueLength }).map((_, i) => (
+          <div 
+            key={i} 
+            className={cn(
+              "w-8 h-1 rounded-full transition-all",
+              i < currentAdIndex ? "bg-primary" : 
+              i === currentAdIndex - 1 ? "bg-primary" : 
+              "bg-white/30"
+            )}
+          />
+        ))}
       </div>
 
       {/* Video player */}
@@ -208,9 +245,30 @@ export function AdBreakOverlay({
         }}
       />
 
-      {/* Ad name (optional subtle display) */}
-      <div className="absolute bottom-6 left-4 z-10">
-        <p className="text-white/60 text-xs">{ad.name}</p>
+      {/* Bottom bar with progress */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent pb-4 pt-12 px-4">
+        {/* Ad name */}
+        <p className="text-white/60 text-xs mb-2">{ad.name}</p>
+        
+        {/* Progress bar */}
+        <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-primary transition-all duration-100 rounded-full"
+            style={{ 
+              width: `${(playedSeconds / (ad.duration_seconds || 30)) * 100}%` 
+            }}
+          />
+        </div>
+        
+        {/* Time remaining */}
+        <div className="flex justify-between items-center mt-2">
+          <span className="text-white/60 text-xs">
+            {Math.ceil(playedSeconds)}s
+          </span>
+          <span className="text-white/60 text-xs">
+            {ad.duration_seconds}s
+          </span>
+        </div>
       </div>
     </div>
   );

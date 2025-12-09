@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_global_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          midroll_interval_minutes: number | null
+          midroll_pod_size: number | null
+          postroll_pod_size: number | null
+          preroll_pod_size: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          midroll_interval_minutes?: number | null
+          midroll_pod_size?: number | null
+          postroll_pod_size?: number | null
+          preroll_pod_size?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          midroll_interval_minutes?: number | null
+          midroll_pod_size?: number | null
+          postroll_pod_size?: number | null
+          preroll_pod_size?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ad_impressions: {
         Row: {
           ad_id: string
@@ -106,6 +136,7 @@ export type Database = {
       ad_placements: {
         Row: {
           ad_id: string
+          all_channels: boolean | null
           channel_id: string | null
           content_id: string | null
           created_at: string | null
@@ -117,6 +148,7 @@ export type Database = {
         }
         Insert: {
           ad_id: string
+          all_channels?: boolean | null
           channel_id?: string | null
           content_id?: string | null
           created_at?: string | null
@@ -128,6 +160,7 @@ export type Database = {
         }
         Update: {
           ad_id?: string
+          all_channels?: boolean | null
           channel_id?: string | null
           content_id?: string | null
           created_at?: string | null
@@ -156,6 +189,60 @@ export type Database = {
             foreignKeyName: "ad_placements_content_id_fkey"
             columns: ["content_id"]
             isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_pod_config: {
+        Row: {
+          channel_id: string | null
+          content_id: string | null
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          midroll_interval_minutes: number | null
+          midroll_pod_size: number | null
+          postroll_pod_size: number | null
+          preroll_pod_size: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          content_id?: string | null
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          midroll_interval_minutes?: number | null
+          midroll_pod_size?: number | null
+          postroll_pod_size?: number | null
+          preroll_pod_size?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          content_id?: string | null
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          midroll_interval_minutes?: number | null
+          midroll_pod_size?: number | null
+          postroll_pod_size?: number | null
+          preroll_pod_size?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_pod_config_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: true
+            referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_pod_config_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: true
             referencedRelation: "contents"
             referencedColumns: ["id"]
           },
@@ -223,6 +310,7 @@ export type Database = {
           is_active: boolean | null
           max_impressions: number | null
           name: string
+          pod_position: number | null
           position_mid: boolean | null
           position_post: boolean | null
           position_pre: boolean | null
@@ -243,6 +331,7 @@ export type Database = {
           is_active?: boolean | null
           max_impressions?: number | null
           name: string
+          pod_position?: number | null
           position_mid?: boolean | null
           position_post?: boolean | null
           position_pre?: boolean | null
@@ -263,6 +352,7 @@ export type Database = {
           is_active?: boolean | null
           max_impressions?: number | null
           name?: string
+          pod_position?: number | null
           position_mid?: boolean | null
           position_post?: boolean | null
           position_pre?: boolean | null
