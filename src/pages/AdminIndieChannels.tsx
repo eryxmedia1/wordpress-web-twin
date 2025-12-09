@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, ExternalLink, Video, Globe, Settings2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Video, Globe, Settings2, X, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
@@ -103,6 +103,8 @@ const AdminIndieChannels = () => {
   const [allowedCountries, setAllowedCountries] = useState<string[]>([]);
   const [allowedRegions, setAllowedRegions] = useState<string[]>([]);
   const [noGeoRestrictions, setNoGeoRestrictions] = useState(true);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBackdrop, setUploadingBackdrop] = useState(false);
 
   useEffect(() => {
     fetchChannels();
@@ -194,6 +196,55 @@ const AdminIndieChannels = () => {
       setAllowedCountries([...allowedCountries, code]);
     }
     setNoGeoRestrictions(false);
+  };
+
+  const handleFileUpload = async (
+    file: File,
+    type: 'logo' | 'backdrop',
+    setUploading: (v: boolean) => void,
+    setUrl: (v: string) => void
+  ) => {
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return;
+    }
+
+    setUploading(true);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${type}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('channel-logos')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('channel-logos')
+        .getPublicUrl(filePath);
+
+      setUrl(publicUrl);
+      toast.success(`${type === 'logo' ? 'Logo' : 'Backdrop'} uploaded successfully`);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(`Failed to upload ${type}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -336,26 +387,67 @@ const AdminIndieChannels = () => {
                   </div>
 
                   <div>
-                    <Label>Logo URL</Label>
-                    <Input
-                      value={logoUrl}
-                      onChange={(e) => setLogoUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="mt-1"
-                    />
+                    <Label>Logo</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={logoUrl}
+                        onChange={(e) => setLogoUrl(e.target.value)}
+                        placeholder="https://... or upload"
+                        className="flex-1"
+                      />
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file, 'logo', setUploadingLogo, setLogoUrl);
+                          }}
+                          disabled={uploadingLogo}
+                        />
+                        <Button type="button" variant="outline" size="icon" disabled={uploadingLogo} asChild>
+                          <span>
+                            {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
                     {logoUrl && (
                       <img src={logoUrl} alt="Logo preview" className="mt-2 h-16 w-16 object-cover rounded" />
                     )}
                   </div>
 
                   <div>
-                    <Label>Backdrop Image URL</Label>
-                    <Input
-                      value={backdropUrl}
-                      onChange={(e) => setBackdropUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="mt-1"
-                    />
+                    <Label>Backdrop Image</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={backdropUrl}
+                        onChange={(e) => setBackdropUrl(e.target.value)}
+                        placeholder="https://... or upload"
+                        className="flex-1"
+                      />
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file, 'backdrop', setUploadingBackdrop, setBackdropUrl);
+                          }}
+                          disabled={uploadingBackdrop}
+                        />
+                        <Button type="button" variant="outline" size="icon" disabled={uploadingBackdrop} asChild>
+                          <span>
+                            {uploadingBackdrop ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
+                    {backdropUrl && (
+                      <img src={backdropUrl} alt="Backdrop preview" className="mt-2 h-24 w-full object-cover rounded" />
+                    )}
                   </div>
 
                   <div>
