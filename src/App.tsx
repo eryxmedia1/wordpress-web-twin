@@ -37,6 +37,7 @@ import AdminLiveTV from "./pages/AdminLiveTV";
 import AdminLiveTVChannels from "./pages/AdminLiveTVChannels";
 import AdminLiveTVPlaylists from "./pages/AdminLiveTVPlaylists";
 import AdminLiveTVAds from "./pages/AdminLiveTVAds";
+import AdminAdReports from "./pages/AdminAdReports";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,7 @@ const App = () => (
                 <Route path="/admin/livetv/channels" element={<AdminLiveTVChannels />} />
                 <Route path="/admin/livetv/playlists/:channelId" element={<AdminLiveTVPlaylists />} />
                 <Route path="/admin/livetv/ads" element={<AdminLiveTVAds />} />
+                <Route path="/admin/ad-reports" element={<AdminAdReports />} />
               </Route>
               
               {/* Catch-all */}
