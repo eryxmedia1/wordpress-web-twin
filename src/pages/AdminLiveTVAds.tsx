@@ -77,6 +77,7 @@ interface GlobalConfig {
 interface Channel {
   id: string;
   name: string;
+  type: 'live' | 'indie';
 }
 
 interface Content {
@@ -185,16 +186,24 @@ export default function AdminLiveTVAds() {
   });
 
   const fetchData = async () => {
-    const [adsRes, channelsRes, contentsRes, globalRes, podConfigsRes] = await Promise.all([
+    const [adsRes, liveChannelsRes, indieChannelsRes, contentsRes, globalRes, podConfigsRes] = await Promise.all([
       supabase.from('ads').select('*').order('name'),
       supabase.from('live_channels').select('id, name').order('name'),
+      supabase.from('indie_channels').select('id, name').eq('is_active', true).order('name'),
       supabase.from('contents').select('id, title, type').order('title').limit(100),
       supabase.from('ad_global_config').select('*').limit(1).maybeSingle(),
       supabase.from('ad_pod_config').select('*'),
     ]);
 
     if (adsRes.data) setAds(adsRes.data);
-    if (channelsRes.data) setChannels(channelsRes.data);
+    
+    // Combine live and indie channels
+    const allChannels: Channel[] = [
+      ...(liveChannelsRes.data || []).map(c => ({ ...c, type: 'live' as const })),
+      ...(indieChannelsRes.data || []).map(c => ({ ...c, type: 'indie' as const })),
+    ];
+    setChannels(allChannels);
+    
     if (contentsRes.data) setContents(contentsRes.data);
     if (globalRes.data) {
       setGlobalConfig({
@@ -1985,25 +1994,52 @@ export default function AdminLiveTVAds() {
                             </div>
                             
                             {!placement.allChannels && (
-                              <div>
-                                <Label>Select Channels</Label>
-                                <div className="grid grid-cols-2 gap-2 mt-2">
-                                  {channels.map(channel => (
-                                    <label key={channel.id} className="flex items-center gap-2 cursor-pointer bg-muted/50 px-3 py-2 rounded-md">
-                                      <Checkbox
-                                        checked={placement.channelIds.includes(channel.id)}
-                                        onCheckedChange={(checked) => {
-                                          setPlacement(prev => ({
-                                            ...prev,
-                                            channelIds: checked 
-                                              ? [...prev.channelIds, channel.id]
-                                              : prev.channelIds.filter(id => id !== channel.id)
-                                          }));
-                                        }}
-                                      />
-                                      <span>{channel.name}</span>
-                                    </label>
-                                  ))}
+                              <div className="space-y-4">
+                                <div>
+                                  <Label className="text-sm font-medium text-primary">Live TV Channels</Label>
+                                  <div className="grid grid-cols-2 gap-2 mt-2">
+                                    {channels.filter(c => c.type === 'live').map(channel => (
+                                      <label key={channel.id} className="flex items-center gap-2 cursor-pointer bg-muted/50 px-3 py-2 rounded-md">
+                                        <Checkbox
+                                          checked={placement.channelIds.includes(channel.id)}
+                                          onCheckedChange={(checked) => {
+                                            setPlacement(prev => ({
+                                              ...prev,
+                                              channelIds: checked 
+                                                ? [...prev.channelIds, channel.id]
+                                                : prev.channelIds.filter(id => id !== channel.id)
+                                            }));
+                                          }}
+                                        />
+                                        <span>{channel.name}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <Label className="text-sm font-medium text-purple-400">Indie Channels</Label>
+                                  <div className="grid grid-cols-2 gap-2 mt-2">
+                                    {channels.filter(c => c.type === 'indie').map(channel => (
+                                      <label key={channel.id} className="flex items-center gap-2 cursor-pointer bg-purple-500/10 border border-purple-500/20 px-3 py-2 rounded-md">
+                                        <Checkbox
+                                          checked={placement.channelIds.includes(channel.id)}
+                                          onCheckedChange={(checked) => {
+                                            setPlacement(prev => ({
+                                              ...prev,
+                                              channelIds: checked 
+                                                ? [...prev.channelIds, channel.id]
+                                                : prev.channelIds.filter(id => id !== channel.id)
+                                            }));
+                                          }}
+                                        />
+                                        <span>{channel.name}</span>
+                                      </label>
+                                    ))}
+                                    {channels.filter(c => c.type === 'indie').length === 0 && (
+                                      <p className="text-sm text-muted-foreground col-span-2">No indie channels available</p>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             )}
