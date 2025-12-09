@@ -10,7 +10,17 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import ReactPlayer from "react-player";
 
-const PREVIEW_DURATION = 60; // 60 seconds max for non-trailer videos
+const PREVIEW_DURATION = 30; // 30 seconds max for non-trailer videos
+
+// Fisher-Yates shuffle function
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 interface Content {
   id: string;
@@ -31,6 +41,8 @@ interface MobileHeroCarouselProps {
 }
 
 const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) => {
+  // Randomize contents on initial render
+  const [shuffledContents] = useState(() => shuffleArray(contents));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
@@ -132,8 +144,8 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
     };
   }, [emblaApi, onSelect]);
 
-  // 60-second countdown for non-trailer videos
-  const currentContent = contents[currentIndex];
+  // 30-second countdown for non-trailer videos
+  const currentContent = shuffledContents[currentIndex];
   const hasTrailer = !!currentContent?.trailer_url;
   const currentVideoUrl = currentContent?.trailer_url || currentContent?.video_url;
   const isCurrentVideoReady = videoReady[currentContent?.id];
@@ -251,14 +263,14 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
     return content.trailer_url || content.video_url;
   };
 
-  if (contents.length === 0) return null;
+  if (shuffledContents.length === 0) return null;
 
   return (
     <div className="relative pt-14 pb-4">
       {/* Embla Carousel Container */}
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex">
-          {contents.map((content, index) => {
+          {shuffledContents.map((content, index) => {
             const isInList = favorites.has(content.id);
             const loading = isLoading[content.id];
             const isActive = index === currentIndex;
@@ -338,8 +350,8 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
                   {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
 
-                  {/* Preview Timer - shows countdown for non-trailer videos */}
-                  {isActive && showVideo && isVideoReady && !content.trailer_url && isPlaying && !previewEnded && (
+                  {/* Preview Timer - shows countdown for all videos */}
+                  {isActive && showVideo && isVideoReady && isPlaying && !previewEnded && (
                     <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
                       <div className="bg-background/50 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1.5">
                         <div className="w-10 h-1 bg-foreground/30 rounded-full overflow-hidden">
@@ -454,7 +466,7 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
 
       {/* Pagination Dots */}
       <div className="flex justify-center gap-1.5 mt-4">
-        {contents.map((_, index) => (
+        {shuffledContents.map((_, index) => (
           <button
             key={index}
             onClick={() => scrollTo(index)}

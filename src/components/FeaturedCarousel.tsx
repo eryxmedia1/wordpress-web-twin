@@ -24,9 +24,21 @@ interface FeaturedCarouselProps {
   onMoreInfo: (id: string) => void;
 }
 
-const PREVIEW_DURATION = 60; // 60 seconds max for non-trailer videos
+const PREVIEW_DURATION = 30; // 30 seconds max for non-trailer videos
+
+// Fisher-Yates shuffle function
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
+  // Randomize contents on initial render
+  const [shuffledContents] = useState(() => shuffleArray(contents));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [videoError, setVideoError] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
@@ -38,11 +50,11 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const playerRef = useRef<ReactPlayer>(null);
 
-  const currentContent = contents[currentIndex];
+  const currentContent = shuffledContents[currentIndex];
   const hasTrailer = !!currentContent?.trailer_url;
   const videoUrl = currentContent?.trailer_url || currentContent?.video_url;
-  const hasMultiple = contents.length > 1;
-  const showPreviewTimer = !hasTrailer && videoUrl && isPlaying && isVideoReady && !previewEnded;
+  const hasMultiple = shuffledContents.length > 1;
+  const showPreviewTimer = videoUrl && isPlaying && isVideoReady && !previewEnded;
 
   // Reset video state when content changes
   useEffect(() => {
@@ -90,16 +102,16 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
     };
   }, [isVideoReady, isPlaying, hasTrailer, videoUrl, previewEnded]);
 
-  // Auto-advance every 60 seconds if multiple items (matches PREVIEW_DURATION)
+  // Auto-advance every 30 seconds if multiple items (matches PREVIEW_DURATION)
   useEffect(() => {
     if (!hasMultiple) return;
     
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % contents.length);
-    }, PREVIEW_DURATION * 1000); // 60 seconds
+      setCurrentIndex((prev) => (prev + 1) % shuffledContents.length);
+    }, PREVIEW_DURATION * 1000); // 30 seconds
 
     return () => clearInterval(timer);
-  }, [contents.length, hasMultiple]);
+  }, [shuffledContents.length, hasMultiple]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -124,11 +136,11 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
   };
 
   const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + contents.length) % contents.length);
+    setCurrentIndex((prev) => (prev - 1 + shuffledContents.length) % shuffledContents.length);
   };
 
   const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % contents.length);
+    setCurrentIndex((prev) => (prev + 1) % shuffledContents.length);
   };
 
   if (!currentContent) return null;
@@ -263,7 +275,7 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
       {/* Pagination Dots */}
       {hasMultiple && (
         <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-          {contents.map((_, index) => (
+          {shuffledContents.map((_, index) => (
             <button
               key={index}
               className={`h-2 rounded-full transition-all ${
