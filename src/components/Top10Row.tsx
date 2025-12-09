@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ContentLockBadge } from "@/components/ContentLockBadge";
 import { Button } from "@/components/ui/button";
-import { Play, Plus, Check, ThumbsUp, Info, ChevronRight } from "lucide-react";
+import { Play, Plus, Check, ThumbsUp, Info, ChevronRight, ChevronLeft } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -37,7 +36,10 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo, seeAllLink }: T
   const [videoErrors, setVideoErrors] = useState<Set<string>>(new Set());
   const [myListItems, setMyListItems] = useState<Set<string>>(new Set());
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch initial favorites and likes state
   useEffect(() => {
@@ -69,6 +71,33 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo, seeAllLink }: T
 
     fetchUserData();
   }, [currentProfile?.id, items]);
+
+  const checkScrollButtons = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkScrollButtons();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScrollButtons);
+      return () => container.removeEventListener('scroll', checkScrollButtons);
+    }
+  }, [items]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 400;
+      scrollContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   const handleMouseEnter = (id: string) => {
     hoverTimeoutRef.current = setTimeout(() => {
@@ -186,7 +215,7 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo, seeAllLink }: T
   if (items.length === 0) return null;
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 relative group/row">
       <div className="flex items-center justify-between">
         <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
         {seeAllLink && (
@@ -199,162 +228,198 @@ const Top10Row = ({ title, items, userPlan = 'free', onMoreInfo, seeAllLink }: T
         )}
       </div>
       
-      <ScrollArea className="w-full">
-        <div className="flex gap-2 pb-4">
-          {items.map((item) => {
-            const isHovered = hoveredId === item.id;
-            const videoUrl = item.trailerUrl || item.videoUrl;
-            const hasVideoError = videoErrors.has(item.id);
-            const showVideo = isHovered && videoUrl && !hasVideoError;
-            const isInList = myListItems.has(item.id);
-            const isLiked = likedItems.has(item.id);
+      {/* Left Arrow */}
+      {canScrollLeft && (
+        <button
+          onClick={() => scroll('left')}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-20 h-32 w-10 bg-gradient-to-r from-background/90 to-transparent flex items-center justify-start opacity-0 group-hover/row:opacity-100 transition-opacity"
+        >
+          <ChevronLeft className="h-8 w-8 text-foreground" />
+        </button>
+      )}
+      
+      {/* Right Arrow */}
+      {canScrollRight && (
+        <button
+          onClick={() => scroll('right')}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-20 h-32 w-10 bg-gradient-to-l from-background/90 to-transparent flex items-center justify-end opacity-0 group-hover/row:opacity-100 transition-opacity"
+        >
+          <ChevronRight className="h-8 w-8 text-foreground" />
+        </button>
+      )}
+      
+      <div 
+        ref={scrollContainerRef}
+        className="flex gap-2 overflow-x-auto scrollbar-hide pb-4"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {items.map((item) => {
+          const isHovered = hoveredId === item.id;
+          const videoUrl = item.trailerUrl || item.videoUrl;
+          const hasVideoError = videoErrors.has(item.id);
+          const showVideo = isHovered && videoUrl && !hasVideoError;
+          const isInList = myListItems.has(item.id);
+          const isLiked = likedItems.has(item.id);
 
-            return (
-              <div
-                key={item.id}
-                className="relative flex-shrink-0 group flex items-end"
-                style={{ minWidth: '220px' }}
-                onMouseEnter={() => handleMouseEnter(item.id)}
-                onMouseLeave={handleMouseLeave}
-              >
-                {/* Large Rank Number - positioned more to the left for better visibility */}
-                <div className="absolute -left-2 bottom-0 z-0 select-none pointer-events-none">
-                  <span 
-                    className="text-[160px] md:text-[200px] font-black leading-none"
-                    style={{
-                      color: 'transparent',
-                      WebkitTextStroke: '4px hsl(180 60% 45%)',
-                      textShadow: '0 0 40px hsl(180 60% 45% / 0.5)',
-                      fontFamily: 'system-ui, -apple-system, sans-serif',
-                      letterSpacing: '-0.05em',
-                    }}
-                  >
-                    {item.rank === 10 ? (
-                      <span className="tracking-tighter">10</span>
-                    ) : (
-                      item.rank
-                    )}
-                  </span>
-                </div>
-                
-              {/* Card Container - pushed more to the right to show numbers better */}
-                <div 
-                  className={`relative ml-20 md:ml-24 rounded-lg overflow-hidden bg-card z-10 shadow-xl transition-all duration-300 ease-out ${
-                    isHovered 
-                      ? 'w-56 md:w-72 shadow-2xl scale-105' 
-                      : 'w-28 md:w-36 h-40 md:h-52'
-                  }`}
+          return (
+            <div
+              key={item.id}
+              className="relative flex-shrink-0 group flex items-end"
+              style={{ minWidth: '220px' }}
+              onMouseEnter={() => handleMouseEnter(item.id)}
+              onMouseLeave={handleMouseLeave}
+            >
+              {/* Large Rank Number - positioned more to the left for better visibility */}
+              <div className="absolute -left-2 bottom-0 z-0 select-none pointer-events-none">
+                <span 
+                  className="text-[160px] md:text-[200px] font-black leading-none"
+                  style={{
+                    color: 'transparent',
+                    WebkitTextStroke: '4px hsl(180 60% 45%)',
+                    textShadow: '0 0 40px hsl(180 60% 45% / 0.5)',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    letterSpacing: '-0.05em',
+                  }}
                 >
-                  {/* Video/Poster Section - Top */}
-                  <Link 
-                    to={`/watch/${item.id}`} 
-                    className={`block relative ${isHovered ? 'h-32 md:h-40' : 'h-full'}`}
-                  >
-                    {showVideo ? (
-                      <ReactPlayer
-                        url={videoUrl}
-                        playing
-                        muted
-                        loop
-                        width="100%"
-                        height="100%"
-                        style={{ position: 'absolute', top: 0, left: 0 }}
-                        onError={() => handleVideoError(item.id)}
-                        config={{
-                          file: {
-                            attributes: {
-                              style: { objectFit: 'cover', width: '100%', height: '100%' }
-                            }
-                          }
-                        }}
-                      />
-                    ) : (
-                      <img
-                        src={item.posterUrl}
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                    
-                    {/* Gradient overlay at bottom of video */}
-                    {isHovered && (
-                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent" />
-                    )}
-                  </Link>
-                  
-                  {/* Content Section - Bottom (only on hover) */}
-                  {isHovered && (
-                    <div className="bg-card p-3 space-y-3">
-                      {/* Action Buttons Row */}
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="icon"
-                          className="h-9 w-9 rounded-full bg-white hover:bg-white/90 text-black"
-                          onClick={(e) => handlePlay(e, item.id)}
-                        >
-                          <Play className="h-4 w-4 fill-current" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className={`h-9 w-9 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isInList ? 'border-primary text-primary' : ''}`}
-                          onClick={(e) => toggleMyList(e, item.id)}
-                        >
-                          {isInList ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className={`h-9 w-9 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isLiked ? 'text-primary border-primary' : ''}`}
-                          onClick={(e) => toggleLike(e, item.id)}
-                        >
-                          <ThumbsUp className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                        </Button>
-                        {onMoreInfo && (
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-9 w-9 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ml-auto"
-                            onClick={(e) => handleMoreInfo(e, item.id)}
-                          >
-                            <Info className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                      
-                      {/* Title */}
-                      <p className="text-sm font-semibold text-foreground line-clamp-1">{item.title}</p>
-                      
-                      {/* Metadata Row */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {item.rating && (
-                          <span className="px-1.5 py-0.5 text-xs font-medium border border-muted-foreground/40 text-muted-foreground rounded">
-                            {item.rating}
-                          </span>
-                        )}
-                        {item.year && (
-                          <span className="text-xs text-muted-foreground">{item.year}</span>
-                        )}
-                        {item.genre && (
-                          <span className="text-xs text-muted-foreground">• {item.genre.split(',')[0]}</span>
-                        )}
-                      </div>
-                    </div>
+                  {item.rank === 10 ? (
+                    <span className="tracking-tighter">10</span>
+                  ) : (
+                    item.rank
                   )}
-                  
-                  {item.requiredPlans && item.requiredPlans.length > 0 && (
-                    <ContentLockBadge 
-                      requiredPlans={item.requiredPlans} 
-                      userPlan={userPlan} 
+                </span>
+              </div>
+              
+              {/* Card Container - pushed more to the right to show numbers better */}
+              <div 
+                className={`relative ml-20 md:ml-24 rounded-lg overflow-hidden bg-card z-10 shadow-xl transition-all duration-300 ease-out ${
+                  isHovered 
+                    ? 'w-56 md:w-72 shadow-2xl scale-105' 
+                    : 'w-28 md:w-36'
+                }`}
+              >
+                {/* Video/Poster Section - Top */}
+                <Link 
+                  to={`/watch/${item.id}`} 
+                  className={`block relative ${isHovered ? 'h-32 md:h-40' : 'h-40 md:h-52'}`}
+                >
+                  {showVideo ? (
+                    <ReactPlayer
+                      url={videoUrl}
+                      playing
+                      muted
+                      loop
+                      width="100%"
+                      height="100%"
+                      style={{ position: 'absolute', top: 0, left: 0 }}
+                      onError={() => handleVideoError(item.id)}
+                      config={{
+                        file: {
+                          attributes: {
+                            style: { objectFit: 'cover', width: '100%', height: '100%' }
+                          }
+                        }
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src={item.posterUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
                     />
                   )}
-                </div>
+                  
+                  {/* Gradient overlay at bottom of video */}
+                  {isHovered && (
+                    <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent" />
+                  )}
+                </Link>
+                
+                {/* Title and metadata below card (always visible when not hovered) */}
+                {!isHovered && (
+                  <div className="p-2 bg-card">
+                    <p className="text-sm font-medium text-foreground line-clamp-1">{item.title}</p>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      {item.year && (
+                        <span className="text-xs text-muted-foreground">{item.year}</span>
+                      )}
+                      {item.genre && (
+                        <span className="text-xs text-muted-foreground">• {item.genre.split(',')[0]}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Content Section - Bottom (only on hover) */}
+                {isHovered && (
+                  <div className="bg-card p-3 space-y-3">
+                    {/* Action Buttons Row */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="icon"
+                        className="h-9 w-9 rounded-full bg-white hover:bg-white/90 text-black"
+                        onClick={(e) => handlePlay(e, item.id)}
+                      >
+                        <Play className="h-4 w-4 fill-current" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className={`h-9 w-9 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isInList ? 'border-primary text-primary' : ''}`}
+                        onClick={(e) => toggleMyList(e, item.id)}
+                      >
+                        {isInList ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className={`h-9 w-9 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ${isLiked ? 'text-primary border-primary' : ''}`}
+                        onClick={(e) => toggleLike(e, item.id)}
+                      >
+                        <ThumbsUp className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                      </Button>
+                      {onMoreInfo && (
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-9 w-9 rounded-full border-muted-foreground/50 bg-background/50 hover:bg-background/80 ml-auto"
+                          onClick={(e) => handleMoreInfo(e, item.id)}
+                        >
+                          <Info className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* Title */}
+                    <p className="text-sm font-semibold text-foreground line-clamp-1">{item.title}</p>
+                    
+                    {/* Metadata Row */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {item.rating && (
+                        <span className="px-1.5 py-0.5 text-xs font-medium border border-muted-foreground/40 text-muted-foreground rounded">
+                          {item.rating}
+                        </span>
+                      )}
+                      {item.year && (
+                        <span className="text-xs text-muted-foreground">{item.year}</span>
+                      )}
+                      {item.genre && (
+                        <span className="text-xs text-muted-foreground">• {item.genre.split(',')[0]}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {item.requiredPlans && item.requiredPlans.length > 0 && (
+                  <ContentLockBadge 
+                    requiredPlans={item.requiredPlans} 
+                    userPlan={userPlan} 
+                  />
+                )}
               </div>
-            );
-          })}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 };
