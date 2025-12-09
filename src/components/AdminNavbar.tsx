@@ -132,6 +132,10 @@ const AdminNavbar = () => {
             <BarChart3 className="h-4 w-4" />
             Ad Reports
           </Link>
+          <Link to="/admin/channel-analytics" className="flex items-center gap-1 text-sky-400 hover:text-sky-300 transition">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </Link>
         </nav>
       </div>
       
