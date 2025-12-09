@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface SelectAdRequest {
   position: 'pre' | 'mid' | 'post';
+  podSize?: number; // Number of ads to return for the pod
   userId?: string;
   profileId?: string;
   contentId?: string;
@@ -47,6 +48,7 @@ serve(async (req) => {
     const request: SelectAdRequest = await req.json();
     const { 
       position, 
+      podSize = 1, // Default to 1 ad if not specified
       userId, 
       profileId, 
       contentId, 
@@ -60,7 +62,7 @@ serve(async (req) => {
       timeZone
     } = request;
 
-    console.log('Ad selection request:', { position, contentId, channelId, membershipTier, geoCountry });
+    console.log('Ad selection request:', { position, podSize, contentId, channelId, membershipTier, geoCountry });
 
     const now = new Date().toISOString();
 
@@ -94,7 +96,7 @@ serve(async (req) => {
 
     if (!allAds || allAds.length === 0) {
       console.log('No active ads found');
-      return new Response(JSON.stringify({ ad: null, reason: 'no_active_ads' }), {
+      return new Response(JSON.stringify({ ads: [], reason: 'no_active_ads' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -112,7 +114,7 @@ serve(async (req) => {
     console.log(`After position filter: ${eligibleAds.length} ads`);
 
     if (eligibleAds.length === 0) {
-      return new Response(JSON.stringify({ ad: null, reason: 'no_ads_for_position' }), {
+      return new Response(JSON.stringify({ ads: [], reason: 'no_ads_for_position' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -135,7 +137,7 @@ serve(async (req) => {
     console.log(`After impression cap filter: ${eligibleAds.length} ads`);
 
     if (eligibleAds.length === 0) {
-      return new Response(JSON.stringify({ ad: null, reason: 'all_ads_capped' }), {
+      return new Response(JSON.stringify({ ads: [], reason: 'all_ads_capped' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -229,6 +231,10 @@ serve(async (req) => {
 
           // Check placement type
           if (placement.placement_type === 'global') return true;
+          
+          // Check "all channels" flag for channel placements
+          if (placement.placement_type === 'channel' && placement.all_channels && channelId) return true;
+          
           if (placement.placement_type === 'content' && contentId && placement.content_id === contentId) return true;
           if (placement.placement_type === 'channel' && channelId && placement.channel_id === channelId) return true;
 
@@ -240,7 +246,7 @@ serve(async (req) => {
     }
 
     if (eligibleAds.length === 0) {
-      return new Response(JSON.stringify({ ad: null, reason: 'no_matching_placements' }), {
+      return new Response(JSON.stringify({ ads: [], reason: 'no_matching_placements' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -273,42 +279,54 @@ serve(async (req) => {
     }
 
     if (eligibleAds.length === 0) {
-      return new Response(JSON.stringify({ ad: null, reason: 'frequency_capped' }), {
+      return new Response(JSON.stringify({ ads: [], reason: 'frequency_capped' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Step 10: Weighted random selection
-    const totalWeight = eligibleAds.reduce((sum, ad) => sum + (ad.weight || 1), 0);
-    let random = Math.random() * totalWeight;
-    let selectedAd: Ad | null = null;
+    // Step 10: Select multiple ads for the pod using weighted random selection
+    const selectedAds: Ad[] = [];
+    const selectedAdIds = new Set<string>();
+    let remainingAds = [...eligibleAds];
 
-    for (const ad of eligibleAds) {
-      random -= (ad.weight || 1);
-      if (random <= 0) {
-        selectedAd = ad;
-        break;
+    for (let i = 0; i < podSize && remainingAds.length > 0; i++) {
+      const totalWeight = remainingAds.reduce((sum, ad) => sum + (ad.weight || 1), 0);
+      let random = Math.random() * totalWeight;
+      let selectedAd: Ad | null = null;
+
+      for (const ad of remainingAds) {
+        random -= (ad.weight || 1);
+        if (random <= 0) {
+          selectedAd = ad;
+          break;
+        }
       }
+
+      // Fallback to first ad if somehow none selected
+      if (!selectedAd) {
+        selectedAd = remainingAds[0];
+      }
+
+      selectedAds.push(selectedAd);
+      selectedAdIds.add(selectedAd.id);
+      
+      // Remove selected ad from remaining pool (no duplicates in same pod)
+      remainingAds = remainingAds.filter(ad => ad.id !== selectedAd!.id);
     }
 
-    // Fallback to first ad if somehow none selected
-    if (!selectedAd) {
-      selectedAd = eligibleAds[0];
-    }
+    console.log(`Selected ${selectedAds.length} ads for pod`);
 
-    console.log(`Selected ad: ${selectedAd.name} (ID: ${selectedAd.id})`);
-
-    // Return the selected ad
+    // Return the selected ads
     const response = {
-      ad: {
-        id: selectedAd.id,
-        name: selectedAd.name,
-        type: selectedAd.vast_tag_url ? 'vast' : 'video',
-        video_url: selectedAd.video_url,
-        vast_tag_url: selectedAd.vast_tag_url,
-        duration_seconds: selectedAd.duration_seconds,
-      },
-      trackingId: crypto.randomUUID(),
+      ads: selectedAds.map(ad => ({
+        id: ad.id,
+        name: ad.name,
+        type: ad.vast_tag_url ? 'vast' : 'video',
+        video_url: ad.video_url,
+        vast_tag_url: ad.vast_tag_url,
+        duration_seconds: ad.duration_seconds,
+      })),
+      trackingIds: selectedAds.map(() => crypto.randomUUID()),
     };
 
     return new Response(JSON.stringify(response), {
