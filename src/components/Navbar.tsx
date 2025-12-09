@@ -315,7 +315,7 @@ const Navbar = () => {
             </DropdownMenuItem>
 
             <DropdownMenuItem asChild className="cursor-pointer">
-              <Link to="/transfer-profile" className="flex items-center gap-3 px-4 py-2">
+              <Link to="/profiles" className="flex items-center gap-3 px-4 py-2">
                 <ArrowRightLeft className="h-4 w-4" />
                 <span>Transfer Profile</span>
               </Link>

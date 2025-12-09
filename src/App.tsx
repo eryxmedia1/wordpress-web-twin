@@ -21,6 +21,8 @@ import AdminTvShows from "./pages/AdminTvShows";
 import AdminTags from "./pages/AdminTags";
 import EditContent from "./pages/EditContent";
 import UserProfile from "./pages/UserProfile";
+import Account from "./pages/Account";
+import HelpCenter from "./pages/HelpCenter";
 import Producers from "./pages/Producers";
 import ProducerProfile from "./pages/ProducerProfile";
 import ProducerDashboard from "./pages/ProducerDashboard";
@@ -77,6 +79,8 @@ const App = () => (
                   <Route path="/watch/:id" element={<Watch />} />
                   <Route path="/profile" element={<UserProfile />} />
                   <Route path="/profile/:id" element={<UserProfile />} />
+                  <Route path="/account" element={<Account />} />
+                  <Route path="/help" element={<HelpCenter />} />
                   <Route path="/producers" element={<Producers />} />
                   <Route path="/producer-profile/:id" element={<ProducerProfile />} />
                   <Route path="/live" element={<LiveTV />} />
