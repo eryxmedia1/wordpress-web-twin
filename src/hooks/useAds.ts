@@ -32,6 +32,13 @@ interface PodConfig {
   midrollIntervalMinutes: number;
 }
 
+interface MidrollPodConfig {
+  break1PodSize: number;
+  break2PodSize: number;
+  break3PodSize: number;
+  break4PodSize: number;
+}
+
 interface UseAdsOptions {
   contentId?: string;
   channelId?: string;
@@ -48,6 +55,13 @@ const DEFAULT_POD_CONFIG: PodConfig = {
   midrollIntervalMinutes: 10,
 };
 
+const DEFAULT_MIDROLL_POD_CONFIG: MidrollPodConfig = {
+  break1PodSize: 2,
+  break2PodSize: 3,
+  break3PodSize: 5,
+  break4PodSize: 3,
+};
+
 export function useAds(options: UseAdsOptions = {}) {
   const { currentProfile } = useProfile();
   const [currentAd, setCurrentAd] = useState<Ad | null>(null);
@@ -61,7 +75,9 @@ export function useAds(options: UseAdsOptions = {}) {
   const [geoData, setGeoData] = useState<GeoData | null>(null);
   const [geoFetched, setGeoFetched] = useState(false);
   const [podConfig, setPodConfig] = useState<PodConfig>(DEFAULT_POD_CONFIG);
+  const [midrollPodConfig, setMidrollPodConfig] = useState<MidrollPodConfig>(DEFAULT_MIDROLL_POD_CONFIG);
   const [podConfigFetched, setPodConfigFetched] = useState(false);
+  const [midrollBreakCount, setMidrollBreakCount] = useState(0);
 
   // Detect device type
   const getDeviceType = useCallback((): 'mobile' | 'desktop' | 'tv' => {
@@ -113,7 +129,7 @@ export function useAds(options: UseAdsOptions = {}) {
     fetchGeo();
   }, [geoFetched]);
 
-  // Fetch pod configuration
+  // Fetch pod configuration including progressive midroll config
   useEffect(() => {
     if (podConfigFetched) return;
     
@@ -135,8 +151,6 @@ export function useAds(options: UseAdsOptions = {}) {
               postrollPodSize: contentConfig.postroll_pod_size || 1,
               midrollIntervalMinutes: contentConfig.midroll_interval_minutes || 10,
             });
-            setPodConfigFetched(true);
-            return;
           }
         }
 
@@ -155,6 +169,45 @@ export function useAds(options: UseAdsOptions = {}) {
               midrollPodSize: channelConfig.midroll_pod_size || 1,
               postrollPodSize: channelConfig.postroll_pod_size || 1,
               midrollIntervalMinutes: channelConfig.midroll_interval_minutes || 10,
+            });
+          }
+        }
+
+        // Fetch progressive midroll pod config
+        // First try content-specific
+        if (options.contentId) {
+          const { data: contentMidroll } = await supabase
+            .from('ad_midroll_pod_config')
+            .select('*')
+            .eq('content_id', options.contentId)
+            .maybeSingle();
+          
+          if (contentMidroll) {
+            setMidrollPodConfig({
+              break1PodSize: contentMidroll.break_1_pod_size || 2,
+              break2PodSize: contentMidroll.break_2_pod_size || 3,
+              break3PodSize: contentMidroll.break_3_pod_size || 5,
+              break4PodSize: contentMidroll.break_4_pod_size || 3,
+            });
+            setPodConfigFetched(true);
+            return;
+          }
+        }
+
+        // Then try channel-specific
+        if (options.channelId) {
+          const { data: channelMidroll } = await supabase
+            .from('ad_midroll_pod_config')
+            .select('*')
+            .eq('channel_id', options.channelId)
+            .maybeSingle();
+          
+          if (channelMidroll) {
+            setMidrollPodConfig({
+              break1PodSize: channelMidroll.break_1_pod_size || 2,
+              break2PodSize: channelMidroll.break_2_pod_size || 3,
+              break3PodSize: channelMidroll.break_3_pod_size || 5,
+              break4PodSize: channelMidroll.break_4_pod_size || 3,
             });
             setPodConfigFetched(true);
             return;
@@ -176,6 +229,22 @@ export function useAds(options: UseAdsOptions = {}) {
             midrollIntervalMinutes: globalConfig.midroll_interval_minutes || 10,
           });
         }
+
+        // Fetch global progressive midroll config
+        const { data: globalMidroll } = await supabase
+          .from('ad_midroll_pod_config')
+          .select('*')
+          .eq('is_global', true)
+          .maybeSingle();
+        
+        if (globalMidroll) {
+          setMidrollPodConfig({
+            break1PodSize: globalMidroll.break_1_pod_size || 2,
+            break2PodSize: globalMidroll.break_2_pod_size || 3,
+            break3PodSize: globalMidroll.break_3_pod_size || 5,
+            break4PodSize: globalMidroll.break_4_pod_size || 3,
+          });
+        }
       } catch (error) {
         console.error('Error fetching pod config:', error);
       }
@@ -184,6 +253,17 @@ export function useAds(options: UseAdsOptions = {}) {
 
     fetchPodConfig();
   }, [options.contentId, options.channelId, podConfigFetched]);
+
+  // Get progressive pod size based on break number
+  const getProgressivePodSize = useCallback((breakNumber: number): number => {
+    switch (breakNumber) {
+      case 1: return midrollPodConfig.break1PodSize;
+      case 2: return midrollPodConfig.break2PodSize;
+      case 3: return midrollPodConfig.break3PodSize;
+      case 4: return midrollPodConfig.break4PodSize;
+      default: return midrollPodConfig.break4PodSize; // Use break 4 size for 5+
+    }
+  }, [midrollPodConfig]);
 
   // Fetch ads from the select-ad edge function
   const fetchAdPod = useCallback(async (position: 'pre' | 'mid' | 'post', podSize: number): Promise<AdPodResponse | null> => {
@@ -294,10 +374,17 @@ export function useAds(options: UseAdsOptions = {}) {
     return false;
   }, [fetchAdPod, podConfig.prerollPodSize, startAdPod]);
 
-  // Request mid-roll ad pod with countdown
+  // Request mid-roll ad pod with progressive pod sizes
   const requestMidRoll = useCallback(async (countdownDuration: number = 10): Promise<boolean> => {
-    const response = await fetchAdPod('mid', podConfig.midrollPodSize);
+    // Increment break count and get progressive pod size
+    const nextBreakNumber = midrollBreakCount + 1;
+    const podSize = getProgressivePodSize(nextBreakNumber);
+    
+    console.log(`Mid-roll break #${nextBreakNumber}, pod size: ${podSize}`);
+    
+    const response = await fetchAdPod('mid', podSize);
     if (response?.ads && response.ads.length > 0) {
+      setMidrollBreakCount(nextBreakNumber);
       // Start countdown
       setCountdownSeconds(countdownDuration);
       setShowCountdown(true);
@@ -307,7 +394,7 @@ export function useAds(options: UseAdsOptions = {}) {
       return true;
     }
     return false;
-  }, [fetchAdPod, podConfig.midrollPodSize]);
+  }, [fetchAdPod, midrollBreakCount, getProgressivePodSize]);
 
   // Request post-roll ad pod
   const requestPostRoll = useCallback(async (): Promise<boolean> => {
@@ -317,6 +404,11 @@ export function useAds(options: UseAdsOptions = {}) {
     }
     return false;
   }, [fetchAdPod, podConfig.postrollPodSize, startAdPod]);
+
+  // Reset midroll break count (call when starting new content)
+  const resetMidrollCount = useCallback(() => {
+    setMidrollBreakCount(0);
+  }, []);
 
   // Countdown timer
   useEffect(() => {
@@ -378,10 +470,13 @@ export function useAds(options: UseAdsOptions = {}) {
     adQueueLength: adQueue.length,
     currentAdIndex: currentAdIndex + 1, // 1-indexed for display
     podConfig,
+    midrollPodConfig,
+    midrollBreakCount,
     requestPreRoll,
     requestMidRoll,
     requestPostRoll,
     onAdComplete,
     skipAd,
+    resetMidrollCount,
   };
 }

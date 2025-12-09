@@ -133,6 +133,60 @@ export type Database = {
           },
         ]
       }
+      ad_midroll_pod_config: {
+        Row: {
+          break_1_pod_size: number | null
+          break_2_pod_size: number | null
+          break_3_pod_size: number | null
+          break_4_pod_size: number | null
+          channel_id: string | null
+          content_id: string | null
+          created_at: string | null
+          id: string
+          is_global: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          break_1_pod_size?: number | null
+          break_2_pod_size?: number | null
+          break_3_pod_size?: number | null
+          break_4_pod_size?: number | null
+          channel_id?: string | null
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_global?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          break_1_pod_size?: number | null
+          break_2_pod_size?: number | null
+          break_3_pod_size?: number | null
+          break_4_pod_size?: number | null
+          channel_id?: string | null
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_global?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_midroll_pod_config_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: true
+            referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_midroll_pod_config_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: true
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_placements: {
         Row: {
           ad_id: string
@@ -750,6 +804,83 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indie_channel_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          indie_channel_id: string
+          name: string
+          slug: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          indie_channel_id: string
+          name: string
+          slug: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          indie_channel_id?: string
+          name?: string
+          slug?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indie_channel_categories_indie_channel_id_fkey"
+            columns: ["indie_channel_id"]
+            isOneToOne: false
+            referencedRelation: "indie_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indie_channel_category_items: {
+        Row: {
+          category_id: string
+          content_id: string
+          created_at: string | null
+          id: string
+          sort_order: number | null
+        }
+        Insert: {
+          category_id: string
+          content_id: string
+          created_at?: string | null
+          id?: string
+          sort_order?: number | null
+        }
+        Update: {
+          category_id?: string
+          content_id?: string
+          created_at?: string | null
+          id?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indie_channel_category_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "indie_channel_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indie_channel_category_items_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
             referencedColumns: ["id"]
           },
         ]
