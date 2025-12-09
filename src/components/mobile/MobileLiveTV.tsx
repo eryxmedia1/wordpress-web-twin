@@ -362,12 +362,18 @@ export default function MobileLiveTV() {
             playsinline
             onEnded={isLiveStreaming ? undefined : handleVideoEnd}
             onReady={handlePlayerReady}
+            onError={(e) => console.error('Player error:', e)}
             config={{
               file: {
                 forceHLS: videoUrl.includes('.m3u8'),
+                attributes: {
+                  crossOrigin: 'anonymous',
+                },
                 hlsOptions: {
                   enableWorker: true,
                   lowLatencyMode: true,
+                  liveSyncDurationCount: 3,
+                  liveMaxLatencyDurationCount: 10,
                 },
               },
               vimeo: {

@@ -697,6 +697,23 @@ export default function AdminLiveTVPlaylists() {
         </div>
 
         {/* Instructions Banner */}
+        {/* RTMP Live Streaming Notice */}
+        <Card className="mb-6 border-blue-500/30 bg-blue-500/5">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <Radio className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Want to live stream from Switcher Studio?</h3>
+                <p className="text-sm text-muted-foreground">
+                  RTMP streaming credentials are configured in <strong>Channel Settings</strong>, not here. 
+                  Go to <Link to="/admin/livetv/channels" className="text-primary underline hover:no-underline">Channels Manager</Link> and 
+                  click <strong>"Generate RTMP"</strong> or <strong>"RTMP Info"</strong> on your channel to get Switcher Studio credentials.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {playlists.length === 0 && (
           <Card className="mb-6 border-primary/30 bg-primary/5">
             <CardContent className="py-4">
