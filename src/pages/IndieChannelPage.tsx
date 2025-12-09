@@ -14,7 +14,7 @@ import ContentDetailModal from "@/components/ContentDetailModal";
 import MobileContentDetailModal from "@/components/mobile/MobileContentDetailModal";
 import { AdBreakOverlay } from "@/components/AdBreakOverlay";
 import { Button } from "@/components/ui/button";
-import { Heart, Play, Share2, Settings, ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
+import { Heart, Play, Share2, Settings, ChevronLeft, ChevronRight, Volume2, VolumeX, Users } from "lucide-react";
 import { toast } from "sonner";
 import ReactPlayer from "react-player";
 
@@ -51,7 +51,9 @@ const IndieChannelPage = () => {
 
   const [channel, setChannel] = useState<IndieChannel | null>(null);
   const [contents, setContents] = useState<Content[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; slug: string; items: Content[] }[]>([]);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   
@@ -90,6 +92,8 @@ const IndieChannelPage = () => {
     if (channel?.id && currentProfile?.id) {
       fetchFavoriteStatus();
       fetchContents();
+      fetchCategories();
+      fetchFollowerCount();
     }
   }, [channel?.id, currentProfile?.id]);
 
@@ -149,6 +153,44 @@ const IndieChannelPage = () => {
     } else {
       setContents((data || []) as Content[]);
     }
+  };
+
+  const fetchCategories = async () => {
+    if (!channel?.id) return;
+
+    const { data: cats } = await supabase
+      .from("indie_channel_categories")
+      .select("id, name, slug")
+      .eq("indie_channel_id", channel.id)
+      .order("sort_order", { ascending: true });
+
+    if (cats && cats.length > 0) {
+      const catsWithItems = await Promise.all(cats.map(async (cat) => {
+        const { data: items } = await supabase
+          .from("indie_channel_category_items")
+          .select("content_id")
+          .eq("category_id", cat.id)
+          .order("sort_order", { ascending: true });
+
+        const contentIds = items?.map(i => i.content_id) || [];
+        const categoryContents = contents.filter(c => contentIds.includes(c.id));
+        
+        return { ...cat, items: categoryContents };
+      }));
+      
+      setCategories(catsWithItems);
+    }
+  };
+
+  const fetchFollowerCount = async () => {
+    if (!channel?.id) return;
+
+    const { count } = await supabase
+      .from("indie_channel_favorites")
+      .select("*", { count: "exact", head: true })
+      .eq("indie_channel_id", channel.id);
+
+    setFollowerCount(count || 0);
   };
 
   const toggleFavorite = async () => {
@@ -307,7 +349,8 @@ const IndieChannelPage = () => {
               className="gap-2"
             >
               <Heart className={`w-5 h-5 ${isFavorite ? "fill-primary text-primary" : ""}`} />
-              {isFavorite ? "Favorited" : "Add to Favorites"}
+              {isFavorite ? "Following" : "Follow"}
+              <span className="ml-1 text-muted-foreground">({followerCount})</span>
             </Button>
             {canManage && (
               <Button

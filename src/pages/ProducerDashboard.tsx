@@ -42,10 +42,17 @@ import {
   Power,
   Loader2,
   Film,
-  FolderPlus
+  FolderPlus,
+  Tv,
+  Layers,
+  Globe,
+  MapPin,
+  Building
 } from "lucide-react";
 import { toast } from "sonner";
 import IndieVideoUploadForm from "@/components/indie/IndieVideoUploadForm";
+import IndieShowUploadForm from "@/components/indie/IndieShowUploadForm";
+import IndieCategoryManager from "@/components/indie/IndieCategoryManager";
 import IndieLimitReachedModal from "@/components/indie/IndieLimitReachedModal";
 
 interface IndieChannel {
@@ -83,6 +90,10 @@ interface AnalyticsData {
   totalWatchTime: number;
   subscriberCount: number;
   contentCount: number;
+  geoCountry: { location: string; views: number }[];
+  geoRegion: { location: string; views: number }[];
+  geoCity: { location: string; views: number }[];
+  avgWatchTime: number;
 }
 
 const ProducerDashboard = () => {
@@ -96,7 +107,11 @@ const ProducerDashboard = () => {
     totalViews: 0,
     totalWatchTime: 0,
     subscriberCount: 0,
-    contentCount: 0
+    contentCount: 0,
+    geoCountry: [],
+    geoRegion: [],
+    geoCity: [],
+    avgWatchTime: 0
   });
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
@@ -164,22 +179,49 @@ const ProducerDashboard = () => {
 
     setContents((contentData || []) as ChannelContent[]);
 
-    // Fetch analytics
+    // Fetch analytics from channel_views
     const { count: subscriberCount } = await supabase
       .from("indie_channel_favorites")
       .select("*", { count: "exact", head: true })
       .eq("indie_channel_id", channelData.id);
 
-    const { count: viewCount } = await supabase
-      .from("watch_history")
-      .select("*, contents!inner(indie_channel_id)", { count: "exact", head: true })
-      .eq("contents.indie_channel_id", channelData.id);
+    const { data: viewsData } = await supabase
+      .from("channel_views")
+      .select("*")
+      .eq("indie_channel_id", channelData.id);
+
+    const views = viewsData || [];
+    const totalSeconds = views.reduce((sum, v) => sum + (v.duration_seconds || 0), 0);
+    
+    // Calculate geo stats
+    const countryMap = new Map<string, number>();
+    const regionMap = new Map<string, number>();
+    const cityMap = new Map<string, number>();
+    
+    views.forEach(v => {
+      if (v.geo_country) countryMap.set(v.geo_country, (countryMap.get(v.geo_country) || 0) + 1);
+      if (v.geo_region) regionMap.set(v.geo_region, (regionMap.get(v.geo_region) || 0) + 1);
+      if (v.geo_city) cityMap.set(v.geo_city, (cityMap.get(v.geo_city) || 0) + 1);
+    });
 
     setAnalytics({
-      totalViews: viewCount || 0,
-      totalWatchTime: (viewCount || 0) * 15,
+      totalViews: views.length,
+      totalWatchTime: totalSeconds,
       subscriberCount: subscriberCount || 0,
-      contentCount: contentData?.length || 0
+      contentCount: contentData?.length || 0,
+      geoCountry: Array.from(countryMap.entries())
+        .map(([location, count]) => ({ location, views: count }))
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 5),
+      geoRegion: Array.from(regionMap.entries())
+        .map(([location, count]) => ({ location, views: count }))
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 5),
+      geoCity: Array.from(cityMap.entries())
+        .map(([location, count]) => ({ location, views: count }))
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 5),
+      avgWatchTime: views.length > 0 ? Math.round(totalSeconds / views.length) : 0
     });
 
     setLoading(false);
@@ -406,6 +448,14 @@ const ProducerDashboard = () => {
             <TabsTrigger value="upload" className="gap-2">
               <Plus className="w-4 h-4" />
               Add Video
+            </TabsTrigger>
+            <TabsTrigger value="tvshow" className="gap-2">
+              <Tv className="w-4 h-4" />
+              Add TV Show
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="gap-2">
+              <Layers className="w-4 h-4" />
+              Categories
             </TabsTrigger>
             {channel.analytics_access && (
               <TabsTrigger value="analytics" className="gap-2">
@@ -671,10 +721,68 @@ const ProducerDashboard = () => {
             </Card>
           </TabsContent>
 
+          {/* Add TV Show Tab */}
+          <TabsContent value="tvshow">
+            <Card>
+              <CardHeader>
+                <CardTitle>Add New TV Show</CardTitle>
+                <CardDescription>
+                  Create a TV show with multiple seasons and episodes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {contents.length >= (channel.max_total_videos || 100) ? (
+                  <div className="text-center py-12">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-500/20">
+                      <Tv className="h-6 w-6 text-yellow-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Video Limit Reached</h3>
+                    <p className="text-muted-foreground mb-4">
+                      You've reached your maximum limit of {channel.max_total_videos} videos.
+                    </p>
+                    <Button asChild>
+                      <a href="mailto:support@zoeratedtv.com">Contact Support to Upgrade</a>
+                    </Button>
+                  </div>
+                ) : (
+                  <IndieShowUploadForm
+                    channelId={channel.id}
+                    onSuccess={() => {
+                      fetchChannel();
+                    }}
+                    onCancel={() => {}}
+                    currentVideoCount={contents.length}
+                    maxVideos={channel.max_total_videos || 100}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Categories Tab */}
+          <TabsContent value="categories">
+            <Card>
+              <CardHeader>
+                <CardTitle>Content Categories</CardTitle>
+                <CardDescription>
+                  Organize your videos into custom rows that appear on your channel page
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <IndieCategoryManager
+                  channelId={channel.id}
+                  maxRows={channel.max_rows || 5}
+                  contents={contents.map(c => ({ id: c.id, title: c.title, poster_url: c.poster_url }))}
+                  onUpdate={fetchChannel}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Analytics Tab */}
           {channel.analytics_access && (
             <TabsContent value="analytics">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Performance Overview</CardTitle>
@@ -687,19 +795,15 @@ const ProducerDashboard = () => {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Total Watch Time</span>
-                        <span className="font-bold">{Math.round(analytics.totalWatchTime / 60)} hours</span>
+                        <span className="font-bold">{Math.round(analytics.totalWatchTime / 3600)}h</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Subscribers</span>
                         <span className="font-bold">{analytics.subscriberCount.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Avg. Views per Video</span>
-                        <span className="font-bold">
-                          {analytics.contentCount > 0 
-                            ? Math.round(analytics.totalViews / analytics.contentCount).toLocaleString() 
-                            : 0}
-                        </span>
+                        <span className="text-muted-foreground">Avg. Watch Time</span>
+                        <span className="font-bold">{Math.round(analytics.avgWatchTime / 60)}m</span>
                       </div>
                     </div>
                   </CardContent>
@@ -729,6 +833,78 @@ const ProducerDashboard = () => {
                               )}
                             </div>
                             <span className="flex-1 truncate text-sm">{content.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Geographic Analytics */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="w-5 h-5" />
+                      Top Countries
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analytics.geoCountry.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">No data yet</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {analytics.geoCountry.map((item, i) => (
+                          <div key={i} className="flex justify-between">
+                            <span className="text-sm">{item.location}</span>
+                            <span className="font-medium">{item.views}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Top States/Regions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analytics.geoRegion.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">No data yet</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {analytics.geoRegion.map((item, i) => (
+                          <div key={i} className="flex justify-between">
+                            <span className="text-sm">{item.location}</span>
+                            <span className="font-medium">{item.views}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building className="w-5 h-5" />
+                      Top Cities
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analytics.geoCity.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">No data yet</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {analytics.geoCity.map((item, i) => (
+                          <div key={i} className="flex justify-between">
+                            <span className="text-sm">{item.location}</span>
+                            <span className="font-medium">{item.views}</span>
                           </div>
                         ))}
                       </div>
