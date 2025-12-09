@@ -83,16 +83,19 @@ export default function MobileLiveTV() {
     adQueueLength,
     currentAdIndex,
     podConfig,
+    canRequestMidRoll,
     onAdComplete,
     skipAd,
     requestPreRoll,
     requestMidRoll,
   } = useAds({
     channelId: selectedChannel?.id,
+    membershipTier: 'free',
+    deviceType: 'mobile',
   });
 
-  // Calculate next ad break countdown
-  const midrollIntervalSeconds = (podConfig.midrollIntervalMinutes || 10) * 60;
+  // Calculate next ad break countdown - 15 minutes for 4 breaks per hour
+  const midrollIntervalSeconds = 15 * 60; // 15 minutes = 900 seconds
   const nextAdBreakIn = midrollIntervalSeconds > 0 
     ? midrollIntervalSeconds - (watchTimeSeconds % midrollIntervalSeconds)
     : 0;
@@ -110,9 +113,9 @@ export default function MobileLiveTV() {
     midrollTimerRef.current = setInterval(() => {
       setWatchTimeSeconds(prev => {
         const newTime = prev + 1;
-        // Check if it's time for a mid-roll break
-        if (newTime > 0 && midrollIntervalSeconds > 0 && newTime % midrollIntervalSeconds === 0) {
-          console.log('[MobileLiveTV] Triggering mid-roll ad break');
+        // Check if it's time for a mid-roll break AND we haven't exceeded max (4 per hour)
+        if (newTime > 0 && midrollIntervalSeconds > 0 && newTime % midrollIntervalSeconds === 0 && canRequestMidRoll()) {
+          console.log('[MobileLiveTV] Triggering mid-roll ad break (every 15 min, max 4 per hour)');
           requestMidRoll(10); // 10 second countdown
         }
         return newTime;
@@ -125,7 +128,7 @@ export default function MobileLiveTV() {
         midrollTimerRef.current = null;
       }
     };
-  }, [isPlaying, isAdPlaying, isLiveStreaming, midrollIntervalSeconds, requestMidRoll]);
+  }, [isPlaying, isAdPlaying, isLiveStreaming, midrollIntervalSeconds, requestMidRoll, canRequestMidRoll]);
 
   // Request pre-roll on initial channel load
   useEffect(() => {

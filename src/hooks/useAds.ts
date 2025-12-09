@@ -60,7 +60,7 @@ const DEFAULT_POD_CONFIG: PodConfig = {
   prerollPodSize: 1,
   midrollPodSize: 1,
   postrollPodSize: 1,
-  midrollIntervalMinutes: 10,
+  midrollIntervalMinutes: 60, // Universal 60-minute interval for Live TV and episodic content
 };
 
 const DEFAULT_MIDROLL_POD_CONFIG: MidrollPodConfig = {
@@ -72,9 +72,9 @@ const DEFAULT_MIDROLL_POD_CONFIG: MidrollPodConfig = {
 
 const DEFAULT_CONTENT_MIDROLL_CONFIG: ContentMidrollConfig = {
   enabled: true,
-  count: 4,
-  startAfterMinutes: 5,
-  intervalMinutes: 10,
+  count: 4,            // 4 mid-rolls per hour
+  startAfterMinutes: 15, // First break at 15 minutes
+  intervalMinutes: 15,   // Then every 15 minutes (15, 30, 45, 60)
 };
 
 export function useAds(options: UseAdsOptions = {}) {
