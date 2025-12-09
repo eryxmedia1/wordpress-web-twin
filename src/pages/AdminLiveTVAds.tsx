@@ -146,7 +146,7 @@ export default function AdminLiveTVAds() {
     frequency_cap_per_user_per_day: null as number | null,
   });
 
-  // Targeting data
+  // Targeting data - default to free and standard tiers (premium members don't see ads)
   const [targeting, setTargeting] = useState<{
     countries: string[];
     regions: string[];
@@ -161,7 +161,7 @@ export default function AdminLiveTVAds() {
     cities: [],
     postal_codes: [],
     time_zones: [],
-    membership_tiers: [],
+    membership_tiers: ['free', 'standard'], // Default: ads only for free and standard users
     device_types: [],
   });
 
@@ -318,7 +318,7 @@ export default function AdminLiveTVAds() {
       cities: [],
       postal_codes: [],
       time_zones: [],
-      membership_tiers: [],
+      membership_tiers: ['free', 'standard'], // Default: ads only for free and standard users
       device_types: [],
     });
     setPlacement({
