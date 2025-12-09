@@ -74,6 +74,14 @@ interface GlobalConfig {
   midroll_interval_minutes: number;
 }
 
+interface ProgressiveMidrollConfig {
+  id?: string;
+  break_1_pod_size: number;
+  break_2_pod_size: number;
+  break_3_pod_size: number;
+  break_4_pod_size: number;
+}
+
 interface Channel {
   id: string;
   name: string;
@@ -128,6 +136,14 @@ export default function AdminLiveTVAds() {
     midroll_interval_minutes: 10,
   });
   const [isSavingGlobal, setIsSavingGlobal] = useState(false);
+  
+  // Progressive mid-roll config state
+  const [progressiveMidroll, setProgressiveMidroll] = useState<ProgressiveMidrollConfig>({
+    break_1_pod_size: 2,
+    break_2_pod_size: 3,
+    break_3_pod_size: 5,
+    break_4_pod_size: 3,
+  });
 
   // Basic form data
   const [formData, setFormData] = useState({
@@ -186,13 +202,14 @@ export default function AdminLiveTVAds() {
   });
 
   const fetchData = async () => {
-    const [adsRes, liveChannelsRes, indieChannelsRes, contentsRes, globalRes, podConfigsRes] = await Promise.all([
+    const [adsRes, liveChannelsRes, indieChannelsRes, contentsRes, globalRes, podConfigsRes, progressiveMidrollRes] = await Promise.all([
       supabase.from('ads').select('*').order('name'),
       supabase.from('live_channels').select('id, name').order('name'),
       supabase.from('indie_channels').select('id, name').eq('is_active', true).order('name'),
       supabase.from('contents').select('id, title, type').order('title').limit(100),
       supabase.from('ad_global_config').select('*').limit(1).maybeSingle(),
       supabase.from('ad_pod_config').select('*'),
+      supabase.from('ad_midroll_pod_config').select('*').eq('is_global', true).maybeSingle(),
     ]);
 
     if (adsRes.data) setAds(adsRes.data);
@@ -212,6 +229,15 @@ export default function AdminLiveTVAds() {
         midroll_pod_size: globalRes.data.midroll_pod_size || 1,
         postroll_pod_size: globalRes.data.postroll_pod_size || 1,
         midroll_interval_minutes: globalRes.data.midroll_interval_minutes || 10,
+      });
+    }
+    if (progressiveMidrollRes.data) {
+      setProgressiveMidroll({
+        id: progressiveMidrollRes.data.id,
+        break_1_pod_size: progressiveMidrollRes.data.break_1_pod_size ?? 2,
+        break_2_pod_size: progressiveMidrollRes.data.break_2_pod_size ?? 3,
+        break_3_pod_size: progressiveMidrollRes.data.break_3_pod_size ?? 5,
+        break_4_pod_size: progressiveMidrollRes.data.break_4_pod_size ?? 3,
       });
     }
     if (podConfigsRes.data) {
@@ -345,6 +371,7 @@ export default function AdminLiveTVAds() {
   const handleSaveGlobalConfig = async () => {
     setIsSavingGlobal(true);
     try {
+      // Save ad_global_config
       if (globalConfig.id) {
         await supabase
           .from('ad_global_config')
@@ -371,6 +398,36 @@ export default function AdminLiveTVAds() {
           setGlobalConfig(prev => ({ ...prev, id: data.id }));
         }
       }
+
+      // Save progressive mid-roll config
+      if (progressiveMidroll.id) {
+        await supabase
+          .from('ad_midroll_pod_config')
+          .update({
+            break_1_pod_size: progressiveMidroll.break_1_pod_size,
+            break_2_pod_size: progressiveMidroll.break_2_pod_size,
+            break_3_pod_size: progressiveMidroll.break_3_pod_size,
+            break_4_pod_size: progressiveMidroll.break_4_pod_size,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', progressiveMidroll.id);
+      } else {
+        const { data } = await supabase
+          .from('ad_midroll_pod_config')
+          .insert({
+            is_global: true,
+            break_1_pod_size: progressiveMidroll.break_1_pod_size,
+            break_2_pod_size: progressiveMidroll.break_2_pod_size,
+            break_3_pod_size: progressiveMidroll.break_3_pod_size,
+            break_4_pod_size: progressiveMidroll.break_4_pod_size,
+          })
+          .select()
+          .single();
+        if (data) {
+          setProgressiveMidroll(prev => ({ ...prev, id: data.id }));
+        }
+      }
+
       toast.success('Global settings saved');
     } catch (error: any) {
       toast.error(error.message || 'Failed to save global settings');
@@ -1201,7 +1258,8 @@ export default function AdminLiveTVAds() {
                   These settings apply to all content and channels unless overridden with specific configurations.
                 </p>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Pre-roll, Post-roll, Interval Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label>Pre-roll Pod Size</Label>
                     <Select
@@ -1218,24 +1276,6 @@ export default function AdminLiveTVAds() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">Ads shown before content</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Mid-roll Pod Size</Label>
-                    <Select
-                      value={String(globalConfig.midroll_pod_size)}
-                      onValueChange={(v) => setGlobalConfig(prev => ({ ...prev, midroll_pod_size: parseInt(v) }))}
-                    >
-                      <SelectTrigger className="bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover">
-                        {[1, 2, 3, 4, 5].map(n => (
-                          <SelectItem key={n} value={String(n)}>{n} ad{n > 1 ? 's' : ''}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Ads shown during content</p>
                   </div>
 
                   <div className="space-y-2">
@@ -1272,6 +1312,96 @@ export default function AdminLiveTVAds() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">Time between mid-rolls</p>
+                  </div>
+                </div>
+
+                {/* Progressive Mid-roll Pod Sizes Section */}
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Layers className="h-5 w-5 text-primary" />
+                    <h4 className="font-medium">Progressive Mid-roll Pod Sizes</h4>
+                  </div>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    Configure how many ads play for each mid-roll break in a viewing session. 
+                    The 4th break setting is used for all breaks 4 and beyond.
+                  </p>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label>1st Mid-roll Break</Label>
+                      <Select
+                        value={String(progressiveMidroll.break_1_pod_size)}
+                        onValueChange={(v) => setProgressiveMidroll(prev => ({ ...prev, break_1_pod_size: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n > 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>2nd Mid-roll Break</Label>
+                      <Select
+                        value={String(progressiveMidroll.break_2_pod_size)}
+                        onValueChange={(v) => setProgressiveMidroll(prev => ({ ...prev, break_2_pod_size: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n > 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>3rd Mid-roll Break</Label>
+                      <Select
+                        value={String(progressiveMidroll.break_3_pod_size)}
+                        onValueChange={(v) => setProgressiveMidroll(prev => ({ ...prev, break_3_pod_size: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n > 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>4th+ Mid-roll Break</Label>
+                      <Select
+                        value={String(progressiveMidroll.break_4_pod_size)}
+                        onValueChange={(v) => setProgressiveMidroll(prev => ({ ...prev, break_4_pod_size: parseInt(v) }))}
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} ad{n > 1 ? 's' : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Used for breaks 4, 5, 6...</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Example:</strong> With settings 2, 3, 5, 3 — First break shows 2 ads, second break shows 3 ads, 
+                      third break shows 5 ads, and all subsequent breaks show 3 ads.
+                    </p>
                   </div>
                 </div>
 
