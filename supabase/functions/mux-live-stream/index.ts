@@ -13,6 +13,67 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication - extract user from JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - No authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    // Create client with user's token to verify identity
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Get the authenticated user
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('Authentication failed:', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('User authenticated:', user.id);
+
+    // Create service role client for admin check and database operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check if user has admin role using the secure has_role function
+    const { data: adminRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    if (roleError) {
+      console.error('Error checking admin role:', roleError);
+      return new Response(
+        JSON.stringify({ error: 'Error verifying permissions' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!adminRole) {
+      console.error('User is not an admin:', user.id);
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Admin access verified for user:', user.id);
+
     const MUX_TOKEN_ID = Deno.env.get('MUX_TOKEN_ID');
     const MUX_TOKEN_SECRET = Deno.env.get('MUX_TOKEN_SECRET');
     
@@ -26,10 +87,6 @@ serve(async (req) => {
 
     const { action, channelId } = await req.json();
     console.log(`Mux action: ${action}, channelId: ${channelId}`);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Base64 encode credentials for Mux API
     const credentials = btoa(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`);

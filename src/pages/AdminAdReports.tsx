@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNavbar from "@/components/AdminNavbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { Eye, Users, CheckCircle, TrendingUp, Calendar, BarChart3 } from "lucide-react";
+import { Eye, Users, CheckCircle, TrendingUp, Calendar, BarChart3, MapPin, Tv, Film } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 
 interface AdImpression {
@@ -18,9 +17,13 @@ interface AdImpression {
   geo_country: string | null;
   geo_region: string | null;
   geo_city: string | null;
+  geo_postal: string | null;
   device_type: string | null;
   membership_tier: string | null;
   duration_ms: number | null;
+  channel_id: string | null;
+  content_id: string | null;
+  user_id: string | null;
 }
 
 interface Ad {
@@ -28,17 +31,29 @@ interface Ad {
   name: string;
 }
 
+interface Channel {
+  id: string;
+  name: string;
+}
+
+interface Content {
+  id: string;
+  title: string;
+}
+
 interface AggregatedData {
   name: string;
   value: number;
 }
 
-const COLORS = ['#d4af37', '#22c55e', '#3b82f6', '#ef4444', '#a855f7', '#f59e0b'];
+const COLORS = ['#d4af37', '#22c55e', '#3b82f6', '#ef4444', '#a855f7', '#f59e0b', '#ec4899', '#14b8a6'];
 
 const AdminAdReports = () => {
   const [dateRange, setDateRange] = useState('7');
   const [impressions, setImpressions] = useState<AdImpression[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,18 +65,22 @@ const AdminAdReports = () => {
     const startDate = startOfDay(subDays(new Date(), parseInt(dateRange)));
     const endDate = endOfDay(new Date());
 
-    const [impressionsRes, adsRes] = await Promise.all([
+    const [impressionsRes, adsRes, channelsRes, contentsRes] = await Promise.all([
       supabase
         .from('ad_impressions')
         .select('*')
         .gte('played_at', startDate.toISOString())
         .lte('played_at', endDate.toISOString())
         .order('played_at', { ascending: false }),
-      supabase.from('ads').select('id, name')
+      supabase.from('ads').select('id, name'),
+      supabase.from('live_channels_public').select('id, name'),
+      supabase.from('contents').select('id, title')
     ]);
 
     if (impressionsRes.data) setImpressions(impressionsRes.data);
     if (adsRes.data) setAds(adsRes.data);
+    if (channelsRes.data) setChannels(channelsRes.data as Channel[]);
+    if (contentsRes.data) setContents(contentsRes.data);
     setLoading(false);
   };
 
@@ -69,7 +88,7 @@ const AdminAdReports = () => {
   const totalImpressions = impressions.length;
   const completedImpressions = impressions.filter(i => i.completed).length;
   const completionRate = totalImpressions > 0 ? Math.round((completedImpressions / totalImpressions) * 100) : 0;
-  const uniqueViewers = new Set(impressions.map(i => i.ad_id)).size;
+  const uniqueViewers = new Set(impressions.filter(i => i.user_id).map(i => i.user_id)).size;
 
   // Aggregate by position
   const positionData: AggregatedData[] = ['pre', 'mid', 'post'].map(pos => ({
@@ -105,6 +124,70 @@ const AdminAdReports = () => {
   const countryData = Object.entries(countryCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10);
+
+  // Aggregate by state/region
+  const regionCounts: Record<string, number> = {};
+  impressions.forEach(i => {
+    const region = i.geo_region || 'Unknown';
+    regionCounts[region] = (regionCounts[region] || 0) + 1;
+  });
+  const regionData = Object.entries(regionCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  // Aggregate by city
+  const cityCounts: Record<string, number> = {};
+  impressions.forEach(i => {
+    const city = i.geo_city ? `${i.geo_city}, ${i.geo_region || ''}` : 'Unknown';
+    cityCounts[city] = (cityCounts[city] || 0) + 1;
+  });
+  const cityData = Object.entries(cityCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  // Aggregate by zip code
+  const zipCounts: Record<string, number> = {};
+  impressions.forEach(i => {
+    const zip = i.geo_postal || 'Unknown';
+    zipCounts[zip] = (zipCounts[zip] || 0) + 1;
+  });
+  const zipData = Object.entries(zipCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  // Aggregate by channel
+  const channelCounts: Record<string, number> = {};
+  impressions.forEach(i => {
+    if (i.channel_id) {
+      channelCounts[i.channel_id] = (channelCounts[i.channel_id] || 0) + 1;
+    }
+  });
+  const channelData = Object.entries(channelCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([channelId, count]) => ({
+      id: channelId,
+      name: channels.find(c => c.id === channelId)?.name || 'Unknown Channel',
+      impressions: count,
+      completed: impressions.filter(i => i.channel_id === channelId && i.completed).length
+    }));
+
+  // Aggregate by content/show
+  const contentCounts: Record<string, number> = {};
+  impressions.forEach(i => {
+    if (i.content_id) {
+      contentCounts[i.content_id] = (contentCounts[i.content_id] || 0) + 1;
+    }
+  });
+  const contentData = Object.entries(contentCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([contentId, count]) => ({
+      id: contentId,
+      title: contents.find(c => c.id === contentId)?.title || 'Unknown Content',
+      impressions: count,
+      completed: impressions.filter(i => i.content_id === contentId && i.completed).length
+    }));
 
   // Daily impressions for line chart
   const dailyData: Record<string, { date: string; impressions: number; completed: number }> = {};
@@ -208,8 +291,8 @@ const AdminAdReports = () => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Unique Ads Shown</p>
-                      <p className="text-3xl font-bold text-foreground">{uniqueViewers}</p>
+                      <p className="text-sm text-muted-foreground">Unique Viewers</p>
+                      <p className="text-3xl font-bold text-foreground">{uniqueViewers.toLocaleString()}</p>
                     </div>
                     <Users className="h-10 w-10 text-purple-500 opacity-50" />
                   </div>
@@ -329,7 +412,235 @@ const AdminAdReports = () => {
               </Card>
             </div>
 
-            {/* Tables Row */}
+            {/* Geographic Section Header */}
+            <div className="flex items-center gap-2 mb-4 mt-8">
+              <MapPin className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-bold text-foreground">Geographic Breakdown</h2>
+            </div>
+
+            {/* Geographic Tables Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
+              {/* By Country */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground text-sm">By Country</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border">
+                        <TableHead className="text-muted-foreground text-xs">Country</TableHead>
+                        <TableHead className="text-muted-foreground text-xs text-right">Count</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {countryData.map(([country, count]) => (
+                        <TableRow key={country} className="border-border">
+                          <TableCell className="text-foreground text-sm">{country}</TableCell>
+                          <TableCell className="text-right text-foreground text-sm">{count}</TableCell>
+                        </TableRow>
+                      ))}
+                      {countryData.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={2} className="text-center text-muted-foreground py-4 text-sm">
+                            No data
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* By State/Region */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground text-sm">By State/Region</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border">
+                        <TableHead className="text-muted-foreground text-xs">State</TableHead>
+                        <TableHead className="text-muted-foreground text-xs text-right">Count</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {regionData.map(([region, count]) => (
+                        <TableRow key={region} className="border-border">
+                          <TableCell className="text-foreground text-sm">{region}</TableCell>
+                          <TableCell className="text-right text-foreground text-sm">{count}</TableCell>
+                        </TableRow>
+                      ))}
+                      {regionData.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={2} className="text-center text-muted-foreground py-4 text-sm">
+                            No data
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* By City */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground text-sm">By City</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border">
+                        <TableHead className="text-muted-foreground text-xs">City</TableHead>
+                        <TableHead className="text-muted-foreground text-xs text-right">Count</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cityData.map(([city, count]) => (
+                        <TableRow key={city} className="border-border">
+                          <TableCell className="text-foreground text-sm truncate max-w-[120px]">{city}</TableCell>
+                          <TableCell className="text-right text-foreground text-sm">{count}</TableCell>
+                        </TableRow>
+                      ))}
+                      {cityData.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={2} className="text-center text-muted-foreground py-4 text-sm">
+                            No data
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* By Zip Code */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground text-sm">By Zip Code</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border">
+                        <TableHead className="text-muted-foreground text-xs">Zip</TableHead>
+                        <TableHead className="text-muted-foreground text-xs text-right">Count</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {zipData.map(([zip, count]) => (
+                        <TableRow key={zip} className="border-border">
+                          <TableCell className="text-foreground text-sm">{zip}</TableCell>
+                          <TableCell className="text-right text-foreground text-sm">{count}</TableCell>
+                        </TableRow>
+                      ))}
+                      {zipData.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={2} className="text-center text-muted-foreground py-4 text-sm">
+                            No data
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Channel & Content Section Header */}
+            <div className="flex items-center gap-2 mb-4 mt-8">
+              <Tv className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-bold text-foreground">Channel & Content Performance</h2>
+            </div>
+
+            {/* Channel & Content Tables */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* By Channel */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Tv className="h-5 w-5" />
+                    Ads by Channel
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border">
+                        <TableHead className="text-muted-foreground">Channel</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Impressions</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Completed</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Rate</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {channelData.map((channel) => (
+                        <TableRow key={channel.id} className="border-border">
+                          <TableCell className="text-foreground font-medium">{channel.name}</TableCell>
+                          <TableCell className="text-right text-foreground">{channel.impressions}</TableCell>
+                          <TableCell className="text-right text-foreground">{channel.completed}</TableCell>
+                          <TableCell className="text-right text-foreground">
+                            {channel.impressions > 0 ? Math.round((channel.completed / channel.impressions) * 100) : 0}%
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {channelData.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            No channel data available
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* By Content/Show */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Film className="h-5 w-5" />
+                    Ads by Content/Show
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border">
+                        <TableHead className="text-muted-foreground">Content</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Impressions</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Completed</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Rate</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {contentData.map((content) => (
+                        <TableRow key={content.id} className="border-border">
+                          <TableCell className="text-foreground font-medium truncate max-w-[200px]">{content.title}</TableCell>
+                          <TableCell className="text-right text-foreground">{content.impressions}</TableCell>
+                          <TableCell className="text-right text-foreground">{content.completed}</TableCell>
+                          <TableCell className="text-right text-foreground">
+                            {content.impressions > 0 ? Math.round((content.completed / content.impressions) * 100) : 0}%
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {contentData.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            No content data available
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Ad Performance Tables Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top Ads */}
               <Card className="bg-card border-border">
@@ -369,39 +680,34 @@ const AdminAdReports = () => {
                 </CardContent>
               </Card>
 
-              {/* Geo Breakdown */}
+              {/* Unique Viewers Stats */}
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-foreground">By Country</CardTitle>
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Viewer Insights
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border">
-                        <TableHead className="text-muted-foreground">Country</TableHead>
-                        <TableHead className="text-muted-foreground text-right">Impressions</TableHead>
-                        <TableHead className="text-muted-foreground text-right">% of Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {countryData.map(([country, count]) => (
-                        <TableRow key={country} className="border-border">
-                          <TableCell className="text-foreground font-medium">{country}</TableCell>
-                          <TableCell className="text-right text-foreground">{count}</TableCell>
-                          <TableCell className="text-right text-foreground">
-                            {totalImpressions > 0 ? Math.round((count / totalImpressions) * 100) : 0}%
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {countryData.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                            No geo data available for selected period
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
+                      <span className="text-muted-foreground">Unique Viewers</span>
+                      <span className="text-2xl font-bold text-foreground">{uniqueViewers.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
+                      <span className="text-muted-foreground">Avg Impressions/Viewer</span>
+                      <span className="text-2xl font-bold text-foreground">
+                        {uniqueViewers > 0 ? (totalImpressions / uniqueViewers).toFixed(1) : '0'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
+                      <span className="text-muted-foreground">Repeat Viewers</span>
+                      <span className="text-2xl font-bold text-foreground">
+                        {impressions.filter(i => i.user_id).length > uniqueViewers ? 
+                          (impressions.filter(i => i.user_id).length - uniqueViewers).toLocaleString() : '0'}
+                      </span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
