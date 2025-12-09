@@ -16,6 +16,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAds } from "@/hooks/useAds";
+import { AdBreakOverlay } from "@/components/AdBreakOverlay";
 
 interface ContentData {
   id: string;
@@ -99,6 +101,32 @@ const Watch = () => {
   const playerRef = useRef<ReactPlayer>(null);
   const hasInitialSeek = useRef(false);
   const [playerReady, setPlayerReady] = useState(false);
+  const [preRollPlayed, setPreRollPlayed] = useState(false);
+  const [lastMidrollTime, setLastMidrollTime] = useState(0);
+
+  // Ad system integration
+  const {
+    currentAd,
+    isAdPlaying,
+    adPosition,
+    countdownSeconds,
+    showCountdown,
+    adQueueLength,
+    requestPreRoll,
+    requestMidRoll,
+    requestPostRoll,
+    onAdComplete,
+    skipAd,
+  } = useAds({
+    contentId: id,
+    membershipTier: userPlan || 'free',
+    deviceType: isMobile ? 'mobile' : 'desktop',
+    onAdStart: () => setIsPlaying(false),
+    onAdEnd: () => setIsPlaying(true),
+  });
+
+  // Get ad configuration based on user's plan
+  const adConfig = getAdConfig();
 
   // Reset seek flag when navigating to new content or episode
   useEffect(() => {
@@ -416,18 +444,49 @@ const Watch = () => {
     };
   }, [progress, saveProgress]);
 
-  const playVideo = () => {
+  const playVideo = async () => {
     // Check access before playing
     if (!hasAccess && contentPlans.length > 0) {
       setShowUpgradeGate(true);
       return;
     }
     setShowVideo(true);
-    setIsPlaying(true);
+    
+    // Request pre-roll ad for free/standard users
+    if (!preRollPlayed && adConfig.showPreroll) {
+      const hasPreRoll = await requestPreRoll();
+      setPreRollPlayed(true);
+      if (!hasPreRoll) {
+        setIsPlaying(true);
+      }
+    } else {
+      setIsPlaying(true);
+    }
   };
 
+  // Handle mid-roll ads based on progress
+  useEffect(() => {
+    if (!isPlaying || isAdPlaying || !adConfig.showMidroll || !duration) return;
+    
+    const currentSeconds = (progress / 100) * duration;
+    const midrollInterval = 10 * 60; // 10 minutes
+    const startAfter = 5 * 60; // 5 minutes
+    
+    if (currentSeconds >= startAfter && currentSeconds - lastMidrollTime >= midrollInterval) {
+      requestMidRoll(10);
+      setLastMidrollTime(currentSeconds);
+    }
+  }, [progress, duration, isPlaying, isAdPlaying, adConfig.showMidroll, lastMidrollTime, requestMidRoll]);
+
+  // Handle post-roll ads when video ends
+  const handleVideoEndedWithAds = useCallback(async () => {
+    if (adConfig.showPostroll) {
+      await requestPostRoll();
+    }
+    handleVideoEnded();
+  }, [adConfig.showPostroll, requestPostRoll, handleVideoEnded]);
+
   // Get ad configuration based on user's plan
-  const adConfig = getAdConfig();
 
   // Handle star rating click - save to database
   const handleStarClick = async (rating: number) => {
@@ -590,6 +649,19 @@ const Watch = () => {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       
+      {/* Ad Break Overlay */}
+      <AdBreakOverlay
+        ad={currentAd}
+        position={adPosition}
+        countdownSeconds={countdownSeconds}
+        showCountdown={showCountdown}
+        adQueueLength={adQueueLength}
+        canSkip={userPlan === 'premium'}
+        skipAfterSeconds={5}
+        onAdComplete={onAdComplete}
+        onSkip={skipAd}
+      />
+      
       {/* Upgrade Gate Modal */}
       {showUpgradeGate && content && (
         <UpgradeGate
@@ -599,7 +671,7 @@ const Watch = () => {
           onClose={() => setShowUpgradeGate(false)}
         />
       )}
-      {showVideo ? (
+      {showVideo && !isAdPlaying ? (
         <div className="h-screen w-full bg-black relative overflow-hidden pt-16">
           <div className="absolute inset-0 bg-black z-0 flex items-center justify-center mt-16">
             <div className="w-full h-full max-h-[calc(100vh-64px)]">
