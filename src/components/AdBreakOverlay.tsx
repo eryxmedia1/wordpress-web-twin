@@ -152,6 +152,16 @@ export function AdBreakOverlay({
     return null;
   }
 
+  // Calculate remaining time in current ad
+  const currentAdRemaining = Math.max(0, Math.ceil((ad?.duration_seconds || 30) - playedSeconds));
+  
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Ad playing overlay - fullscreen
   return (
     <div className="fixed inset-0 z-50 bg-black">
@@ -170,6 +180,14 @@ export function AdBreakOverlay({
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Countdown timer to resume */}
+          <div className="flex items-center gap-2 bg-black/50 px-3 py-1.5 rounded-full">
+            <span className="text-white/70 text-xs">Returns in</span>
+            <span className="text-primary font-mono font-bold text-sm">
+              {formatTime(currentAdRemaining)}
+            </span>
+          </div>
+          
           <Button
             variant="ghost"
             size="icon"
@@ -208,12 +226,22 @@ export function AdBreakOverlay({
           <div 
             key={i} 
             className={cn(
-              "w-8 h-1 rounded-full transition-all",
-              i < currentAdIndex ? "bg-primary" : 
-              i === currentAdIndex - 1 ? "bg-primary" : 
-              "bg-white/30"
+              "h-1 rounded-full transition-all",
+              i < currentAdIndex - 1 ? "w-8 bg-primary" : 
+              i === currentAdIndex - 1 ? "w-8 bg-primary" : 
+              "w-8 bg-white/30"
             )}
-          />
+          >
+            {/* Show progress on current ad segment */}
+            {i === currentAdIndex - 1 && (
+              <div 
+                className="h-full bg-primary rounded-full transition-all duration-100"
+                style={{ 
+                  width: `${(playedSeconds / (ad?.duration_seconds || 30)) * 100}%` 
+                }}
+              />
+            )}
+          </div>
         ))}
       </div>
 
@@ -247,8 +275,13 @@ export function AdBreakOverlay({
 
       {/* Bottom bar with progress */}
       <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent pb-4 pt-12 px-4">
-        {/* Ad name */}
-        <p className="text-white/60 text-xs mb-2">{ad.name}</p>
+        {/* Ad name and countdown */}
+        <div className="flex justify-between items-center mb-2">
+          <p className="text-white/60 text-xs">{ad.name}</p>
+          <p className="text-primary text-sm font-medium">
+            {currentAdRemaining}s remaining
+          </p>
+        </div>
         
         {/* Progress bar */}
         <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
@@ -260,13 +293,13 @@ export function AdBreakOverlay({
           />
         </div>
         
-        {/* Time remaining */}
+        {/* Time display */}
         <div className="flex justify-between items-center mt-2">
           <span className="text-white/60 text-xs">
-            {Math.ceil(playedSeconds)}s
+            {formatTime(Math.ceil(playedSeconds))}
           </span>
           <span className="text-white/60 text-xs">
-            {ad.duration_seconds}s
+            {formatTime(ad.duration_seconds)}
           </span>
         </div>
       </div>
