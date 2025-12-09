@@ -14,33 +14,263 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_impressions: {
+        Row: {
+          ad_id: string
+          channel_id: string | null
+          completed: boolean | null
+          content_id: string | null
+          device_type: string | null
+          duration_ms: number | null
+          geo_city: string | null
+          geo_country: string | null
+          geo_postal: string | null
+          geo_region: string | null
+          id: string
+          membership_tier: string | null
+          played_at: string | null
+          position: string
+          profile_id: string | null
+          time_zone: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ad_id: string
+          channel_id?: string | null
+          completed?: boolean | null
+          content_id?: string | null
+          device_type?: string | null
+          duration_ms?: number | null
+          geo_city?: string | null
+          geo_country?: string | null
+          geo_postal?: string | null
+          geo_region?: string | null
+          id?: string
+          membership_tier?: string | null
+          played_at?: string | null
+          position: string
+          profile_id?: string | null
+          time_zone?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ad_id?: string
+          channel_id?: string | null
+          completed?: boolean | null
+          content_id?: string | null
+          device_type?: string | null
+          duration_ms?: number | null
+          geo_city?: string | null
+          geo_country?: string | null
+          geo_postal?: string | null
+          geo_region?: string | null
+          id?: string
+          membership_tier?: string | null
+          played_at?: string | null
+          position?: string
+          profile_id?: string | null
+          time_zone?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_impressions_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_impressions_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_impressions_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_impressions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_placements: {
+        Row: {
+          ad_id: string
+          channel_id: string | null
+          content_id: string | null
+          created_at: string | null
+          id: string
+          mid_enabled: boolean | null
+          placement_type: string
+          post_enabled: boolean | null
+          pre_enabled: boolean | null
+        }
+        Insert: {
+          ad_id: string
+          channel_id?: string | null
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          mid_enabled?: boolean | null
+          placement_type?: string
+          post_enabled?: boolean | null
+          pre_enabled?: boolean | null
+        }
+        Update: {
+          ad_id?: string
+          channel_id?: string | null
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          mid_enabled?: boolean | null
+          placement_type?: string
+          post_enabled?: boolean | null
+          pre_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_placements_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_placements_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_placements_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_targeting: {
+        Row: {
+          ad_id: string
+          cities: string[] | null
+          countries: string[] | null
+          created_at: string | null
+          device_types: string[] | null
+          id: string
+          membership_tiers: string[] | null
+          postal_codes: string[] | null
+          regions: string[] | null
+          time_zones: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          ad_id: string
+          cities?: string[] | null
+          countries?: string[] | null
+          created_at?: string | null
+          device_types?: string[] | null
+          id?: string
+          membership_tiers?: string[] | null
+          postal_codes?: string[] | null
+          regions?: string[] | null
+          time_zones?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          ad_id?: string
+          cities?: string[] | null
+          countries?: string[] | null
+          created_at?: string | null
+          device_types?: string[] | null
+          id?: string
+          membership_tiers?: string[] | null
+          postal_codes?: string[] | null
+          regions?: string[] | null
+          time_zones?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_targeting_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: true
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ads: {
         Row: {
           ad_type: string
           created_at: string | null
+          current_impressions: number | null
           duration_seconds: number
+          end_at: string | null
+          frequency_cap_per_user_per_day: number | null
           id: string
           is_active: boolean | null
+          max_impressions: number | null
           name: string
+          position_mid: boolean | null
+          position_post: boolean | null
+          position_pre: boolean | null
+          start_at: string | null
+          status: string
+          vast_tag_url: string | null
           video_url: string
+          weight: number | null
         }
         Insert: {
           ad_type: string
           created_at?: string | null
+          current_impressions?: number | null
           duration_seconds: number
+          end_at?: string | null
+          frequency_cap_per_user_per_day?: number | null
           id?: string
           is_active?: boolean | null
+          max_impressions?: number | null
           name: string
+          position_mid?: boolean | null
+          position_post?: boolean | null
+          position_pre?: boolean | null
+          start_at?: string | null
+          status?: string
+          vast_tag_url?: string | null
           video_url: string
+          weight?: number | null
         }
         Update: {
           ad_type?: string
           created_at?: string | null
+          current_impressions?: number | null
           duration_seconds?: number
+          end_at?: string | null
+          frequency_cap_per_user_per_day?: number | null
           id?: string
           is_active?: boolean | null
+          max_impressions?: number | null
           name?: string
+          position_mid?: boolean | null
+          position_post?: boolean | null
+          position_pre?: boolean | null
+          start_at?: string | null
+          status?: string
+          vast_tag_url?: string | null
           video_url?: string
+          weight?: number | null
         }
         Relationships: []
       }
