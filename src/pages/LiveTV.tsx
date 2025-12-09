@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import MobileLiveTV from "@/components/mobile/MobileLiveTV";
 import MobileLayout from "@/components/mobile/MobileLayout";
 import ReactPlayer from "react-player";
-import { Loader2, Radio, Volume2, VolumeX } from "lucide-react";
+import { Loader2, Radio, Volume2, VolumeX, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -66,6 +66,8 @@ export default function LiveTV() {
   const [isLiveStreaming, setIsLiveStreaming] = useState(false);
   const [preRollPlayed, setPreRollPlayed] = useState(false);
   const [watchTimeSeconds, setWatchTimeSeconds] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
   const playerRef = useRef<ReactPlayer>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const muxPollRef = useRef<NodeJS.Timeout | null>(null);
@@ -132,6 +134,60 @@ export default function LiveTV() {
   useEffect(() => {
     setWatchTimeSeconds(0);
   }, [selectedChannel?.id]);
+
+  // Fetch follow status and follower count for selected channel
+  useEffect(() => {
+    const fetchFollowStatus = async () => {
+      if (!selectedChannel?.id || !currentProfile?.id) {
+        setIsFollowing(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("live_channel_favorites")
+        .select("id")
+        .eq("profile_id", currentProfile.id)
+        .eq("live_channel_id", selectedChannel.id)
+        .single();
+
+      setIsFollowing(!!data);
+    };
+
+    const fetchFollowerCount = async () => {
+      if (!selectedChannel?.id) return;
+
+      const { count } = await supabase
+        .from("live_channel_favorites")
+        .select("*", { count: "exact", head: true })
+        .eq("live_channel_id", selectedChannel.id);
+
+      setFollowerCount(count || 0);
+    };
+
+    fetchFollowStatus();
+    fetchFollowerCount();
+  }, [selectedChannel?.id, currentProfile?.id]);
+
+  const toggleFollow = async () => {
+    if (!currentProfile?.id || !selectedChannel?.id) return;
+
+    if (isFollowing) {
+      await supabase
+        .from("live_channel_favorites")
+        .delete()
+        .eq("profile_id", currentProfile.id)
+        .eq("live_channel_id", selectedChannel.id);
+      setIsFollowing(false);
+      setFollowerCount(prev => Math.max(0, prev - 1));
+    } else {
+      await supabase.from("live_channel_favorites").insert({
+        profile_id: currentProfile.id,
+        live_channel_id: selectedChannel.id,
+      });
+      setIsFollowing(true);
+      setFollowerCount(prev => prev + 1);
+    }
+  };
 
   // Check Mux stream status for a channel
   const checkMuxStreamStatus = useCallback(async (channel: Channel) => {
@@ -615,6 +671,17 @@ export default function LiveTV() {
                         Duration: {formatTime(liveSegment.nowPlaying.duration)}
                       </p>
                     )}
+                    {/* Follow Button */}
+                    <Button
+                      variant={isFollowing ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={toggleFollow}
+                      className="mt-3 gap-2"
+                    >
+                      <Heart className={`h-4 w-4 ${isFollowing ? "fill-primary text-primary" : ""}`} />
+                      {isFollowing ? "Following" : "Follow"}
+                      <span className="text-muted-foreground">({followerCount})</span>
+                    </Button>
                   </div>
                 </div>
               </div>

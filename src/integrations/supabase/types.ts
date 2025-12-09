@@ -1150,6 +1150,42 @@ export type Database = {
           },
         ]
       }
+      live_channel_favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          live_channel_id: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          live_channel_id: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          live_channel_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_channel_favorites_live_channel_id_fkey"
+            columns: ["live_channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_channel_favorites_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_channel_playlists: {
         Row: {
           ad_break_duration_seconds: number | null

@@ -104,6 +104,9 @@ const Watch = () => {
   const [preRollPlayed, setPreRollPlayed] = useState(false);
   const [lastMidrollTime, setLastMidrollTime] = useState(0);
   const viewTracked = useRef(false);
+  const viewRecordId = useRef<string | null>(null);
+  const watchStartTime = useRef<number | null>(null);
+  const totalWatchedSeconds = useRef(0);
 
   // Ad system integration
   const {
@@ -133,6 +136,9 @@ const Watch = () => {
   useEffect(() => {
     hasInitialSeek.current = false;
     viewTracked.current = false;
+    viewRecordId.current = null;
+    watchStartTime.current = null;
+    totalWatchedSeconds.current = 0;
     setPlayerReady(false);
     setShowVideo(false);
     setIsPlaying(false);
@@ -142,6 +148,7 @@ const Watch = () => {
   const trackView = useCallback(async () => {
     if (viewTracked.current || !id) return;
     viewTracked.current = true;
+    watchStartTime.current = Date.now();
 
     try {
       // Detect geo location
@@ -179,7 +186,7 @@ const Watch = () => {
         .single();
 
       // Insert view record
-      await supabase.from('channel_views').insert({
+      const { data: viewRecord } = await supabase.from('channel_views').insert({
         content_id: id,
         indie_channel_id: contentData?.indie_channel_id || null,
         profile_id: currentProfile?.id || null,
@@ -192,11 +199,64 @@ const Watch = () => {
         time_zone: geoData.timezone,
         duration_seconds: 0,
         progress_percent: 0,
-      });
+      }).select('id').single();
+
+      if (viewRecord) {
+        viewRecordId.current = viewRecord.id;
+      }
     } catch (error) {
       console.error('Error tracking view:', error);
     }
   }, [id, currentProfile?.id, isMobile]);
+
+  // Update view duration when user leaves or finishes
+  const updateViewDuration = useCallback(async (finalProgress?: number) => {
+    if (!viewRecordId.current) return;
+
+    const watchedSeconds = watchStartTime.current 
+      ? Math.floor((Date.now() - watchStartTime.current) / 1000) 
+      : 0;
+    totalWatchedSeconds.current += watchedSeconds;
+
+    try {
+      await supabase.from('channel_views')
+        .update({
+          duration_seconds: totalWatchedSeconds.current,
+          progress_percent: Math.round(finalProgress ?? progress),
+        })
+        .eq('id', viewRecordId.current);
+    } catch (error) {
+      console.error('Error updating view duration:', error);
+    }
+
+    // Reset the start time for next play session
+    watchStartTime.current = isPlaying ? Date.now() : null;
+  }, [progress, isPlaying]);
+
+  // Track play/pause for accurate duration
+  useEffect(() => {
+    if (isPlaying) {
+      watchStartTime.current = Date.now();
+    } else if (watchStartTime.current) {
+      // Paused - add to total watched
+      const watchedSeconds = Math.floor((Date.now() - watchStartTime.current) / 1000);
+      totalWatchedSeconds.current += watchedSeconds;
+      watchStartTime.current = null;
+    }
+  }, [isPlaying]);
+
+  // Update duration when leaving page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      updateViewDuration();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      updateViewDuration();
+    };
+  }, [updateViewDuration]);
 
   // Fetch all episodes for the content (for episode selector and auto-play next)
   useEffect(() => {
@@ -443,6 +503,7 @@ const Watch = () => {
   // Handle episode end - auto-play next episode
   const handleVideoEnded = useCallback(() => {
     saveProgress(100);
+    updateViewDuration(100); // Update view with final duration
     
     if ((autoPlayNext || bingeMode) && nextEpisode && nextEpisode.video_url) {
       if (bingeMode) {
@@ -457,7 +518,7 @@ const Watch = () => {
       setShowVideo(false);
       setIsPlaying(false);
     }
-  }, [autoPlayNext, bingeMode, nextEpisode, saveProgress, setSearchParams]);
+  }, [autoPlayNext, bingeMode, nextEpisode, saveProgress, setSearchParams, updateViewDuration]);
 
   // Handle episode selection from dropdown
   const handleEpisodeSelect = useCallback((selectedEpisodeId: string) => {
