@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
+import ExpandingSidebar from "@/components/ExpandingSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
@@ -36,7 +38,9 @@ import {
   Users, 
   Clock,
   TrendingUp,
-  Play
+  Play,
+  ExternalLink,
+  Power
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,6 +57,8 @@ interface IndieChannel {
   can_go_live: boolean;
   analytics_access: boolean;
   max_total_videos: number;
+  max_rows: number;
+  max_videos_per_row: number;
 }
 
 interface ChannelContent {
@@ -75,7 +81,7 @@ interface AnalyticsData {
 const ProducerDashboard = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   
   const [channel, setChannel] = useState<IndieChannel | null>(null);
   const [contents, setContents] = useState<ChannelContent[]>([]);
@@ -131,11 +137,12 @@ const ProducerDashboard = () => {
     setSettingsBackdropUrl(channelData.backdrop_url || "");
     setSettingsTrailerUrl(channelData.trailer_url || "");
 
-    // Check if user is owner
+    // Check if user is owner OR admin
     const ownerMatch = channelData.owner_id === user?.id;
-    setIsOwner(ownerMatch);
+    const hasAccess = ownerMatch || isAdmin;
+    setIsOwner(hasAccess);
 
-    if (!ownerMatch) {
+    if (!hasAccess) {
       toast.error("You don't have access to this dashboard");
       navigate("/");
       return;
@@ -265,11 +272,28 @@ const ProducerDashboard = () => {
     return null;
   }
 
+  const toggleChannelActive = async () => {
+    if (!channel) return;
+    
+    const { error } = await supabase
+      .from("indie_channels")
+      .update({ is_active: !channel.is_active })
+      .eq("id", channel.id);
+
+    if (error) {
+      toast.error("Failed to update channel status");
+    } else {
+      toast.success(channel.is_active ? "Channel deactivated" : "Channel activated");
+      fetchChannel();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <ExpandingSidebar />
       
-      <div className="container mx-auto px-4 pt-24 pb-12">
+      <div className="ml-16 container mx-auto px-4 pt-24 pb-12">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden flex-shrink-0">
@@ -282,9 +306,41 @@ const ProducerDashboard = () => {
             )}
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-foreground">{channel.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-foreground">{channel.name}</h1>
+              <span className={`px-2 py-0.5 rounded text-xs ${channel.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                {channel.is_active ? 'Active' : 'Inactive'}
+              </span>
+            </div>
             <p className="text-muted-foreground">Producer Dashboard</p>
           </div>
+          
+          {/* Admin Controls */}
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant={channel.is_active ? "destructive" : "default"}
+                size="sm"
+                onClick={toggleChannelActive}
+                className="gap-2"
+              >
+                <Power className="w-4 h-4" />
+                {channel.is_active ? "Deactivate" : "Activate"}
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/admin/indie-channels">
+                  Back to Admin
+                </Link>
+              </Button>
+            </div>
+          )}
+          
+          <Button variant="outline" asChild>
+            <Link to={`/indie-channel/${channel.slug}`} className="gap-2">
+              <ExternalLink className="w-4 h-4" />
+              View Channel
+            </Link>
+          </Button>
           <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
