@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.track-ad-impression]
 verify_jwt = false
+
+[functions.detect-geo]
+verify_jwt = false
