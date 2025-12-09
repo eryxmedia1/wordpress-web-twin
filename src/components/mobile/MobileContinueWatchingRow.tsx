@@ -82,7 +82,17 @@ const MobileContinueWatchingRow = ({ onItemClick, seeAllLink }: MobileContinueWa
         .limit(10);
 
       if (!error && data) {
-        setItems(data as unknown as WatchHistoryItem[]);
+        // Deduplicate by content_id + episode_id, keeping the most recent entry
+        const deduplicatedMap = new Map<string, typeof data[0]>();
+        for (const item of data) {
+          if (!item.contents) continue;
+          const key = item.episode_id ? `${item.content_id}-${item.episode_id}` : item.content_id;
+          // Since data is ordered by last_watched_at DESC, first occurrence is the most recent
+          if (!deduplicatedMap.has(key)) {
+            deduplicatedMap.set(key, item);
+          }
+        }
+        setItems(Array.from(deduplicatedMap.values()) as unknown as WatchHistoryItem[]);
       }
       setIsLoading(false);
     };
