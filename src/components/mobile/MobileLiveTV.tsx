@@ -169,7 +169,7 @@ export default function MobileLiveTV() {
   useEffect(() => {
     const fetchChannels = async () => {
       const { data, error } = await supabase
-        .from('live_channels')
+        .from('live_channels_public')
         .select('*')
         .eq('is_active', true)
         .order('name');
