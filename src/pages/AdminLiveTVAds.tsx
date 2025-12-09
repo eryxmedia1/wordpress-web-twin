@@ -102,6 +102,7 @@ interface PodConfig {
   midroll_pod_size: number;
   postroll_pod_size: number;
   midroll_interval_minutes: number;
+  max_midroll_count: number | null;
   enabled: boolean;
 }
 
@@ -125,8 +126,8 @@ export default function AdminLiveTVAds() {
   const [channelPodConfigs, setChannelPodConfigs] = useState<PodConfig[]>([]);
   const [selectedContentForConfig, setSelectedContentForConfig] = useState<string>("");
   const [selectedChannelForConfig, setSelectedChannelForConfig] = useState<string>("");
-  const [newContentConfig, setNewContentConfig] = useState({ preroll: 1, midroll: 1, postroll: 1, interval: 10 });
-  const [newChannelConfig, setNewChannelConfig] = useState({ preroll: 1, midroll: 1, postroll: 1, interval: 10 });
+  const [newContentConfig, setNewContentConfig] = useState({ preroll: 1, midroll: 1, postroll: 1, interval: 10, midrollCount: 4 });
+  const [newChannelConfig, setNewChannelConfig] = useState({ preroll: 1, midroll: 1, postroll: 1, interval: 10, midrollCount: 4 });
 
   // Global config state
   const [globalConfig, setGlobalConfig] = useState<GlobalConfig>({
@@ -266,6 +267,7 @@ export default function AdminLiveTVAds() {
           midroll_pod_size: newContentConfig.midroll,
           postroll_pod_size: newContentConfig.postroll,
           midroll_interval_minutes: newContentConfig.interval,
+          max_midroll_count: newContentConfig.midrollCount,
           updated_at: new Date().toISOString(),
         }).eq('id', existing.id);
       } else {
@@ -275,6 +277,7 @@ export default function AdminLiveTVAds() {
           midroll_pod_size: newContentConfig.midroll,
           postroll_pod_size: newContentConfig.postroll,
           midroll_interval_minutes: newContentConfig.interval,
+          max_midroll_count: newContentConfig.midrollCount,
         });
       }
       toast.success('Content ad config saved');
@@ -299,6 +302,7 @@ export default function AdminLiveTVAds() {
           midroll_pod_size: newChannelConfig.midroll,
           postroll_pod_size: newChannelConfig.postroll,
           midroll_interval_minutes: newChannelConfig.interval,
+          max_midroll_count: newChannelConfig.midrollCount,
           updated_at: new Date().toISOString(),
         }).eq('id', existing.id);
       } else {
@@ -308,6 +312,7 @@ export default function AdminLiveTVAds() {
           midroll_pod_size: newChannelConfig.midroll,
           postroll_pod_size: newChannelConfig.postroll,
           midroll_interval_minutes: newChannelConfig.interval,
+          max_midroll_count: newChannelConfig.midrollCount,
         });
       }
       toast.success('Channel ad config saved');
@@ -1466,17 +1471,17 @@ export default function AdminLiveTVAds() {
                       </Select>
                     </div>
                     <div>
-                      <Label>Mid-roll</Label>
+                      <Label>Mid-rolls</Label>
                       <Select 
-                        value={String(newContentConfig.midroll)} 
-                        onValueChange={(v) => setNewContentConfig(prev => ({ ...prev, midroll: parseInt(v) }))}
+                        value={String(newContentConfig.midrollCount)} 
+                        onValueChange={(v) => setNewContentConfig(prev => ({ ...prev, midrollCount: parseInt(v) }))}
                       >
                         <SelectTrigger className="bg-background mt-1">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                          {[0, 1, 2, 3, 4, 5].map(n => (
-                            <SelectItem key={n} value={String(n)}>{n} ad{n !== 1 ? 's' : ''}</SelectItem>
+                          {[1, 2, 3, 4].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} break{n !== 1 ? 's' : ''}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1534,7 +1539,7 @@ export default function AdminLiveTVAds() {
                             <div className="flex-1">
                               <h5 className="font-medium">{content?.title || 'Unknown Content'}</h5>
                               <p className="text-sm text-muted-foreground">
-                                Pre: {config.preroll_pod_size} • Mid: {config.midroll_pod_size} • Post: {config.postroll_pod_size} • Interval: {config.midroll_interval_minutes}min
+                                Pre: {config.preroll_pod_size} ads • Mid-rolls: {config.max_midroll_count ?? 4} breaks • Post: {config.postroll_pod_size} ads • Interval: {config.midroll_interval_minutes}min
                               </p>
                             </div>
                             <Button variant="ghost" size="icon" onClick={() => handleDeletePodConfig(config.id)}>
@@ -1605,17 +1610,17 @@ export default function AdminLiveTVAds() {
                       </Select>
                     </div>
                     <div>
-                      <Label>Mid-roll</Label>
+                      <Label>Mid-rolls</Label>
                       <Select 
-                        value={String(newChannelConfig.midroll)} 
-                        onValueChange={(v) => setNewChannelConfig(prev => ({ ...prev, midroll: parseInt(v) }))}
+                        value={String(newChannelConfig.midrollCount)} 
+                        onValueChange={(v) => setNewChannelConfig(prev => ({ ...prev, midrollCount: parseInt(v) }))}
                       >
                         <SelectTrigger className="bg-background mt-1">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                          {[0, 1, 2, 3, 4, 5].map(n => (
-                            <SelectItem key={n} value={String(n)}>{n} ad{n !== 1 ? 's' : ''}</SelectItem>
+                          {[1, 2, 3, 4].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} break{n !== 1 ? 's' : ''}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1673,7 +1678,7 @@ export default function AdminLiveTVAds() {
                             <div className="flex-1">
                               <h5 className="font-medium">{channel?.name || 'Unknown Channel'}</h5>
                               <p className="text-sm text-muted-foreground">
-                                Pre: {config.preroll_pod_size} • Mid: {config.midroll_pod_size} • Post: {config.postroll_pod_size} • Interval: {config.midroll_interval_minutes}min
+                                Pre: {config.preroll_pod_size} ads • Mid-rolls: {config.max_midroll_count ?? 4} breaks • Post: {config.postroll_pod_size} ads • Interval: {config.midroll_interval_minutes}min
                               </p>
                             </div>
                             <Button variant="ghost" size="icon" onClick={() => handleDeletePodConfig(config.id)}>
