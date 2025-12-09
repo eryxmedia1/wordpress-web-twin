@@ -8,6 +8,7 @@ import { supabase, DbContent, DbCategory, DbTag, ContentType } from "@/integrati
 import { VimeoUrlInput } from "@/components/VimeoUrlInput";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { GenreSelector } from "@/components/admin/GenreSelector";
+import { IndieChannelSelector } from "@/components/admin/IndieChannelSelector";
 import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
 
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
   const [selectedSubtitleLanguages, setSelectedSubtitleLanguages] = useState<string[]>([]);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [selectedIndieChannelId, setSelectedIndieChannelId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const {
@@ -225,6 +227,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
           audio_languages: selectedAudioLanguages.length > 0 ? selectedAudioLanguages : null,
           subtitle_languages: selectedSubtitleLanguages.length > 0 ? selectedSubtitleLanguages : null,
           channels: selectedChannels.length > 0 ? selectedChannels : [],
+          indie_channel_id: selectedIndieChannelId,
           duration: data.duration || null,
           vast_ad_preroll: data.vastAdPreroll || null,
           vast_ad_midroll: data.vastAdMidroll || null,
@@ -440,6 +443,12 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
               <ChannelsSelector
                 selectedChannels={selectedChannels}
                 onChannelsChange={setSelectedChannels}
+              />
+
+              {/* Indie Channel Selector */}
+              <IndieChannelSelector
+                selectedChannelId={selectedIndieChannelId}
+                onChannelChange={setSelectedIndieChannelId}
               />
             </TabsContent>
             
