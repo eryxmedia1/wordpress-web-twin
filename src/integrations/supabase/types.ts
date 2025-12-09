@@ -118,6 +118,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ad_impressions_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ad_impressions_content_id_fkey"
             columns: ["content_id"]
             isOneToOne: false
@@ -176,6 +183,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: true
             referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_midroll_pod_config_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: true
+            referencedRelation: "live_channels_public"
             referencedColumns: ["id"]
           },
           {
@@ -243,6 +257,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ad_placements_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ad_placements_content_id_fkey"
             columns: ["content_id"]
             isOneToOne: false
@@ -301,6 +322,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: true
             referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_pod_config_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: true
+            referencedRelation: "live_channels_public"
             referencedColumns: ["id"]
           },
           {
@@ -603,6 +631,13 @@ export type Database = {
             columns: ["live_channel_id"]
             isOneToOne: false
             referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_views_live_channel_id_fkey"
+            columns: ["live_channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels_public"
             referencedColumns: ["id"]
           },
           {
@@ -1178,6 +1213,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "live_channel_favorites_live_channel_id_fkey"
+            columns: ["live_channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "live_channel_favorites_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
@@ -1232,6 +1274,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_channel_playlists_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1779,7 +1828,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      live_channels_public: {
+        Row: {
+          created_at: string | null
+          default_ad_interval_minutes: number | null
+          description: string | null
+          id: string | null
+          is_active: boolean | null
+          is_live_streaming: boolean | null
+          logo_url: string | null
+          name: string | null
+          playback_url: string | null
+          slug: string | null
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_ad_interval_minutes?: number | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_live_streaming?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          playback_url?: string | null
+          slug?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_ad_interval_minutes?: number | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_live_streaming?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          playback_url?: string | null
+          slug?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
