@@ -158,6 +158,15 @@ const IndieChannelPage = () => {
   const fetchCategories = async () => {
     if (!channel?.id) return;
 
+    // Fetch all contents first to have them available
+    const { data: allContents } = await supabase
+      .from("contents")
+      .select("id, title, poster_url, backdrop_url, video_url, trailer_url, rating, release_year, genre, description")
+      .eq("indie_channel_id", channel.id)
+      .order("created_at", { ascending: false });
+
+    const contentsMap = new Map((allContents || []).map(c => [c.id, c as Content]));
+
     const { data: cats } = await supabase
       .from("indie_channel_categories")
       .select("id, name, slug")
@@ -173,12 +182,15 @@ const IndieChannelPage = () => {
           .order("sort_order", { ascending: true });
 
         const contentIds = items?.map(i => i.content_id) || [];
-        const categoryContents = contents.filter(c => contentIds.includes(c.id));
+        const categoryContents = contentIds
+          .map(cid => contentsMap.get(cid))
+          .filter((c): c is Content => !!c);
         
         return { ...cat, items: categoryContents };
       }));
       
-      setCategories(catsWithItems);
+      // Only include categories that have content
+      setCategories(catsWithItems.filter(c => c.items.length > 0));
     }
   };
 
@@ -477,7 +489,26 @@ const IndieChannelPage = () => {
 
   const contentRows = contents.length > 0 && (
     <div className="space-y-8 p-4 md:p-8">
-      {/* Latest Videos */}
+      {/* Custom Category Rows */}
+      {categories.map((category) => (
+        isMobile ? (
+          <MobileContentRow
+            key={category.id}
+            title={category.name}
+            items={mapToContentRow(category.items)}
+            onItemClick={handleMoreInfo}
+          />
+        ) : (
+          <ContentRow
+            key={category.id}
+            title={category.name}
+            contents={mapToContentRow(category.items)}
+            onMoreInfo={handleMoreInfo}
+          />
+        )
+      ))}
+
+      {/* Latest Videos - show remaining content not in categories */}
       {isMobile ? (
         <MobileContentRow
           title="Latest Videos"
