@@ -97,16 +97,27 @@ const IndieChannelPage = () => {
     }
   }, [channel?.id, currentProfile?.id]);
 
-  // Auto-advance hero carousel
+  // Randomize hero contents
+  const [shuffledHeroContents, setShuffledHeroContents] = useState<Content[]>([]);
+  
   useEffect(() => {
-    if (contents.length <= 1) return;
+    if (contents.length > 0) {
+      // Shuffle contents for hero
+      const shuffled = [...contents].sort(() => Math.random() - 0.5).slice(0, 5);
+      setShuffledHeroContents(shuffled);
+    }
+  }, [contents]);
+
+  // Auto-advance hero carousel every 30 seconds
+  useEffect(() => {
+    if (shuffledHeroContents.length <= 1) return;
     
     const interval = setInterval(() => {
-      setCurrentHeroIndex((prev) => (prev + 1) % Math.min(contents.length, 5));
-    }, 8000);
+      setCurrentHeroIndex((prev) => (prev + 1) % shuffledHeroContents.length);
+    }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, [contents.length]);
+  }, [shuffledHeroContents.length]);
 
   const fetchChannel = async () => {
     const { data, error } = await supabase
@@ -252,8 +263,8 @@ const IndieChannelPage = () => {
       trailerUrl: item.trailer_url,
     }));
 
-  // Get featured content for hero (first 5 videos)
-  const heroContents = contents.slice(0, 5);
+  // Get featured content for hero (randomized, first 5 videos)
+  const heroContents = shuffledHeroContents;
   const currentHeroContent = heroContents[currentHeroIndex];
 
   if (loading) {
