@@ -90,13 +90,13 @@ const FeaturedCarousel = ({ contents, onMoreInfo }: FeaturedCarouselProps) => {
     };
   }, [isVideoReady, isPlaying, hasTrailer, videoUrl, previewEnded]);
 
-  // Auto-advance every 15 seconds if multiple items
+  // Auto-advance every 60 seconds if multiple items (matches PREVIEW_DURATION)
   useEffect(() => {
     if (!hasMultiple) return;
     
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % contents.length);
-    }, 15000);
+    }, PREVIEW_DURATION * 1000); // 60 seconds
 
     return () => clearInterval(timer);
   }, [contents.length, hasMultiple]);
