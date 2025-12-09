@@ -53,15 +53,46 @@ export default function MobileLiveTV() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
   const playerRef = useRef<ReactPlayer>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const muxPollRef = useRef<NodeJS.Timeout | null>(null);
   const targetOffsetRef = useRef<number>(0);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
     containScroll: 'trimSnaps',
   });
+
+  // Check Mux stream status for a channel
+  const checkMuxStreamStatus = useCallback(async (channel: Channel) => {
+    if (!channel.playback_url || !channel.id) return false;
+    
+    try {
+      const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/mux-live-stream`;
+      
+      const res = await fetch(funcUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRqdHZzbG9qeGtrY3JwY29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjUxNjcsImV4cCI6MjA2MjYwMTE2N30.TC4eACBOJsfggnuB3OyOK7x4O9yp7bjzOP5Tr9_jHds',
+        },
+        body: JSON.stringify({ action: 'status', channelId: channel.id }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Mux stream status:', data);
+        const isActive = data.status === 'active' || data.isLive === true;
+        setIsLiveStreaming(isActive);
+        return isActive;
+      }
+    } catch (error) {
+      console.error('Error checking Mux stream status:', error);
+    }
+    return false;
+  }, []);
 
   // Fetch all channels
   useEffect(() => {
@@ -91,9 +122,14 @@ export default function MobileLiveTV() {
     fetchChannels();
   }, [channelSlug]);
 
-  // Fetch current segment for selected channel
+  // Fetch current segment for selected channel (playlist-based fallback)
   const fetchLiveSegment = useCallback(async (isInitialLoad = false) => {
     if (!selectedChannel) return;
+    
+    // If we're live streaming via Mux, skip playlist segment fetch
+    if (isLiveStreaming && selectedChannel.playback_url) {
+      return;
+    }
 
     try {
       const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/get-live-segment?channel=${selectedChannel.slug}`;
@@ -124,24 +160,54 @@ export default function MobileLiveTV() {
     } catch (error) {
       console.error('Error fetching live segment:', error);
     }
-  }, [selectedChannel]);
+  }, [selectedChannel, isLiveStreaming]);
 
+  // Check for Mux stream first, then fall back to playlist
   useEffect(() => {
     if (selectedChannel) {
       setIsPlaying(false);
       setIsSeeking(false);
+      setIsLiveStreaming(false);
       targetOffsetRef.current = 0;
       
-      fetchLiveSegment(true);
-      pollIntervalRef.current = setInterval(() => fetchLiveSegment(false), 30000);
+      const initChannel = async () => {
+        if (selectedChannel.playback_url) {
+          const isLive = await checkMuxStreamStatus(selectedChannel);
+          if (isLive) {
+            console.log('Mux stream is LIVE, playing HLS:', selectedChannel.playback_url);
+            setIsPlaying(true);
+          } else {
+            fetchLiveSegment(true);
+          }
+        } else {
+          fetchLiveSegment(true);
+        }
+      };
+      
+      initChannel();
+      
+      if (selectedChannel.playback_url) {
+        muxPollRef.current = setInterval(() => {
+          checkMuxStreamStatus(selectedChannel);
+        }, 10000);
+      }
+      
+      pollIntervalRef.current = setInterval(() => {
+        if (!isLiveStreaming) {
+          fetchLiveSegment(false);
+        }
+      }, 30000);
     }
 
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
+      if (muxPollRef.current) {
+        clearInterval(muxPollRef.current);
+      }
     };
-  }, [selectedChannel, fetchLiveSegment]);
+  }, [selectedChannel, fetchLiveSegment, checkMuxStreamStatus, isLiveStreaming]);
 
   const handleChannelSelect = (channel: Channel) => {
     setSelectedChannel(channel);
@@ -211,16 +277,15 @@ export default function MobileLiveTV() {
     return `${mins}m`;
   };
 
-  // Get the video URL - prioritize Mux HLS playback URL if channel is live streaming
+  // Get the video URL - prioritize Mux HLS playback URL if live streaming
   const getVideoUrl = () => {
-    if (selectedChannel?.is_live_streaming && selectedChannel?.playback_url) {
+    if (isLiveStreaming && selectedChannel?.playback_url) {
       return selectedChannel.playback_url;
     }
     return liveSegment?.videoUrl;
   };
 
   const videoUrl = getVideoUrl();
-  const isLiveFromMux = selectedChannel?.is_live_streaming && selectedChannel?.playback_url;
 
   if (isLoading) {
     return (
@@ -244,7 +309,7 @@ export default function MobileLiveTV() {
         <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
           <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-            {isLiveFromMux ? 'LIVE STREAM' : 'LIVE'}
+            {isLiveStreaming ? '🔴 LIVE' : 'LIVE'}
           </span>
         </div>
 
@@ -295,7 +360,7 @@ export default function MobileLiveTV() {
             width="100%"
             height="100%"
             playsinline
-            onEnded={handleVideoEnd}
+            onEnded={isLiveStreaming ? undefined : handleVideoEnd}
             onReady={handlePlayerReady}
             config={{
               file: {
@@ -379,8 +444,8 @@ export default function MobileLiveTV() {
                 />
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-primary font-semibold uppercase mb-0.5">
-                  {isLiveFromMux ? 'Live Broadcast' : 'Now Playing'}
+              <p className="text-xs text-primary font-semibold uppercase mb-0.5">
+                  {isLiveStreaming ? '🔴 Live Broadcast' : 'Now Playing'}
                 </p>
                 <h3 className="text-sm font-bold text-foreground truncate">
                   {liveSegment.nowPlaying.title}
@@ -395,7 +460,7 @@ export default function MobileLiveTV() {
       )}
 
       {/* Up Next */}
-      {liveSegment?.upNext && liveSegment.upNext.length > 0 && (
+      {!isLiveStreaming && liveSegment?.upNext && liveSegment.upNext.length > 0 && (
         <div className="px-4">
           <h3 className="text-sm font-semibold text-foreground mb-2">Up Next</h3>
           <div className="space-y-2">
