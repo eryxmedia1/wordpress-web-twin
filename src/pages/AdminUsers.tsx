@@ -29,7 +29,7 @@ interface UserProfile {
   subscription_tier: string | null;
   created_at: string;
   is_admin: boolean | null;
-  email?: string;
+  email: string | null;
 }
 
 const TIERS = ['free', 'standard', 'premium'];
@@ -105,6 +105,7 @@ const AdminUsers = () => {
     const matchesSearch = 
       !searchQuery || 
       user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.id.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesTier = filterTier === 'all' || user.subscription_tier === filterTier;
@@ -223,13 +224,13 @@ const AdminUsers = () => {
                               />
                             ) : (
                               <span className="text-primary font-medium">
-                                {user.full_name?.[0]?.toUpperCase() || 'U'}
+                                {(user.full_name?.[0] || user.email?.[0] || 'U').toUpperCase()}
                               </span>
                             )}
                           </div>
                           <div>
                             <div className="font-medium text-foreground">
-                              {user.full_name || 'Unknown User'}
+                              {user.full_name || user.email || 'Unknown User'}
                             </div>
                             {user.is_admin && (
                               <Badge variant="outline" className="text-xs bg-red-500/20 text-red-400 border-red-500/30">
