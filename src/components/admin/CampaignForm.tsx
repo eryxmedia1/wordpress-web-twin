@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +20,114 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Loader2, X, Plus, Search, List, Grid } from "lucide-react";
+import { CalendarIcon, Loader2, X, Plus, Search, List, Grid, Play, Film } from "lucide-react";
 import type { Campaign } from "./CampaignList";
+
+// Video preview component with hover-to-play
+function VideoPreview({ src, className }: { src: string | null; className?: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    if (videoRef.current && isHovering && hasLoaded) {
+      videoRef.current.play().catch(() => {});
+    } else if (videoRef.current && !isHovering) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  }, [isHovering, hasLoaded]);
+
+  if (!src) {
+    return (
+      <div className={cn("flex items-center justify-center bg-muted text-muted-foreground", className)}>
+        <Film className="w-6 h-6" />
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className={cn("relative", className)}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      <video
+        ref={videoRef}
+        src={src}
+        className="w-full h-full object-cover"
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        onLoadedData={() => setHasLoaded(true)}
+      />
+      {!isHovering && hasLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+          <Play className="w-6 h-6 text-white/80" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Content preview component with poster and hover video
+function ContentPreview({ content, className }: { 
+  content: { poster_url: string | null; video_url: string | null; trailer_url: string | null; title: string }; 
+  className?: string 
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  const videoSrc = content.trailer_url || content.video_url;
+
+  useEffect(() => {
+    if (videoRef.current && isHovering && hasLoaded) {
+      videoRef.current.play().catch(() => {});
+    } else if (videoRef.current && !isHovering) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  }, [isHovering, hasLoaded]);
+
+  return (
+    <div 
+      className={cn("relative bg-muted", className)}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      {/* Show poster by default, video on hover if available */}
+      {isHovering && videoSrc ? (
+        <video
+          ref={videoRef}
+          src={videoSrc}
+          className="w-full h-full object-cover"
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          onLoadedData={() => setHasLoaded(true)}
+        />
+      ) : content.poster_url ? (
+        <img
+          src={content.poster_url}
+          alt={content.title}
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+          <Film className="w-4 h-4" />
+        </div>
+      )}
+      {!isHovering && videoSrc && content.poster_url && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity">
+          <Play className="w-4 h-4 text-white/80" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 const POSITIONS = ['pre_roll', 'mid_roll', 'post_roll', 'live_break'];
 const MEMBERSHIP_TIERS = ['free', 'standard', 'premium'];
@@ -49,6 +155,8 @@ interface Content {
   title: string;
   type: string;
   poster_url: string | null;
+  video_url: string | null;
+  trailer_url: string | null;
 }
 
 interface CampaignCreative {
@@ -113,7 +221,7 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
       supabase.from('ads').select('id, name, duration_seconds, position_pre, position_mid, position_post, video_url').eq('status', 'active'),
       supabase.from('live_channels').select('id, name').order('name'),
       supabase.from('indie_channels').select('id, name').eq('is_active', true).order('name'),
-      supabase.from('contents').select('id, title, type, poster_url').order('title').limit(200),
+      supabase.from('contents').select('id, title, type, poster_url, video_url, trailer_url').order('title').limit(200),
     ]);
 
     if (creativesRes.data) setCreatives(creativesRes.data);
@@ -629,23 +737,7 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
                           onClick={() => addCreative(creative.id)}
                           className="cursor-pointer rounded-lg border hover:border-primary transition-colors overflow-hidden group"
                         >
-                          <div className="aspect-video bg-muted relative">
-                            {creative.video_url ? (
-                              <video
-                                src={creative.video_url}
-                                className="w-full h-full object-cover"
-                                muted
-                                preload="metadata"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                                No Preview
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Plus className="w-8 h-8 text-white" />
-                            </div>
-                          </div>
+                          <VideoPreview src={creative.video_url} className="aspect-video bg-muted" />
                           <div className="p-2">
                             <p className="text-sm font-medium truncate">{creative.name}</p>
                             <p className="text-xs text-muted-foreground">{creative.duration_seconds}s</p>
@@ -667,20 +759,10 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
                       return (
                         <div key={sc.creative_id} className="flex items-center justify-between p-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-16 h-10 rounded bg-muted overflow-hidden flex-shrink-0">
-                              {creative.video_url ? (
-                                <video
-                                  src={creative.video_url}
-                                  className="w-full h-full object-cover"
-                                  muted
-                                  preload="metadata"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                                  No Preview
-                                </div>
-                              )}
-                            </div>
+                            <VideoPreview 
+                              src={creative.video_url} 
+                              className="w-16 h-10 rounded bg-muted overflow-hidden flex-shrink-0" 
+                            />
                             <div>
                               <p className="font-medium">{creative.name}</p>
                               <p className="text-sm text-muted-foreground">
@@ -775,25 +857,13 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
                 {contentViewMode === 'list' ? (
                   <ScrollArea className="h-48 border rounded-lg p-2">
                     {filteredContents.map((content) => (
-                      <div key={content.id} className="flex items-center space-x-3 py-1.5">
+                      <div key={content.id} className="flex items-center space-x-3 py-1.5 group">
                         <Checkbox
                           id={content.id}
                           checked={selectedContentIds.includes(content.id)}
                           onCheckedChange={() => toggleContent(content.id)}
                         />
-                        <div className="w-12 h-8 rounded bg-muted overflow-hidden flex-shrink-0">
-                          {content.poster_url ? (
-                            <img
-                              src={content.poster_url}
-                              alt={content.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-[8px]">
-                              No Image
-                            </div>
-                          )}
-                        </div>
+                        <ContentPreview content={content} className="w-12 h-8 rounded overflow-hidden flex-shrink-0" />
                         <label htmlFor={content.id} className="text-sm cursor-pointer flex-1 truncate">
                           {content.title}
                         </label>
@@ -815,18 +885,8 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
                               : "border-transparent hover:border-muted-foreground/30"
                           )}
                         >
-                          <div className="aspect-video bg-muted relative">
-                            {content.poster_url ? (
-                              <img
-                                src={content.poster_url}
-                                alt={content.title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                                No Image
-                              </div>
-                            )}
+                          <div className="aspect-video relative">
+                            <ContentPreview content={content} className="w-full h-full" />
                             {selectedContentIds.includes(content.id) && (
                               <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                                 <svg className="w-3 h-3 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
