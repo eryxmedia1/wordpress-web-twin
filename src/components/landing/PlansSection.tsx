@@ -100,49 +100,52 @@ const CREATOR_PLANS: Record<string, {
   price: number;
   icon: typeof Video;
   isPopular?: boolean;
-  basicPerks: string[];
-  noLiveStreaming?: boolean;
-  expandedPerks: string[];
+  basicPerks: { text: string; included: boolean }[];
+  expandedPerks: { text: string; included: boolean }[];
 }> = {
   basic: {
     name: "Basic",
     price: 295,
     icon: Video,
     basicPerks: [
-      "5 Rows",
-      "20 videos per row",
-      "100 videos total",
+      { text: "1 Indie Channel", included: true },
+      { text: "Channel page & branding", included: true },
+      { text: "Logo + description", included: true },
+      { text: "Custom rows (max 5)", included: true },
     ],
-    noLiveStreaming: true,
     expandedPerks: [
-      "Custom branding",
-      "Basic analytics dashboard",
-      "50% ad revenue share",
-      "Standard support",
-      "Manual video uploads",
-      "Basic thumbnail customization",
+      { text: "Max 100 videos total", included: true },
+      { text: "Max 20 videos per row", included: true },
+      { text: "TV seasons/episodes", included: false },
+      { text: "Bulk import", included: false },
+      { text: "Ads disabled", included: false },
+      { text: "Revenue share", included: false },
+      { text: "Sponsorships", included: false },
+      { text: "Basic analytics (views, followers)", included: true },
+      { text: "Live streaming", included: false },
     ],
   },
   professional: {
-    name: "Professional",
+    name: "Pro",
     price: 495,
     icon: Tv,
     isPopular: true,
     basicPerks: [
-      "10 Rows",
-      "50 videos per row",
-      "500 videos total",
+      { text: "Everything in Basic", included: true },
+      { text: "TV shows & seasons", included: true },
+      { text: "Episode selector", included: true },
+      { text: "Categories & rows (max 10)", included: true },
     ],
-    noLiveStreaming: true,
     expandedPerks: [
-      "Custom branding",
-      "Advanced analytics dashboard",
-      "60% ad revenue share",
-      "Priority support",
-      "Bulk video uploads",
-      "Custom thumbnail library",
-      "Audience insights",
-      "Scheduled publishing",
+      { text: "Max 500 videos total", included: true },
+      { text: "Max 50 videos per row", included: true },
+      { text: "Platform ads allowed", included: true },
+      { text: "Eligible for revenue share", included: true },
+      { text: "Can be included in campaigns", included: true },
+      { text: "Full analytics dashboard", included: true },
+      { text: "Watch time & geo data", included: true },
+      { text: "Device & top videos stats", included: true },
+      { text: "Live streaming", included: false },
     ],
   },
   enterprise: {
@@ -150,22 +153,23 @@ const CREATOR_PLANS: Record<string, {
     price: 995,
     icon: Radio,
     basicPerks: [
-      "20 Rows",
-      "50 videos per row",
-      "1000 videos total",
-      "Access to Live Streaming",
+      { text: "Unlimited customization", included: true },
+      { text: "Multiple admins", included: true },
+      { text: "Featured placement eligibility", included: true },
+      { text: "Max 20 rows", included: true },
     ],
     expandedPerks: [
-      "Full custom branding",
-      "Full analytics access",
-      "70% ad revenue share",
-      "24/7 Dedicated support",
-      "API access",
-      "White-label options",
-      "Sponsorship opportunities",
-      "Multi-channel management",
-      "Real-time viewer analytics",
-      "Custom integrations",
+      { text: "Max 1,000+ videos", included: true },
+      { text: "Max 50 videos per row", included: true },
+      { text: "Full ad control (pre/mid/post)", included: true },
+      { text: "Sponsorship eligible", included: true },
+      { text: "Campaign targeting allowed", included: true },
+      { text: "Live streaming (RTMP/Mux)", included: true },
+      { text: "Playlist-based scheduling", included: true },
+      { text: "Join-in-progress logic", included: true },
+      { text: "Live ads insertion", included: true },
+      { text: "Advanced analytics", included: true },
+      { text: "Revenue reports & export", included: true },
     ],
   },
 };
@@ -459,16 +463,12 @@ const PlansSection = () => {
                   <ul className="space-y-3">
                     {plan.basicPerks.map((perk, i) => (
                       <li key={i} className="flex items-center">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>{perk}</span>
+                        <span className={perk.included ? "text-green-500" : "text-red-500"} style={{ marginRight: '0.5rem' }}>
+                          {perk.included ? "✓" : "✗"}
+                        </span>
+                        <span className={!perk.included ? "text-muted-foreground" : ""}>{perk.text}</span>
                       </li>
                     ))}
-                    {plan.noLiveStreaming && (
-                      <li className="flex items-center">
-                        <span className="text-red-500 mr-2">✗</span>
-                        <span className="text-muted-foreground">No Live Streaming</span>
-                      </li>
-                    )}
                   </ul>
 
                   {/* Expanded Perks */}
@@ -476,8 +476,10 @@ const PlansSection = () => {
                     <ul className="space-y-3 mt-3 pt-3 border-t border-border">
                       {plan.expandedPerks.map((perk, i) => (
                         <li key={i} className="flex items-center">
-                          <span className="text-green-500 mr-2">✓</span>
-                          <span>{perk}</span>
+                          <span className={perk.included ? "text-green-500" : "text-red-500"} style={{ marginRight: '0.5rem' }}>
+                            {perk.included ? "✓" : "✗"}
+                          </span>
+                          <span className={!perk.included ? "text-muted-foreground" : ""}>{perk.text}</span>
                         </li>
                       ))}
                     </ul>
@@ -548,73 +550,61 @@ const PlansSection = () => {
                     <td className="py-4 px-4">Total Videos</td>
                     <td className="py-4 px-4 text-center">100</td>
                     <td className="py-4 px-4 text-center bg-primary/10">500</td>
-                    <td className="py-4 px-4 text-center">1,000</td>
+                    <td className="py-4 px-4 text-center text-green-500">1,000+</td>
                   </tr>
                   <tr className="border-b border-border">
-                    <td className="py-4 px-4">Live Streaming</td>
-                    <td className="py-4 px-4 text-center">
-                      <X className="h-5 w-5 text-red-500 mx-auto" />
-                    </td>
-                    <td className="py-4 px-4 text-center bg-primary/10">
-                      <X className="h-5 w-5 text-red-500 mx-auto" />
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <Check className="h-5 w-5 text-green-500 mx-auto" />
-                    </td>
+                    <td className="py-4 px-4">TV Shows & Seasons</td>
+                    <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="py-4 px-4">Live Streaming (RTMP/Mux)</td>
+                    <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
                   </tr>
                   <tr className="border-b border-border">
                     <td className="py-4 px-4">Custom Branding</td>
-                    <td className="py-4 px-4 text-center">
-                      <Check className="h-5 w-5 text-green-500 mx-auto" />
-                    </td>
-                    <td className="py-4 px-4 text-center bg-primary/10">
-                      <Check className="h-5 w-5 text-green-500 mx-auto" />
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <Check className="h-5 w-5 text-green-500 mx-auto" />
-                    </td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="py-4 px-4">Platform Ads</td>
+                    <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center text-green-500">Full Control</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="py-4 px-4">Revenue Share Eligible</td>
+                    <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="py-4 px-4">Sponsorship Eligible</td>
+                    <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
                   </tr>
                   <tr className="border-b border-border">
                     <td className="py-4 px-4">Analytics Dashboard</td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="text-muted-foreground">Basic</span>
-                    </td>
-                    <td className="py-4 px-4 text-center bg-primary/10">
-                      <span className="text-primary">Advanced</span>
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="text-primary">Full Access</span>
-                    </td>
+                    <td className="py-4 px-4 text-center"><span className="text-muted-foreground">Basic</span></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><span className="text-primary">Full</span></td>
+                    <td className="py-4 px-4 text-center text-green-500">Advanced + Export</td>
                   </tr>
                   <tr className="border-b border-border">
-                    <td className="py-4 px-4">Ad Revenue Share</td>
-                    <td className="py-4 px-4 text-center">50%</td>
-                    <td className="py-4 px-4 text-center bg-primary/10">60%</td>
-                    <td className="py-4 px-4 text-center">70%</td>
-                  </tr>
-                  <tr className="border-b border-border">
-                    <td className="py-4 px-4">Priority Support</td>
-                    <td className="py-4 px-4 text-center">
-                      <X className="h-5 w-5 text-red-500 mx-auto" />
-                    </td>
-                    <td className="py-4 px-4 text-center bg-primary/10">
-                      <Check className="h-5 w-5 text-green-500 mx-auto" />
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <Check className="h-5 w-5 text-green-500 mx-auto" />
-                    </td>
+                    <td className="py-4 px-4">Multiple Admins</td>
+                    <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
                   </tr>
                   <tr>
-                    <td className="py-4 px-4">API Access</td>
-                    <td className="py-4 px-4 text-center">
-                      <X className="h-5 w-5 text-red-500 mx-auto" />
-                    </td>
-                    <td className="py-4 px-4 text-center bg-primary/10">
-                      <X className="h-5 w-5 text-red-500 mx-auto" />
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <Check className="h-5 w-5 text-green-500 mx-auto" />
-                    </td>
+                    <td className="py-4 px-4">Featured Placement</td>
+                    <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
                   </tr>
                 </tbody>
               </table>
