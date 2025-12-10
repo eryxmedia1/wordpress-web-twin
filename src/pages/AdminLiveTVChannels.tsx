@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -41,7 +42,14 @@ interface Channel {
   stream_key: string | null;
   playback_url: string | null;
   is_live_streaming: boolean;
+  allowed_tiers: string[] | null;
 }
+
+const MEMBERSHIP_TIERS = [
+  { value: 'free', label: 'Free', description: 'Ad-supported users' },
+  { value: 'standard', label: 'Standard', description: '$9.95/month users' },
+  { value: 'premium', label: 'Premium', description: '$19.95/month users' },
+];
 
 const TIMEZONES = [
   { value: 'America/New_York', label: 'Eastern Time (ET)' },
@@ -69,6 +77,7 @@ export default function AdminLiveTVChannels() {
     timezone: 'America/New_York',
     is_active: true,
     default_ad_interval_minutes: 15,
+    allowed_tiers: ['free', 'standard', 'premium'] as string[],
   });
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -147,6 +156,7 @@ export default function AdminLiveTVChannels() {
       timezone: 'America/New_York',
       is_active: true,
       default_ad_interval_minutes: 15,
+      allowed_tiers: ['free', 'standard', 'premium'],
     });
     setEditingChannel(null);
   };
@@ -161,6 +171,7 @@ export default function AdminLiveTVChannels() {
       timezone: channel.timezone,
       is_active: channel.is_active,
       default_ad_interval_minutes: channel.default_ad_interval_minutes,
+      allowed_tiers: channel.allowed_tiers || ['free', 'standard', 'premium'],
     });
     setIsDialogOpen(true);
   };
@@ -193,6 +204,7 @@ export default function AdminLiveTVChannels() {
             timezone: formData.timezone,
             is_active: formData.is_active,
             default_ad_interval_minutes: formData.default_ad_interval_minutes,
+            allowed_tiers: formData.allowed_tiers,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingChannel.id);
@@ -210,6 +222,7 @@ export default function AdminLiveTVChannels() {
             timezone: formData.timezone,
             is_active: formData.is_active,
             default_ad_interval_minutes: formData.default_ad_interval_minutes,
+            allowed_tiers: formData.allowed_tiers,
           });
 
         if (error) throw error;
@@ -472,6 +485,40 @@ export default function AdminLiveTVChannels() {
                   />
                 </div>
 
+                  <div className="space-y-3">
+                    <Label>Membership Access</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Select which membership tiers can access this channel
+                    </p>
+                    <div className="space-y-2">
+                      {MEMBERSHIP_TIERS.map((tier) => (
+                        <div key={tier.value} className="flex items-center space-x-3 p-2 rounded-md border border-border hover:bg-accent/50 transition-colors">
+                          <Checkbox
+                            id={`tier-${tier.value}`}
+                            checked={formData.allowed_tiers.includes(tier.value)}
+                            onCheckedChange={(checked) => {
+                              setFormData(prev => ({
+                                ...prev,
+                                allowed_tiers: checked
+                                  ? [...prev.allowed_tiers, tier.value]
+                                  : prev.allowed_tiers.filter(t => t !== tier.value)
+                              }));
+                            }}
+                          />
+                          <div className="flex-1">
+                            <label htmlFor={`tier-${tier.value}`} className="text-sm font-medium cursor-pointer">
+                              {tier.label}
+                            </label>
+                            <p className="text-xs text-muted-foreground">{tier.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {formData.allowed_tiers.length === 0 && (
+                      <p className="text-xs text-destructive">At least one tier must be selected</p>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <Label>Active</Label>
                     <Switch
@@ -480,7 +527,7 @@ export default function AdminLiveTVChannels() {
                     />
                   </div>
 
-                  <Button onClick={handleSave} className="w-full" disabled={isSaving}>
+                  <Button onClick={handleSave} className="w-full" disabled={isSaving || formData.allowed_tiers.length === 0}>
                     {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     {editingChannel ? 'Update Channel' : 'Create Channel'}
                   </Button>
