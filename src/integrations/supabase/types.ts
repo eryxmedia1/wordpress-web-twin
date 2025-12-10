@@ -1555,6 +1555,7 @@ export type Database = {
       }
       live_channels: {
         Row: {
+          allowed_tiers: string[] | null
           created_at: string | null
           default_ad_interval_minutes: number | null
           description: string | null
@@ -1572,6 +1573,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allowed_tiers?: string[] | null
           created_at?: string | null
           default_ad_interval_minutes?: number | null
           description?: string | null
@@ -1589,6 +1591,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allowed_tiers?: string[] | null
           created_at?: string | null
           default_ad_interval_minutes?: number | null
           description?: string | null
@@ -2101,6 +2104,7 @@ export type Database = {
     Views: {
       live_channels_public: {
         Row: {
+          allowed_tiers: string[] | null
           created_at: string | null
           default_ad_interval_minutes: number | null
           description: string | null
@@ -2115,6 +2119,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allowed_tiers?: string[] | null
           created_at?: string | null
           default_ad_interval_minutes?: number | null
           description?: string | null
@@ -2129,6 +2134,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allowed_tiers?: string[] | null
           created_at?: string | null
           default_ad_interval_minutes?: number | null
           description?: string | null
