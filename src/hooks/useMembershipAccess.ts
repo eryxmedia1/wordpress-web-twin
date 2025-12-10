@@ -113,13 +113,39 @@ export const useMembershipAccess = (contentId?: string) => {
     }
   };
 
+  // Get max profiles based on plan
+  const getMaxProfiles = (): number => {
+    switch (userPlan) {
+      case 'premium': return 6;
+      case 'standard': return 4;
+      default: return 2;
+    }
+  };
+
+  // Get max playlists based on plan
+  const getMaxPlaylists = (): number => {
+    switch (userPlan) {
+      case 'premium': return -1; // unlimited
+      case 'standard': return 10;
+      default: return 0;
+    }
+  };
+
+  // Check if user can create playlists
+  const canCreatePlaylist = (): boolean => {
+    return userPlan !== 'free';
+  };
+
   return {
     userPlan,
     contentPlans,
     allPlans,
     hasAccess,
     loading,
-    getAdConfig
+    getAdConfig,
+    getMaxProfiles,
+    getMaxPlaylists,
+    canCreatePlaylist,
   };
 };
 

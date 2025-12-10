@@ -14,20 +14,25 @@ const AVATAR_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 interface MobileProfileSelectionProps {
   profiles: UserProfile[];
   isManaging: boolean;
+  maxProfiles?: number;
   onSelectProfile: (profile: UserProfile) => void;
   onCreateProfile: () => void;
   onToggleManage: () => void;
   onSignOut: () => void;
+  onUpgrade?: () => void;
 }
 
 const MobileProfileSelection = ({
   profiles,
   isManaging,
+  maxProfiles = 6,
   onSelectProfile,
   onCreateProfile,
   onToggleManage,
   onSignOut,
+  onUpgrade,
 }: MobileProfileSelectionProps) => {
+  const canAddProfile = profiles.length < maxProfiles;
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:hidden">
       {/* Header with sign out */}
@@ -93,7 +98,7 @@ const MobileProfileSelection = ({
         })}
 
         {/* Add Profile Button */}
-        {profiles.length < 6 && (
+        {canAddProfile ? (
           <button
             onClick={onCreateProfile}
             className="group flex flex-col items-center transition-transform active:scale-95"
@@ -103,6 +108,18 @@ const MobileProfileSelection = ({
             </div>
             <span className="text-muted-foreground group-hover:text-foreground transition-colors text-sm font-medium">
               Add Profile
+            </span>
+          </button>
+        ) : onUpgrade && (
+          <button
+            onClick={onUpgrade}
+            className="group flex flex-col items-center transition-transform active:scale-95"
+          >
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-2 border-2 border-dashed border-primary/40 group-hover:border-primary bg-primary/10 transition-colors">
+              <Plus className="w-10 h-10 text-primary/50 group-hover:text-primary" />
+            </div>
+            <span className="text-primary/70 group-hover:text-primary transition-colors text-xs font-medium text-center">
+              Upgrade for more
             </span>
           </button>
         )}

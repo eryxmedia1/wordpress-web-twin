@@ -2,6 +2,13 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
+// Tier-based profile limits
+const TIER_PROFILE_LIMITS: Record<string, number> = {
+  free: 2,
+  standard: 4,
+  premium: 6,
+};
+
 export interface UserProfile {
   id: string;
   account_id: string;
@@ -17,6 +24,8 @@ interface ProfileContextType {
   profiles: UserProfile[];
   currentProfile: UserProfile | null;
   isLoading: boolean;
+  userTier: string;
+  maxProfiles: number;
   selectProfile: (profile: UserProfile) => void;
   clearProfile: () => void;
   createProfile: (name: string, avatarColor: string, avatarIcon: string, isKids: boolean) => Promise<void>;
@@ -34,16 +43,31 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userTier, setUserTier] = useState<string>('free');
+
+  const maxProfiles = TIER_PROFILE_LIMITS[userTier] || 2;
 
   const fetchProfiles = async () => {
     if (!user) {
       setProfiles([]);
       setCurrentProfile(null);
+      setUserTier('free');
       setIsLoading(false);
       return;
     }
 
     try {
+      // Fetch user tier from profiles table
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileData) {
+        setUserTier(profileData.subscription_tier || 'free');
+      }
+
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -87,8 +111,8 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
   const createProfile = async (name: string, avatarColor: string, avatarIcon: string, isKids: boolean) => {
     if (!user) return;
 
-    if (profiles.length >= 6) {
-      throw new Error('Maximum 6 profiles allowed per account');
+    if (profiles.length >= maxProfiles) {
+      throw new Error(`Maximum ${maxProfiles} profiles allowed for your ${userTier} plan. Upgrade to add more profiles.`);
     }
 
     const { error } = await supabase
@@ -159,6 +183,8 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
         profiles,
         currentProfile,
         isLoading,
+        userTier,
+        maxProfiles,
         selectProfile,
         clearProfile,
         createProfile,
