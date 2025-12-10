@@ -24,7 +24,7 @@ const PlansSection = () => {
               </li>
               <li className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
-                <span>SD quality (480p)</span>
+                <span>HD quality (1080p)</span>
               </li>
               <li className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
