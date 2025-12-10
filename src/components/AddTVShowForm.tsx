@@ -5,11 +5,11 @@ import { useForm } from "react-hook-form";
 import { CheckIcon, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase, DbContent, DbCategory, DbTag, ContentType } from "@/integrations/supabase/client";
-import { VimeoUrlInput } from "@/components/VimeoUrlInput";
+import { VideoUrlInput } from "@/components/VideoUrlInput";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { GenreSelector } from "@/components/admin/GenreSelector";
 import { IndieChannelSelector } from "@/components/admin/IndieChannelSelector";
-import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
+import { VideoMetadata } from "@/hooks/useVideoMetadata";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -454,12 +454,12 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
             
             <TabsContent value="media" className="space-y-4">
               <div>
-                <Label className="text-white">Video URL (Vimeo) - Paste to auto-fill all fields</Label>
-                <VimeoUrlInput
+                <Label className="text-white">Video URL (Vimeo or YouTube) - Paste to auto-fill all fields</Label>
+                <VideoUrlInput
                   value={watch("videoUrl") || ""}
                   onChange={(value) => setValue("videoUrl", value)}
-                  onMetadataFetched={(metadata: VimeoMetadata) => {
-                    // Auto-fill ALL fields from Vimeo metadata (overwrite existing)
+                  onMetadataFetched={(metadata: VideoMetadata) => {
+                    // Auto-fill ALL fields from metadata (overwrite existing)
                     if (metadata.title) {
                       setValue('title', metadata.title);
                     }
@@ -480,7 +480,7 @@ const AddTVShowForm = ({ onClose }: AddTVShowFormProps) => {
                   className="mt-1 bg-gray-700 border-gray-600 text-white"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Paste a Vimeo URL to auto-fetch thumbnail, duration, title, and description
+                  Paste a Vimeo or YouTube URL to auto-fetch thumbnail, duration, title, and description
                 </p>
               </div>
 

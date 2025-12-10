@@ -43,8 +43,8 @@ import {
   HelpCircle, Info, BookOpen, Zap, Users, MapPin, Clock, BarChart3,
   CheckCircle2, AlertCircle, ArrowRight
 } from "lucide-react";
-import { VimeoUrlInput } from "@/components/VimeoUrlInput";
-import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
+import { VideoUrlInput } from "@/components/VideoUrlInput";
+import { VideoMetadata } from "@/hooks/useVideoMetadata";
 
 interface Ad {
   id: string;
@@ -1787,11 +1787,11 @@ export default function AdminLiveTVAds() {
 
                         {formData.adType === 'video' ? (
                           <div>
-                            <Label>Video URL * (paste Vimeo URL for auto-metadata)</Label>
-                            <VimeoUrlInput
+                            <Label>Video URL * (paste Vimeo or YouTube URL for auto-metadata)</Label>
+                            <VideoUrlInput
                               value={formData.video_url}
                               onChange={(value) => setFormData(prev => ({ ...prev, video_url: value }))}
-                              onMetadataFetched={(metadata: VimeoMetadata) => {
+                              onMetadataFetched={(metadata: VideoMetadata) => {
                                 // Auto-fill duration from metadata
                                 if (metadata.duration_seconds) {
                                   setFormData(prev => ({ 
@@ -1802,10 +1802,10 @@ export default function AdminLiveTVAds() {
                                   }));
                                 }
                               }}
-                              placeholder="https://vimeo.com/... (auto-fetches duration & thumbnail)"
+                              placeholder="https://vimeo.com/... or https://youtube.com/... (auto-fetches duration)"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                              Paste a Vimeo URL to automatically fetch duration and thumbnail preview
+                              Paste a Vimeo or YouTube URL to automatically fetch duration and thumbnail preview
                             </p>
                           </div>
                         ) : (
