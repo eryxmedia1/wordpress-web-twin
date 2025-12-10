@@ -21,11 +21,13 @@ const AVATAR_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 const ProfileSelection = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { profiles, isLoading, selectProfile, createProfile, updateProfile, deleteProfile } = useProfile();
+  const { profiles, isLoading, selectProfile, createProfile, updateProfile, deleteProfile, userTier, maxProfiles } = useProfile();
   const isMobile = useIsMobile();
   const [isManaging, setIsManaging] = useState(false);
   const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+
+  const canAddProfile = profiles.length < maxProfiles;
 
   const handleSelectProfile = (profile: UserProfile) => {
     if (isManaging) {
@@ -89,10 +91,12 @@ const ProfileSelection = () => {
       <MobileProfileSelection
         profiles={profiles}
         isManaging={isManaging}
+        maxProfiles={maxProfiles}
         onSelectProfile={handleSelectProfile}
         onCreateProfile={handleCreateProfile}
         onToggleManage={() => setIsManaging(!isManaging)}
         onSignOut={handleSignOut}
+        onUpgrade={() => navigate('/plans?upgrade=standard')}
       />
     );
   }
@@ -154,7 +158,7 @@ const ProfileSelection = () => {
         })}
 
         {/* Add Profile Button */}
-        {profiles.length < 6 && (
+        {canAddProfile ? (
           <button
             onClick={handleCreateProfile}
             className="group flex flex-col items-center transition-transform hover:scale-105"
@@ -164,6 +168,18 @@ const ProfileSelection = () => {
             </div>
             <span className="text-muted-foreground group-hover:text-foreground transition-colors text-sm md:text-base">
               Add Profile
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate('/plans?upgrade=standard')}
+            className="group flex flex-col items-center transition-transform hover:scale-105"
+          >
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg flex items-center justify-center mb-2 border-2 border-primary/30 group-hover:border-primary bg-primary/10 transition-colors">
+              <Plus className="w-12 h-12 md:w-16 md:h-16 text-primary/50 group-hover:text-primary" />
+            </div>
+            <span className="text-primary/70 group-hover:text-primary transition-colors text-sm md:text-base text-center">
+              Upgrade for<br />more profiles
             </span>
           </button>
         )}

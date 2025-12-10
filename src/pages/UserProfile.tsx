@@ -159,7 +159,15 @@ const UserProfile = () => {
     if (!newPlaylistName.trim() || !currentProfile?.id) return;
     
     if (userPlan === 'free') {
-      toast.error("Playlists are available for Standard and Premium members");
+      toast.error("Playlists are available for Standard and Premium members. Upgrade to create playlists!");
+      navigate('/plans?upgrade=standard');
+      return;
+    }
+
+    // Check playlist limit for Standard tier (max 10)
+    if (userPlan === 'standard' && playlists.length >= 10) {
+      toast.error("Standard plan allows up to 10 playlists. Upgrade to Premium for unlimited playlists!");
+      navigate('/plans?upgrade=premium');
       return;
     }
 
@@ -366,10 +374,28 @@ const UserProfile = () => {
             ) : (
               <>
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-semibold">Your Playlists ({playlists.length})</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold">Your Playlists</h3>
+                    {userPlan === 'standard' && (
+                      <p className="text-sm text-muted-foreground">
+                        {playlists.length} of 10 playlists used
+                        {playlists.length >= 10 && (
+                          <Link to="/plans?upgrade=premium" className="text-primary ml-2 hover:underline">
+                            Upgrade for unlimited
+                          </Link>
+                        )}
+                      </p>
+                    )}
+                    {userPlan === 'premium' && (
+                      <p className="text-sm text-muted-foreground">{playlists.length} playlists • Unlimited</p>
+                    )}
+                  </div>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button className="bg-primary">
+                      <Button 
+                        className="bg-primary"
+                        disabled={userPlan === 'standard' && playlists.length >= 10}
+                      >
                         <Plus className="w-4 h-4 mr-2" /> Create Playlist
                       </Button>
                     </DialogTrigger>

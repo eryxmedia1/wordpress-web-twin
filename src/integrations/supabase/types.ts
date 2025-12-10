@@ -1054,6 +1054,63 @@ export type Database = {
           },
         ]
       }
+      creator_plans: {
+        Row: {
+          allow_ads: boolean | null
+          analytics_level: string | null
+          can_go_live: boolean | null
+          can_upload_shows: boolean | null
+          created_at: string | null
+          custom_branding: boolean | null
+          features: string[] | null
+          id: string
+          max_rows: number | null
+          max_total_videos: number | null
+          max_videos_per_row: number | null
+          name: string
+          price: number | null
+          revenue_share_eligible: boolean | null
+          slug: string
+          sort_order: number | null
+        }
+        Insert: {
+          allow_ads?: boolean | null
+          analytics_level?: string | null
+          can_go_live?: boolean | null
+          can_upload_shows?: boolean | null
+          created_at?: string | null
+          custom_branding?: boolean | null
+          features?: string[] | null
+          id?: string
+          max_rows?: number | null
+          max_total_videos?: number | null
+          max_videos_per_row?: number | null
+          name: string
+          price?: number | null
+          revenue_share_eligible?: boolean | null
+          slug: string
+          sort_order?: number | null
+        }
+        Update: {
+          allow_ads?: boolean | null
+          analytics_level?: string | null
+          can_go_live?: boolean | null
+          can_upload_shows?: boolean | null
+          created_at?: string | null
+          custom_branding?: boolean | null
+          features?: string[] | null
+          id?: string
+          max_rows?: number | null
+          max_total_videos?: number | null
+          max_videos_per_row?: number | null
+          name?: string
+          price?: number | null
+          revenue_share_eligible?: boolean | null
+          slug?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       episodes: {
         Row: {
           created_at: string
@@ -1731,6 +1788,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          creator_tier: string | null
           full_name: string | null
           id: string
           is_admin: boolean | null
@@ -1739,6 +1797,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          creator_tier?: string | null
           full_name?: string | null
           id: string
           is_admin?: boolean | null
@@ -1747,6 +1806,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          creator_tier?: string | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
