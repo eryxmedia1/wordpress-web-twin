@@ -10,25 +10,34 @@ const VIEWER_PLANS: Record<string, {
   name: string;
   price: number;
   isPopular?: boolean;
-  basicPerks: string[];
-  expandedPerks: string[];
+  basicPerks: { text: string; included: boolean }[];
+  expandedPerks: { text: string; included: boolean }[];
 }> = {
   free: {
     name: "Free",
     price: 0,
     basicPerks: [
-      "Limited content access",
-      "Ad-supported viewing",
-      "HD quality (1080p)",
-      "Basic channels only",
+      { text: "Limited movies & shows", included: true },
+      { text: "Limited live TV channels", included: true },
+      { text: "Indie channels (limited catalog)", included: true },
+      { text: "1080p HD quality", included: true },
     ],
     expandedPerks: [
-      "2 user profiles",
-      "4 mid-roll ads per hour",
-      "No playlist creation",
-      "Standard support",
-      "Watch on 1 device at a time",
-      "Basic recommendations",
+      { text: "4K / HDR quality", included: false },
+      { text: "Premium-only content", included: false },
+      { text: "Pre-roll, mid-roll & post-roll ads", included: true },
+      { text: "Up to 4 mid-roll ads per hour", included: true },
+      { text: "Ad countdown & 'Ad X of Y' display", included: true },
+      { text: "Ad skipping", included: false },
+      { text: "Play content", included: true },
+      { text: "Like (👍) content", included: true },
+      { text: "Add to My List", included: true },
+      { text: "Continue Watching", included: true },
+      { text: "Custom playlists", included: false },
+      { text: "Offline downloads", included: false },
+      { text: "Up to 2 profiles", included: true },
+      { text: "Kids profile", included: true },
+      { text: "Watch on 1 device", included: true },
     ],
   },
   standard: {
@@ -36,40 +45,51 @@ const VIEWER_PLANS: Record<string, {
     price: 9.95,
     isPopular: true,
     basicPerks: [
-      "Most content access",
-      "Limited ads (max 2 per show)",
-      "HD quality (1080p)",
-      "Most channels included",
+      { text: "Most movies & shows", included: true },
+      { text: "Most live TV channels", included: true },
+      { text: "Full indie channel access", included: true },
+      { text: "1080p HD quality", included: true },
     ],
     expandedPerks: [
-      "4 user profiles",
-      "Create up to 10 playlists",
-      "Download for offline viewing",
-      "Priority support",
-      "Watch on 2 devices at a time",
-      "Personalized recommendations",
-      "Early access to new releases",
+      { text: "4K / HDR quality", included: false },
+      { text: "Pre-roll & mid-roll ads only", included: true },
+      { text: "Max 2 mid-roll ads per show", included: true },
+      { text: "No post-roll ads", included: true },
+      { text: "Ad countdown display", included: true },
+      { text: "Everything in Free tier", included: true },
+      { text: "Custom playlists (up to 10)", included: true },
+      { text: "Add to playlist button unlocked", included: true },
+      { text: "Up to 4 profiles", included: true },
+      { text: "Kids profile", included: true },
+      { text: "Because You Watched", included: true },
+      { text: "We Think You'll Love", included: true },
+      { text: "Next To Watch", included: true },
+      { text: "Binge mode", included: true },
+      { text: "Watch on 2 devices", included: true },
     ],
   },
   premium: {
     name: "Premium",
     price: 19.95,
     basicPerks: [
-      "All content access",
-      "No ads ever",
-      "4K + HDR quality",
-      "All channels included",
+      { text: "ALL movies & shows", included: true },
+      { text: "ALL live TV channels", included: true },
+      { text: "ALL indie channels", included: true },
+      { text: "4K + HDR quality", included: true },
     ],
     expandedPerks: [
-      "6 user profiles",
-      "Unlimited playlists",
-      "Download for offline viewing",
-      "24/7 Premium support",
-      "Watch on 4 devices at a time",
-      "AI-powered recommendations",
-      "Exclusive premiere access",
-      "Behind-the-scenes content",
-      "Director's cut versions",
+      { text: "NO ADS. EVER.", included: true },
+      { text: "Priority playback / fastest load", included: true },
+      { text: "Up to 6 profiles", included: true },
+      { text: "Kids profile", included: true },
+      { text: "Unlimited playlists", included: true },
+      { text: "Playlist sharing (coming soon)", included: true },
+      { text: "Full ratings & engagement", included: true },
+      { text: "Skip intros", included: true },
+      { text: "Instant playback", included: true },
+      { text: "No upgrade prompts", included: true },
+      { text: "Watch on 4 devices", included: true },
+      { text: "24/7 Premium support", included: true },
     ],
   },
 };
@@ -237,8 +257,10 @@ const PlansSection = () => {
                 <ul className="space-y-3">
                   {plan.basicPerks.map((perk, i) => (
                     <li key={i} className="flex items-center">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>{perk}</span>
+                      <span className={perk.included ? "text-green-500" : "text-red-500"} style={{ marginRight: '0.5rem' }}>
+                        {perk.included ? "✓" : "✗"}
+                      </span>
+                      <span className={!perk.included ? "text-muted-foreground" : ""}>{perk.text}</span>
                     </li>
                   ))}
                 </ul>
@@ -248,8 +270,10 @@ const PlansSection = () => {
                   <ul className="space-y-3 mt-3 pt-3 border-t border-border">
                     {plan.expandedPerks.map((perk, i) => (
                       <li key={i} className="flex items-center">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>{perk}</span>
+                        <span className={perk.included ? "text-green-500" : "text-red-500"} style={{ marginRight: '0.5rem' }}>
+                          {perk.included ? "✓" : "✗"}
+                        </span>
+                        <span className={!perk.included ? "text-muted-foreground" : ""}>{perk.text}</span>
                       </li>
                     ))}
                   </ul>
@@ -312,15 +336,21 @@ const PlansSection = () => {
                     <td className="py-4 px-4 text-center">6</td>
                   </tr>
                   <tr className="border-b border-border">
+                    <td className="py-4 px-4">Kids Profile</td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr className="border-b border-border">
                     <td className="py-4 px-4">Video Quality</td>
                     <td className="py-4 px-4 text-center">HD (1080p)</td>
                     <td className="py-4 px-4 text-center bg-primary/10">HD (1080p)</td>
-                    <td className="py-4 px-4 text-center">4K + HDR</td>
+                    <td className="py-4 px-4 text-center text-green-500">4K + HDR</td>
                   </tr>
                   <tr className="border-b border-border">
                     <td className="py-4 px-4">Ads</td>
-                    <td className="py-4 px-4 text-center">4/hour</td>
-                    <td className="py-4 px-4 text-center bg-primary/10">Max 2/show</td>
+                    <td className="py-4 px-4 text-center">4 mid-roll/hour + pre/post</td>
+                    <td className="py-4 px-4 text-center bg-primary/10">Max 2/show (no post)</td>
                     <td className="py-4 px-4 text-center text-green-500">None</td>
                   </tr>
                   <tr className="border-b border-border">
@@ -330,10 +360,22 @@ const PlansSection = () => {
                     <td className="py-4 px-4 text-center text-green-500">All</td>
                   </tr>
                   <tr className="border-b border-border">
-                    <td className="py-4 px-4">Playlists</td>
+                    <td className="py-4 px-4">Live TV Channels</td>
+                    <td className="py-4 px-4 text-center">Limited</td>
+                    <td className="py-4 px-4 text-center bg-primary/10">Most</td>
+                    <td className="py-4 px-4 text-center text-green-500">All</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="py-4 px-4">Indie Channels</td>
+                    <td className="py-4 px-4 text-center">Limited</td>
+                    <td className="py-4 px-4 text-center bg-primary/10">Full Access</td>
+                    <td className="py-4 px-4 text-center text-green-500">Full Access</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="py-4 px-4">Custom Playlists</td>
                     <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
-                    <td className="py-4 px-4 text-center bg-primary/10">10</td>
-                    <td className="py-4 px-4 text-center">Unlimited</td>
+                    <td className="py-4 px-4 text-center bg-primary/10">Up to 10</td>
+                    <td className="py-4 px-4 text-center text-green-500">Unlimited</td>
                   </tr>
                   <tr className="border-b border-border">
                     <td className="py-4 px-4">Offline Downloads</td>
@@ -347,11 +389,23 @@ const PlansSection = () => {
                     <td className="py-4 px-4 text-center bg-primary/10">2</td>
                     <td className="py-4 px-4 text-center">4</td>
                   </tr>
-                  <tr>
-                    <td className="py-4 px-4">Exclusive Content</td>
+                  <tr className="border-b border-border">
+                    <td className="py-4 px-4">Smart Features (Binge Mode, Recommendations)</td>
                     <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
-                    <td className="py-4 px-4 text-center bg-primary/10">Early Access</td>
-                    <td className="py-4 px-4 text-center text-green-500">Full Access</td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="py-4 px-4">Skip Intros</td>
+                    <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  </tr>
+                  <tr>
+                    <td className="py-4 px-4">Priority Playback</td>
+                    <td className="py-4 px-4 text-center"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center bg-primary/10"><X className="h-5 w-5 text-red-500 mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
                   </tr>
                 </tbody>
               </table>
