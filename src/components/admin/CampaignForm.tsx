@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Loader2, X, Plus, Search } from "lucide-react";
+import { CalendarIcon, Loader2, X, Plus, Search, List, Grid } from "lucide-react";
 import type { Campaign } from "./CampaignList";
 
 const POSITIONS = ['pre_roll', 'mid_roll', 'post_roll', 'live_break'];
@@ -35,6 +35,7 @@ interface Creative {
   position_pre: boolean;
   position_mid: boolean;
   position_post: boolean;
+  video_url: string | null;
 }
 
 interface Channel {
@@ -47,6 +48,7 @@ interface Content {
   id: string;
   title: string;
   type: string;
+  poster_url: string | null;
 }
 
 interface CampaignCreative {
@@ -67,6 +69,8 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
   const [channels, setChannels] = useState<Channel[]>([]);
   const [contents, setContents] = useState<Content[]>([]);
   const [contentSearch, setContentSearch] = useState("");
+  const [contentViewMode, setContentViewMode] = useState<'list' | 'grid'>('list');
+  const [creativesViewMode, setCreativesViewMode] = useState<'list' | 'grid'>('list');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -106,10 +110,10 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
 
   const fetchData = async () => {
     const [creativesRes, liveChannelsRes, indieChannelsRes, contentsRes] = await Promise.all([
-      supabase.from('ads').select('id, name, duration_seconds, position_pre, position_mid, position_post').eq('status', 'active'),
+      supabase.from('ads').select('id, name, duration_seconds, position_pre, position_mid, position_post, video_url').eq('status', 'active'),
       supabase.from('live_channels').select('id, name').order('name'),
       supabase.from('indie_channels').select('id, name').eq('is_active', true).order('name'),
-      supabase.from('contents').select('id, title, type').order('title').limit(200),
+      supabase.from('contents').select('id, title, type, poster_url').order('title').limit(200),
     ]);
 
     if (creativesRes.data) setCreatives(creativesRes.data);
@@ -581,19 +585,76 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
 
             <TabsContent value="creatives" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label>Select Ad Creatives</Label>
-                <Select onValueChange={addCreative}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose an ad creative to add..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {creatives.filter(c => !selectedCreatives.find(sc => sc.creative_id === c.id)).map((creative) => (
-                      <SelectItem key={creative.id} value={creative.id}>
-                        {creative.name} ({creative.duration_seconds}s)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center justify-between">
+                  <Label>Select Ad Creatives</Label>
+                  <div className="flex items-center gap-1 border rounded-lg p-1">
+                    <Button
+                      variant={creativesViewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setCreativesViewMode('list')}
+                      className="h-7 px-2"
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant={creativesViewMode === 'grid' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setCreativesViewMode('grid')}
+                      className="h-7 px-2"
+                    >
+                      <Grid className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {creativesViewMode === 'list' ? (
+                  <Select onValueChange={addCreative}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose an ad creative to add..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {creatives.filter(c => !selectedCreatives.find(sc => sc.creative_id === c.id)).map((creative) => (
+                        <SelectItem key={creative.id} value={creative.id}>
+                          {creative.name} ({creative.duration_seconds}s)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <ScrollArea className="h-64 border rounded-lg p-2">
+                    <div className="grid grid-cols-3 gap-3">
+                      {creatives.filter(c => !selectedCreatives.find(sc => sc.creative_id === c.id)).map((creative) => (
+                        <div
+                          key={creative.id}
+                          onClick={() => addCreative(creative.id)}
+                          className="cursor-pointer rounded-lg border hover:border-primary transition-colors overflow-hidden group"
+                        >
+                          <div className="aspect-video bg-muted relative">
+                            {creative.video_url ? (
+                              <video
+                                src={creative.video_url}
+                                className="w-full h-full object-cover"
+                                muted
+                                preload="metadata"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                                No Preview
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Plus className="w-8 h-8 text-white" />
+                            </div>
+                          </div>
+                          <div className="p-2">
+                            <p className="text-sm font-medium truncate">{creative.name}</p>
+                            <p className="text-xs text-muted-foreground">{creative.duration_seconds}s</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
               </div>
 
               {selectedCreatives.length > 0 && (
@@ -605,14 +666,30 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
                       if (!creative) return null;
                       return (
                         <div key={sc.creative_id} className="flex items-center justify-between p-3">
-                          <div>
-                            <p className="font-medium">{creative.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {creative.duration_seconds}s • 
-                              {creative.position_pre && ' Pre'}
-                              {creative.position_mid && ' Mid'}
-                              {creative.position_post && ' Post'}
-                            </p>
+                          <div className="flex items-center gap-3">
+                            <div className="w-16 h-10 rounded bg-muted overflow-hidden flex-shrink-0">
+                              {creative.video_url ? (
+                                <video
+                                  src={creative.video_url}
+                                  className="w-full h-full object-cover"
+                                  muted
+                                  preload="metadata"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                                  No Preview
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium">{creative.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {creative.duration_seconds}s • 
+                                {creative.position_pre && ' Pre'}
+                                {creative.position_mid && ' Mid'}
+                                {creative.position_post && ' Post'}
+                              </p>
+                            </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="flex items-center gap-2">
@@ -660,9 +737,32 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
               </div>
 
               <div className="space-y-2">
-                <Label>Target Content (optional)</Label>
-                <p className="text-xs text-muted-foreground mb-2">Select specific videos/shows or leave empty for all content.</p>
-                <div className="relative mb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Target Content (optional)</Label>
+                    <p className="text-xs text-muted-foreground">Select specific videos/shows or leave empty for all content.</p>
+                  </div>
+                  <div className="flex items-center gap-1 border rounded-lg p-1">
+                    <Button
+                      variant={contentViewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setContentViewMode('list')}
+                      className="h-7 px-2"
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant={contentViewMode === 'grid' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setContentViewMode('grid')}
+                      className="h-7 px-2"
+                    >
+                      <Grid className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search content..."
@@ -671,21 +771,80 @@ export function CampaignForm({ open, onOpenChange, campaign, onSave }: CampaignF
                     className="pl-9"
                   />
                 </div>
-                <ScrollArea className="h-48 border rounded-lg p-2">
-                  {filteredContents.map((content) => (
-                    <div key={content.id} className="flex items-center space-x-2 py-1">
-                      <Checkbox
-                        id={content.id}
-                        checked={selectedContentIds.includes(content.id)}
-                        onCheckedChange={() => toggleContent(content.id)}
-                      />
-                      <label htmlFor={content.id} className="text-sm cursor-pointer">
-                        {content.title}
-                        <Badge variant="outline" className="ml-2 text-xs">{content.type}</Badge>
-                      </label>
+                
+                {contentViewMode === 'list' ? (
+                  <ScrollArea className="h-48 border rounded-lg p-2">
+                    {filteredContents.map((content) => (
+                      <div key={content.id} className="flex items-center space-x-3 py-1.5">
+                        <Checkbox
+                          id={content.id}
+                          checked={selectedContentIds.includes(content.id)}
+                          onCheckedChange={() => toggleContent(content.id)}
+                        />
+                        <div className="w-12 h-8 rounded bg-muted overflow-hidden flex-shrink-0">
+                          {content.poster_url ? (
+                            <img
+                              src={content.poster_url}
+                              alt={content.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-[8px]">
+                              No Image
+                            </div>
+                          )}
+                        </div>
+                        <label htmlFor={content.id} className="text-sm cursor-pointer flex-1 truncate">
+                          {content.title}
+                        </label>
+                        <Badge variant="outline" className="text-xs flex-shrink-0">{content.type}</Badge>
+                      </div>
+                    ))}
+                  </ScrollArea>
+                ) : (
+                  <ScrollArea className="h-64 border rounded-lg p-2">
+                    <div className="grid grid-cols-4 gap-3">
+                      {filteredContents.map((content) => (
+                        <div
+                          key={content.id}
+                          onClick={() => toggleContent(content.id)}
+                          className={cn(
+                            "cursor-pointer rounded-lg border-2 transition-colors overflow-hidden",
+                            selectedContentIds.includes(content.id) 
+                              ? "border-primary bg-primary/10" 
+                              : "border-transparent hover:border-muted-foreground/30"
+                          )}
+                        >
+                          <div className="aspect-video bg-muted relative">
+                            {content.poster_url ? (
+                              <img
+                                src={content.poster_url}
+                                alt={content.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                                No Image
+                              </div>
+                            )}
+                            {selectedContentIds.includes(content.id) && (
+                              <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                <svg className="w-3 h-3 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-1.5">
+                            <p className="text-xs font-medium truncate">{content.title}</p>
+                            <Badge variant="outline" className="text-[10px] mt-0.5">{content.type}</Badge>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </ScrollArea>
+                  </ScrollArea>
+                )}
+                
                 {selectedContentIds.length > 0 && (
                   <p className="text-sm text-muted-foreground">{selectedContentIds.length} items selected</p>
                 )}
