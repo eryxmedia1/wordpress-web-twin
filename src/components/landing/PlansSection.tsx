@@ -28,12 +28,12 @@ const PlansSection = () => {
               </li>
             </ul>
             <Link to="/signup?plan=free">
-              <Button className="w-full mt-6 bg-[#e50914] hover:bg-[#f6121d]">Get Started</Button>
+              <Button className="w-full mt-6 bg-primary hover:bg-primary/90">Get Started</Button>
             </Link>
           </div>
           
-          <div className="bg-[#222] p-6 rounded-lg border-2 border-[#e50914] relative">
-            <div className="absolute -top-3 -right-3 bg-[#e50914] text-white text-sm font-bold py-1 px-3 rounded-full">
+          <div className="bg-[#222] p-6 rounded-lg border-2 border-primary relative">
+            <div className="absolute -top-3 -right-3 bg-primary text-primary-foreground text-sm font-bold py-1 px-3 rounded-full">
               Popular
             </div>
             <h3 className="text-xl font-bold mb-4">Standard</h3>
@@ -53,7 +53,7 @@ const PlansSection = () => {
               </li>
             </ul>
             <Link to="/signup?plan=standard">
-              <Button className="w-full mt-6 bg-[#e50914] hover:bg-[#f6121d]">Get Started</Button>
+              <Button className="w-full mt-6 bg-primary hover:bg-primary/90">Get Started</Button>
             </Link>
           </div>
           
@@ -79,7 +79,7 @@ const PlansSection = () => {
               </li>
             </ul>
             <Link to="/signup?plan=premium">
-              <Button className="w-full mt-6 bg-[#e50914] hover:bg-[#f6121d]">Get Started</Button>
+              <Button className="w-full mt-6 bg-primary hover:bg-primary/90">Get Started</Button>
             </Link>
           </div>
         </div>
