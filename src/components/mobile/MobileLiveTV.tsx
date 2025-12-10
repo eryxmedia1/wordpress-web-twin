@@ -9,6 +9,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import { useAds } from "@/hooks/useAds";
 import { AdBreakOverlay } from "@/components/AdBreakOverlay";
 import { useProfile } from "@/context/ProfileContext";
+import { useLiveViewerTracking } from "@/hooks/useLiveViewerTracking";
 
 interface Channel {
   id: string;
@@ -93,6 +94,9 @@ export default function MobileLiveTV() {
     membershipTier: 'free',
     deviceType: 'mobile',
   });
+
+  // Real-time viewer tracking for analytics
+  useLiveViewerTracking(selectedChannel?.id || null, isPlaying && !isAdPlaying);
 
   // Calculate next ad break countdown - 15 minutes for 4 breaks per hour
   const midrollIntervalSeconds = 15 * 60; // 15 minutes = 900 seconds

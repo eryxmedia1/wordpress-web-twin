@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import AdminNavbar from "@/components/AdminNavbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +19,9 @@ import {
   TrendingUp,
   Monitor,
   Smartphone,
-  Tv
+  Tv,
+  Radio,
+  RefreshCw
 } from "lucide-react";
 
 interface ChannelStats {
@@ -39,6 +42,22 @@ interface GeoData {
   watchHours: number;
 }
 
+interface LiveViewerStats {
+  total_viewers: number;
+  total_devices: Record<string, number>;
+  total_countries: Record<string, number>;
+  channels: Array<{
+    channel_id: string;
+    channel_name: string;
+    channel_slug: string;
+    logo_url: string | null;
+    viewer_count: number;
+    devices: Record<string, number>;
+    countries: Record<string, number>;
+  }>;
+  timestamp: string;
+}
+
 const AdminChannelAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [channelStats, setChannelStats] = useState<ChannelStats[]>([]);
@@ -49,9 +68,40 @@ const AdminChannelAnalytics = () => {
   const [geoByRegion, setGeoByRegion] = useState<GeoData[]>([]);
   const [geoByCity, setGeoByCity] = useState<GeoData[]>([]);
   const [deviceStats, setDeviceStats] = useState<{ device: string; count: number }[]>([]);
+  
+  // Live viewer stats
+  const [liveViewerStats, setLiveViewerStats] = useState<LiveViewerStats | null>(null);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     fetchAnalytics();
+    fetchLiveViewers();
+    
+    // Auto-refresh live viewers every 30 seconds
+    const interval = setInterval(() => {
+      fetchLiveViewers();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchLiveViewers = useCallback(async () => {
+    setLiveLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-active-viewers');
+      
+      if (error) {
+        console.error('Error fetching live viewers:', error);
+      } else {
+        setLiveViewerStats(data);
+        setLastUpdated(new Date());
+      }
+    } catch (error) {
+      console.error('Error fetching live viewers:', error);
+    } finally {
+      setLiveLoading(false);
+    }
   }, []);
 
   const fetchAnalytics = async () => {
@@ -232,7 +282,24 @@ const AdminChannelAnalytics = () => {
         </div>
 
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+          <Card className="border-red-500/50 bg-red-500/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Radio className="w-4 h-4 text-red-500 animate-pulse" />
+                Watching Now
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-red-500">
+                  {liveViewerStats?.total_viewers || 0}
+                </span>
+                <span className="text-xs text-muted-foreground">live viewers</span>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Views</CardTitle>
@@ -282,8 +349,12 @@ const AdminChannelAnalytics = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="channels" className="space-y-6">
+        <Tabs defaultValue="live" className="space-y-6">
           <TabsList>
+            <TabsTrigger value="live" className="gap-2">
+              <Radio className="w-4 h-4" />
+              Live Now
+            </TabsTrigger>
             <TabsTrigger value="channels" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Channels
@@ -297,6 +368,207 @@ const AdminChannelAnalytics = () => {
               Devices
             </TabsTrigger>
           </TabsList>
+
+          {/* Live Now Tab */}
+          <TabsContent value="live">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Radio className="w-5 h-5 text-red-500 animate-pulse" />
+                      Real-Time Viewers
+                    </CardTitle>
+                    <CardDescription>
+                      {lastUpdated && (
+                        <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
+                      )}
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={fetchLiveViewers}
+                    disabled={liveLoading}
+                  >
+                    <RefreshCw className={cn("w-4 h-4 mr-2", liveLoading && "animate-spin")} />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {liveViewerStats && liveViewerStats.total_viewers > 0 ? (
+                  <div className="space-y-6">
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card>
+                        <CardContent className="pt-4">
+                          <div className="text-center">
+                            <div className="text-4xl font-bold text-red-500">
+                              {liveViewerStats.total_viewers}
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-1">Total Watching</div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-4">
+                          <div className="text-center">
+                            <div className="text-4xl font-bold text-primary">
+                              {liveViewerStats.channels.length}
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-1">Active Channels</div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-4">
+                          <div className="text-center">
+                            <div className="text-4xl font-bold text-primary">
+                              {Object.keys(liveViewerStats.total_countries).length}
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-1">Countries</div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Per-Channel Breakdown */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Viewers by Channel</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Channel</TableHead>
+                            <TableHead className="text-center">Viewers</TableHead>
+                            <TableHead>Device Breakdown</TableHead>
+                            <TableHead>Top Locations</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {liveViewerStats.channels.map((channel) => (
+                            <TableRow key={channel.channel_id}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded bg-muted overflow-hidden">
+                                    {channel.logo_url ? (
+                                      <img src={channel.logo_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center">
+                                        <span className="text-sm font-bold text-muted-foreground">
+                                          {channel.channel_name.charAt(0)}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">{channel.channel_name}</span>
+                                    <div className="flex items-center gap-1 text-xs text-red-500">
+                                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                                      Live
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center justify-center">
+                                  <span className="text-2xl font-bold text-red-500">
+                                    {channel.viewer_count}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-2">
+                                  {Object.entries(channel.devices).map(([device, count]) => (
+                                    <span 
+                                      key={device} 
+                                      className="flex items-center gap-1 px-2 py-1 rounded bg-muted text-xs"
+                                    >
+                                      {getDeviceIcon(device)}
+                                      {count}
+                                    </span>
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {Object.entries(channel.countries)
+                                    .sort(([,a], [,b]) => b - a)
+                                    .slice(0, 3)
+                                    .map(([country, count]) => (
+                                      <span 
+                                        key={country} 
+                                        className="px-2 py-1 rounded bg-muted text-xs"
+                                      >
+                                        {country}: {count}
+                                      </span>
+                                    ))}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Device & Country Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm">Device Distribution</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {Object.entries(liveViewerStats.total_devices)
+                              .sort(([,a], [,b]) => b - a)
+                              .map(([device, count]) => (
+                                <div key={device} className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    {getDeviceIcon(device)}
+                                    <span className="capitalize">{device}</span>
+                                  </div>
+                                  <span className="font-medium">{count}</span>
+                                </div>
+                              ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm">Countries</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {Object.entries(liveViewerStats.total_countries)
+                              .sort(([,a], [,b]) => b - a)
+                              .slice(0, 5)
+                              .map(([country, count]) => (
+                                <div key={country} className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Globe className="w-4 h-4" />
+                                    <span>{country}</span>
+                                  </div>
+                                  <span className="font-medium">{count}</span>
+                                </div>
+                              ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Radio className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Live Viewers</h3>
+                    <p className="text-muted-foreground">
+                      There are no viewers watching Live TV channels right now.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Channels Tab */}
           <TabsContent value="channels">
@@ -456,20 +728,21 @@ const AdminChannelAnalytics = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {deviceStats.map((item, i) => (
                     <Card key={i}>
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                          {getDeviceIcon(item.device)}
+                      <CardContent className="pt-4">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-full bg-primary/10">
+                            {getDeviceIcon(item.device)}
+                          </div>
                           <div>
-                            <p className="font-medium capitalize">{item.device || "Unknown"}</p>
+                            <p className="text-sm text-muted-foreground capitalize">{item.device}</p>
                             <p className="text-2xl font-bold">{item.count.toLocaleString()}</p>
-                            <p className="text-xs text-muted-foreground">views</p>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
                   {deviceStats.length === 0 && (
-                    <p className="text-muted-foreground text-center py-8 col-span-3">No device data yet</p>
+                    <p className="text-muted-foreground text-center py-4 col-span-3">No data yet</p>
                   )}
                 </div>
               </CardContent>
