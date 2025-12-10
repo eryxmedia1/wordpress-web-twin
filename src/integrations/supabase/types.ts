@@ -1500,6 +1500,7 @@ export type Database = {
         Row: {
           ad_break_duration_seconds: number | null
           ad_breaks_per_hour: number | null
+          allowed_tiers: string[] | null
           channel_id: string
           created_at: string | null
           id: string
@@ -1513,6 +1514,7 @@ export type Database = {
         Insert: {
           ad_break_duration_seconds?: number | null
           ad_breaks_per_hour?: number | null
+          allowed_tiers?: string[] | null
           channel_id: string
           created_at?: string | null
           id?: string
@@ -1526,6 +1528,7 @@ export type Database = {
         Update: {
           ad_break_duration_seconds?: number | null
           ad_breaks_per_hour?: number | null
+          allowed_tiers?: string[] | null
           channel_id?: string
           created_at?: string | null
           id?: string

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -53,7 +54,14 @@ interface Playlist {
   is_active: boolean;
   ad_breaks_per_hour: number | null;
   ad_break_duration_seconds: number | null;
+  allowed_tiers: string[] | null;
 }
+
+const MEMBERSHIP_TIERS = [
+  { value: 'free', label: 'Free', description: 'Ad-supported users' },
+  { value: 'standard', label: 'Standard', description: '$9.95/month' },
+  { value: 'premium', label: 'Premium', description: '$19.95/month' },
+];
 
 interface PlaylistItem {
   id: string;
@@ -210,6 +218,7 @@ export default function AdminLiveTVPlaylists() {
     is_active: true,
     ad_breaks_per_hour: 2,
     ad_break_duration_seconds: 30,
+    allowed_tiers: ['free', 'standard', 'premium'] as string[],
   });
 
   const sensors = useSensors(
@@ -305,6 +314,7 @@ export default function AdminLiveTVPlaylists() {
       is_active: true,
       ad_breaks_per_hour: 2,
       ad_break_duration_seconds: 30,
+      allowed_tiers: ['free', 'standard', 'premium'],
     });
     setEditingPlaylist(null);
   };
@@ -319,6 +329,7 @@ export default function AdminLiveTVPlaylists() {
       is_active: playlist.is_active,
       ad_breaks_per_hour: playlist.ad_breaks_per_hour || 2,
       ad_break_duration_seconds: playlist.ad_break_duration_seconds || 30,
+      allowed_tiers: playlist.allowed_tiers || ['free', 'standard', 'premium'],
     });
     setIsDialogOpen(true);
   };
@@ -356,6 +367,7 @@ export default function AdminLiveTVPlaylists() {
             is_active: formData.is_active,
             ad_breaks_per_hour: formData.ad_breaks_per_hour,
             ad_break_duration_seconds: formData.ad_break_duration_seconds,
+            allowed_tiers: formData.allowed_tiers,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingPlaylist.id);
@@ -371,6 +383,7 @@ export default function AdminLiveTVPlaylists() {
           is_active: formData.is_active,
           ad_breaks_per_hour: formData.ad_breaks_per_hour,
           ad_break_duration_seconds: formData.ad_break_duration_seconds,
+          allowed_tiers: formData.allowed_tiers,
         });
         if (error) throw error;
         toast.success('Playlist created');
@@ -759,6 +772,41 @@ export default function AdminLiveTVPlaylists() {
                   </div>
                 </div>
 
+                {/* Membership Access */}
+                <div className="border-t pt-4 mt-2">
+                  <Label className="text-sm font-semibold text-foreground mb-2 block">Membership Access</Label>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Select which membership tiers can access this playlist
+                  </p>
+                  <div className="space-y-2">
+                    {MEMBERSHIP_TIERS.map((tier) => (
+                      <div key={tier.value} className="flex items-center space-x-3 p-2 rounded-md border border-border hover:bg-accent/50 transition-colors">
+                        <Checkbox
+                          id={`playlist-tier-${tier.value}`}
+                          checked={formData.allowed_tiers.includes(tier.value)}
+                          onCheckedChange={(checked) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              allowed_tiers: checked
+                                ? [...prev.allowed_tiers, tier.value]
+                                : prev.allowed_tiers.filter(t => t !== tier.value)
+                            }));
+                          }}
+                        />
+                        <div className="flex-1">
+                          <label htmlFor={`playlist-tier-${tier.value}`} className="text-sm font-medium cursor-pointer">
+                            {tier.label}
+                          </label>
+                          <p className="text-xs text-muted-foreground">{tier.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {formData.allowed_tiers.length === 0 && (
+                    <p className="text-xs text-destructive mt-2">At least one tier must be selected</p>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-between">
                   <Label>Activate Immediately</Label>
                   <Switch 
@@ -766,7 +814,7 @@ export default function AdminLiveTVPlaylists() {
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))} 
                   />
                 </div>
-                <Button onClick={handleSavePlaylist} className="w-full" disabled={isSaving}>
+                <Button onClick={handleSavePlaylist} className="w-full" disabled={isSaving || formData.allowed_tiers.length === 0}>
                   {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {editingPlaylist ? 'Update' : 'Create'} Playlist
                 </Button>
