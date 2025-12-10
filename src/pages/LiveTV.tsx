@@ -137,6 +137,118 @@ export default function LiveTV() {
     setWatchTimeSeconds(0);
   }, [selectedChannel?.id]);
 
+  // Track view to channel_views when playback starts
+  const viewTrackedRef = useRef<string | null>(null);
+  const viewRecordIdRef = useRef<string | null>(null);
+  const viewStartTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    const trackView = async () => {
+      if (!selectedChannel?.id || !isPlaying || isAdPlaying) return;
+      
+      // Only track once per channel session
+      if (viewTrackedRef.current === selectedChannel.id) return;
+      viewTrackedRef.current = selectedChannel.id;
+      viewStartTimeRef.current = Date.now();
+
+      try {
+        // Get geo data
+        const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/detect-geo`;
+        const session = await supabase.auth.getSession();
+        
+        let geoData = {
+          country: null as string | null,
+          region: null as string | null,
+          city: null as string | null,
+          postal: null as string | null,
+          timezone: null as string | null,
+        };
+
+        try {
+          const geoRes = await fetch(funcUrl, {
+            headers: {
+              'Authorization': `Bearer ${session.data.session?.access_token || ''}`,
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRqdHZzbG9qeGtrY3JwY29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjUxNjcsImV4cCI6MjA2MjYwMTE2N30.TC4eACBOJsfggnuB3OyOK7x4O9yp7bjzOP5Tr9_jHds',
+            },
+          });
+          if (geoRes.ok) {
+            const geo = await geoRes.json();
+            geoData = {
+              country: geo.country || null,
+              region: geo.region || null,
+              city: geo.city || null,
+              postal: geo.postal || null,
+              timezone: geo.timezone || null,
+            };
+          }
+        } catch (e) {
+          console.error('Error fetching geo data:', e);
+        }
+
+        // Insert view record
+        const { data: viewRecord } = await supabase.from('channel_views').insert({
+          live_channel_id: selectedChannel.id,
+          user_id: session.data.session?.user?.id || null,
+          profile_id: currentProfile?.id || null,
+          device_type: 'desktop',
+          geo_country: geoData.country,
+          geo_region: geoData.region,
+          geo_city: geoData.city,
+          geo_postal: geoData.postal,
+          time_zone: geoData.timezone,
+          duration_seconds: 0,
+          progress_percent: 0,
+        }).select('id').single();
+
+        if (viewRecord) {
+          viewRecordIdRef.current = viewRecord.id;
+          console.log('[LiveTV] View tracked:', viewRecord.id);
+        }
+      } catch (error) {
+        console.error('Error tracking view:', error);
+      }
+    };
+
+    trackView();
+  }, [selectedChannel?.id, isPlaying, isAdPlaying, currentProfile?.id]);
+
+  // Update view duration periodically
+  useEffect(() => {
+    if (!viewRecordIdRef.current || !isPlaying) return;
+
+    const updateDuration = async () => {
+      const durationSeconds = Math.floor((Date.now() - viewStartTimeRef.current) / 1000);
+      
+      await supabase
+        .from('channel_views')
+        .update({ duration_seconds: durationSeconds })
+        .eq('id', viewRecordIdRef.current);
+    };
+
+    // Update every 30 seconds
+    const interval = setInterval(updateDuration, 30000);
+
+    return () => {
+      clearInterval(interval);
+      // Final update on unmount
+      if (viewRecordIdRef.current) {
+        const durationSeconds = Math.floor((Date.now() - viewStartTimeRef.current) / 1000);
+        supabase
+          .from('channel_views')
+          .update({ duration_seconds: durationSeconds })
+          .eq('id', viewRecordIdRef.current);
+      }
+    };
+  }, [isPlaying]);
+
+  // Reset view tracking when channel changes
+  useEffect(() => {
+    return () => {
+      viewTrackedRef.current = null;
+      viewRecordIdRef.current = null;
+    };
+  }, [selectedChannel?.id]);
+
   // Fetch follow status and follower count for selected channel
   useEffect(() => {
     const fetchFollowStatus = async () => {
