@@ -108,7 +108,7 @@ export const useMembershipAccess = (contentId?: string) => {
           showPreroll: true,
           showMidroll: true,
           showPostroll: true,
-          maxAdBreaks: 99 // Unlimited
+          maxAdBreaks: 4 // 4 mid-roll breaks per hour (every 15 minutes)
         };
     }
   };
