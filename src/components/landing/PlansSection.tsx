@@ -26,6 +26,10 @@ const PlansSection = () => {
                 <span className="text-green-500 mr-2">✓</span>
                 <span>SD quality (480p)</span>
               </li>
+              <li className="flex items-center">
+                <span className="text-green-500 mr-2">✓</span>
+                <span>Basic channels only</span>
+              </li>
             </ul>
             <Link to="/signup?plan=free">
               <Button className="w-full mt-6 bg-primary hover:bg-primary/90">Get Started</Button>
@@ -37,19 +41,23 @@ const PlansSection = () => {
               Popular
             </div>
             <h3 className="text-xl font-bold mb-4">Standard</h3>
-            <p className="text-3xl font-bold mb-6">$9.99<span className="text-sm font-normal">/month</span></p>
+            <p className="text-3xl font-bold mb-6">$9.95<span className="text-sm font-normal">/month</span></p>
             <ul className="space-y-3">
               <li className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
-                <span>Full content access</span>
+                <span>Most content access</span>
               </li>
               <li className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
-                <span>Ad-free viewing</span>
+                <span>Limited ads (max 2 per show)</span>
               </li>
               <li className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
                 <span>HD quality (1080p)</span>
+              </li>
+              <li className="flex items-center">
+                <span className="text-green-500 mr-2">✓</span>
+                <span>Most channels included</span>
               </li>
             </ul>
             <Link to="/signup?plan=standard">
@@ -59,15 +67,15 @@ const PlansSection = () => {
           
           <div className="bg-[#222] p-6 rounded-lg">
             <h3 className="text-xl font-bold mb-4">Premium</h3>
-            <p className="text-3xl font-bold mb-6">$14.99<span className="text-sm font-normal">/month</span></p>
+            <p className="text-3xl font-bold mb-6">$19.95<span className="text-sm font-normal">/month</span></p>
             <ul className="space-y-3">
               <li className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
-                <span>Full content access</span>
+                <span>All content access</span>
               </li>
               <li className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
-                <span>Ad-free viewing</span>
+                <span>No ads ever</span>
               </li>
               <li className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
@@ -75,7 +83,7 @@ const PlansSection = () => {
               </li>
               <li className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
-                <span>Multiple devices</span>
+                <span>All channels included</span>
               </li>
             </ul>
             <Link to="/signup?plan=premium">
