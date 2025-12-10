@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { Tv, Video, Radio } from "lucide-react";
+import { Tv, Video, Radio, Check, X } from "lucide-react";
 
 const PlansSection = () => {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [isChannelAnnual, setIsChannelAnnual] = useState(false);
 
   const getPrice = (monthlyPrice: number) => {
     if (isAnnual) {
@@ -17,7 +18,7 @@ const PlansSection = () => {
   };
 
   const getChannelPrice = (monthlyPrice: number) => {
-    if (isAnnual) {
+    if (isChannelAnnual) {
       const annualPrice = monthlyPrice * 12 * 0.9; // 10% off
       return Math.round(annualPrice / 12);
     }
@@ -127,9 +128,22 @@ const PlansSection = () => {
         </div>
 
         {/* Create Your Own TV Channel Section */}
-        <div className="mt-20">
+        <div className="mt-20 pt-16 border-t border-[#333]">
           <h2 className="text-3xl md:text-5xl font-bold mb-6">Create Your Own TV Channel</h2>
-          <p className="text-xl mb-12">Launch your own streaming channel on Zoe RatedTV</p>
+          <p className="text-xl mb-8">Launch your own streaming channel on Zoe RatedTV</p>
+          
+          {/* Channel Billing Toggle */}
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <span className={`text-lg ${!isChannelAnnual ? 'text-primary font-semibold' : 'text-gray-400'}`}>Monthly</span>
+            <Switch
+              checked={isChannelAnnual}
+              onCheckedChange={setIsChannelAnnual}
+              className="data-[state=checked]:bg-primary"
+            />
+            <span className={`text-lg ${isChannelAnnual ? 'text-primary font-semibold' : 'text-gray-400'}`}>
+              Annual <span className="text-green-500 text-sm font-bold ml-1">Save 10%</span>
+            </span>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
             <div className="bg-[#222] p-6 rounded-lg">
@@ -137,7 +151,7 @@ const PlansSection = () => {
                 <Video className="h-8 w-8 text-primary" />
                 <h3 className="text-xl font-bold">Basic</h3>
               </div>
-              <p className="text-3xl font-bold mb-6">${getChannelPrice(295)}<span className="text-sm font-normal">/{isAnnual ? 'year' : 'month'}</span></p>
+              <p className="text-3xl font-bold mb-6">${getChannelPrice(295)}<span className="text-sm font-normal">/{isChannelAnnual ? 'year' : 'month'}</span></p>
               <ul className="space-y-3">
                 <li className="flex items-center">
                   <span className="text-green-500 mr-2">✓</span>
@@ -169,7 +183,7 @@ const PlansSection = () => {
                 <Tv className="h-8 w-8 text-primary" />
                 <h3 className="text-xl font-bold">Professional</h3>
               </div>
-              <p className="text-3xl font-bold mb-6">${getChannelPrice(495)}<span className="text-sm font-normal">/{isAnnual ? 'year' : 'month'}</span></p>
+              <p className="text-3xl font-bold mb-6">${getChannelPrice(495)}<span className="text-sm font-normal">/{isChannelAnnual ? 'year' : 'month'}</span></p>
               <ul className="space-y-3">
                 <li className="flex items-center">
                   <span className="text-green-500 mr-2">✓</span>
@@ -198,7 +212,7 @@ const PlansSection = () => {
                 <Radio className="h-8 w-8 text-primary" />
                 <h3 className="text-xl font-bold">Enterprise</h3>
               </div>
-              <p className="text-3xl font-bold mb-6">${getChannelPrice(995)}<span className="text-sm font-normal">/{isAnnual ? 'year' : 'month'}</span></p>
+              <p className="text-3xl font-bold mb-6">${getChannelPrice(995)}<span className="text-sm font-normal">/{isChannelAnnual ? 'year' : 'month'}</span></p>
               <ul className="space-y-3">
                 <li className="flex items-center">
                   <span className="text-green-500 mr-2">✓</span>
@@ -220,6 +234,106 @@ const PlansSection = () => {
               <Link to="/signup?channel=enterprise">
                 <Button className="w-full mt-6 bg-primary hover:bg-primary/90">Get Started</Button>
               </Link>
+            </div>
+          </div>
+
+          {/* Channel Plans Comparison Table */}
+          <div className="mt-16">
+            <h3 className="text-2xl font-bold mb-8">Compare Channel Plans</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[#333]">
+                    <th className="py-4 px-4 text-gray-400 font-normal">Features</th>
+                    <th className="py-4 px-4 text-center">
+                      <div className="font-bold">Basic</div>
+                      <div className="text-primary text-sm">${getChannelPrice(295)}/mo</div>
+                    </th>
+                    <th className="py-4 px-4 text-center bg-primary/10 rounded-t-lg">
+                      <div className="font-bold">Professional</div>
+                      <div className="text-primary text-sm">${getChannelPrice(495)}/mo</div>
+                    </th>
+                    <th className="py-4 px-4 text-center">
+                      <div className="font-bold">Enterprise</div>
+                      <div className="text-primary text-sm">${getChannelPrice(995)}/mo</div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-[#333]">
+                    <td className="py-4 px-4">Content Rows</td>
+                    <td className="py-4 px-4 text-center">5</td>
+                    <td className="py-4 px-4 text-center bg-primary/10">10</td>
+                    <td className="py-4 px-4 text-center">20</td>
+                  </tr>
+                  <tr className="border-b border-[#333]">
+                    <td className="py-4 px-4">Videos Per Row</td>
+                    <td className="py-4 px-4 text-center">20</td>
+                    <td className="py-4 px-4 text-center bg-primary/10">50</td>
+                    <td className="py-4 px-4 text-center">50</td>
+                  </tr>
+                  <tr className="border-b border-[#333]">
+                    <td className="py-4 px-4">Total Videos</td>
+                    <td className="py-4 px-4 text-center">100</td>
+                    <td className="py-4 px-4 text-center bg-primary/10">500</td>
+                    <td className="py-4 px-4 text-center">1,000</td>
+                  </tr>
+                  <tr className="border-b border-[#333]">
+                    <td className="py-4 px-4">Live Streaming</td>
+                    <td className="py-4 px-4 text-center">
+                      <X className="h-5 w-5 text-red-500 mx-auto" />
+                    </td>
+                    <td className="py-4 px-4 text-center bg-primary/10">
+                      <X className="h-5 w-5 text-red-500 mx-auto" />
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <Check className="h-5 w-5 text-green-500 mx-auto" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-[#333]">
+                    <td className="py-4 px-4">Custom Branding</td>
+                    <td className="py-4 px-4 text-center">
+                      <Check className="h-5 w-5 text-green-500 mx-auto" />
+                    </td>
+                    <td className="py-4 px-4 text-center bg-primary/10">
+                      <Check className="h-5 w-5 text-green-500 mx-auto" />
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <Check className="h-5 w-5 text-green-500 mx-auto" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-[#333]">
+                    <td className="py-4 px-4">Analytics Dashboard</td>
+                    <td className="py-4 px-4 text-center">
+                      <span className="text-gray-400">Basic</span>
+                    </td>
+                    <td className="py-4 px-4 text-center bg-primary/10">
+                      <span className="text-primary">Advanced</span>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <span className="text-primary">Full Access</span>
+                    </td>
+                  </tr>
+                  <tr className="border-b border-[#333]">
+                    <td className="py-4 px-4">Ad Revenue Share</td>
+                    <td className="py-4 px-4 text-center">50%</td>
+                    <td className="py-4 px-4 text-center bg-primary/10">60%</td>
+                    <td className="py-4 px-4 text-center">70%</td>
+                  </tr>
+                  <tr>
+                    <td className="py-4 px-4">Priority Support</td>
+                    <td className="py-4 px-4 text-center">
+                      <X className="h-5 w-5 text-red-500 mx-auto" />
+                    </td>
+                    <td className="py-4 px-4 text-center bg-primary/10">
+                      <Check className="h-5 w-5 text-green-500 mx-auto" />
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <Check className="h-5 w-5 text-green-500 mx-auto" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
