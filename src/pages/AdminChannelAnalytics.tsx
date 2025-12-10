@@ -42,6 +42,24 @@ interface GeoData {
   watchHours: number;
 }
 
+interface ViewerDetail {
+  session_id: string;
+  channel_id: string;
+  channel_name: string;
+  user_id: string | null;
+  user_email: string | null;
+  user_name: string | null;
+  profile_id: string | null;
+  profile_name: string | null;
+  profile_color: string | null;
+  device_type: string;
+  geo_country: string | null;
+  geo_region: string | null;
+  geo_city: string | null;
+  started_at: string;
+  watch_duration_seconds: number;
+}
+
 interface LiveViewerStats {
   total_viewers: number;
   total_devices: Record<string, number>;
@@ -54,7 +72,9 @@ interface LiveViewerStats {
     viewer_count: number;
     devices: Record<string, number>;
     countries: Record<string, number>;
+    viewers: ViewerDetail[];
   }>;
+  all_viewers: ViewerDetail[];
   timestamp: string;
 }
 
@@ -258,6 +278,14 @@ const AdminChannelAnalytics = () => {
     if (device.toLowerCase().includes('mobile')) return <Smartphone className="w-4 h-4" />;
     if (device.toLowerCase().includes('tv')) return <Tv className="w-4 h-4" />;
     return <Monitor className="w-4 h-4" />;
+  };
+
+  const formatDuration = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${mins}m`;
   };
 
   if (loading) {
@@ -556,6 +584,72 @@ const AdminChannelAnalytics = () => {
                         </CardContent>
                       </Card>
                     </div>
+
+                    {/* All Viewers Detailed List */}
+                    {liveViewerStats.all_viewers && liveViewerStats.all_viewers.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">All Active Viewers</h3>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>User / Profile</TableHead>
+                              <TableHead>Channel</TableHead>
+                              <TableHead>Device</TableHead>
+                              <TableHead>Location</TableHead>
+                              <TableHead>Watch Time</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {liveViewerStats.all_viewers.map((viewer) => (
+                              <TableRow key={viewer.session_id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-3">
+                                    <div 
+                                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                                      style={{ backgroundColor: viewer.profile_color || '#d4af37' }}
+                                    >
+                                      {(viewer.profile_name?.[0] || viewer.user_email?.[0] || 'A').toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <div className="font-medium">
+                                        {viewer.profile_name || 'Anonymous'}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {viewer.user_email || 'Guest viewer'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1 text-xs">
+                                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                                    {viewer.channel_name}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    {getDeviceIcon(viewer.device_type)}
+                                    <span className="capitalize text-sm">{viewer.device_type}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    {[viewer.geo_city, viewer.geo_region, viewer.geo_country]
+                                      .filter(Boolean)
+                                      .join(', ') || 'Unknown'}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium">
+                                    {formatDuration(viewer.watch_duration_seconds)}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-12">

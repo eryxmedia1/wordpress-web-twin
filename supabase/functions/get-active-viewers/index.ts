@@ -24,12 +24,15 @@ Deno.serve(async (req) => {
       .delete()
       .lt('last_heartbeat', twoMinutesAgo)
 
-    // Get all active viewers
+    // Get all active viewers with user and profile info
     const { data: activeViewers, error } = await supabase
       .from('live_channel_active_viewers')
       .select(`
         id,
+        session_id,
         live_channel_id,
+        user_id,
+        profile_id,
         device_type,
         geo_country,
         geo_region,
@@ -51,6 +54,24 @@ Deno.serve(async (req) => {
 
     const channelMap = new Map(channels?.map(c => [c.id, c]) || [])
 
+    // Get user profiles (accounts)
+    const userIds = [...new Set(activeViewers?.map(v => v.user_id).filter(Boolean) || [])]
+    const { data: userProfiles } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', userIds.length > 0 ? userIds : ['00000000-0000-0000-0000-000000000000'])
+    
+    const userMap = new Map(userProfiles?.map(u => [u.id, u]) || [])
+
+    // Get user viewing profiles
+    const profileIds = [...new Set(activeViewers?.map(v => v.profile_id).filter(Boolean) || [])]
+    const { data: viewingProfiles } = await supabase
+      .from('user_profiles')
+      .select('id, name, avatar_color, avatar_icon, account_id')
+      .in('id', profileIds.length > 0 ? profileIds : ['00000000-0000-0000-0000-000000000000'])
+    
+    const profileMap = new Map(viewingProfiles?.map(p => [p.id, p]) || [])
+
     // Group by channel
     const channelStats: Record<string, {
       channel_id: string;
@@ -62,17 +83,55 @@ Deno.serve(async (req) => {
       countries: Record<string, number>;
       regions: Record<string, number>;
       cities: Record<string, number>;
+      viewers: Array<{
+        session_id: string;
+        user_email: string | null;
+        user_name: string | null;
+        profile_name: string | null;
+        profile_color: string | null;
+        device_type: string;
+        geo_country: string | null;
+        geo_region: string | null;
+        geo_city: string | null;
+        started_at: string;
+        watch_duration_seconds: number;
+      }>;
     }> = {}
 
     let totalViewers = 0
     const totalDevices: Record<string, number> = {}
     const totalCountries: Record<string, number> = {}
+    
+    // All viewers list for admin
+    const allViewers: Array<{
+      session_id: string;
+      channel_id: string;
+      channel_name: string;
+      user_id: string | null;
+      user_email: string | null;
+      user_name: string | null;
+      profile_id: string | null;
+      profile_name: string | null;
+      profile_color: string | null;
+      device_type: string;
+      geo_country: string | null;
+      geo_region: string | null;
+      geo_city: string | null;
+      started_at: string;
+      watch_duration_seconds: number;
+    }> = []
 
     for (const viewer of activeViewers || []) {
       totalViewers++
       
       const channelId = viewer.live_channel_id
       const channel = channelMap.get(channelId)
+      const user = viewer.user_id ? userMap.get(viewer.user_id) : null
+      const profile = viewer.profile_id ? profileMap.get(viewer.profile_id) : null
+      
+      // Calculate watch duration
+      const startedAt = new Date(viewer.started_at)
+      const watchDurationSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000)
       
       if (!channelStats[channelId]) {
         channelStats[channelId] = {
@@ -84,11 +143,38 @@ Deno.serve(async (req) => {
           devices: {},
           countries: {},
           regions: {},
-          cities: {}
+          cities: {},
+          viewers: []
         }
       }
 
       channelStats[channelId].viewer_count++
+      
+      // Add viewer details
+      const viewerDetail = {
+        session_id: viewer.session_id,
+        user_email: user?.email || null,
+        user_name: user?.full_name || null,
+        profile_name: profile?.name || null,
+        profile_color: profile?.avatar_color || null,
+        device_type: viewer.device_type || 'unknown',
+        geo_country: viewer.geo_country,
+        geo_region: viewer.geo_region,
+        geo_city: viewer.geo_city,
+        started_at: viewer.started_at,
+        watch_duration_seconds: watchDurationSeconds
+      }
+      
+      channelStats[channelId].viewers.push(viewerDetail)
+      
+      // Add to all viewers list
+      allViewers.push({
+        ...viewerDetail,
+        channel_id: channelId,
+        channel_name: channel?.name || 'Unknown',
+        user_id: viewer.user_id,
+        profile_id: viewer.profile_id
+      })
       
       // Device breakdown
       const device = viewer.device_type || 'unknown'
@@ -113,6 +199,7 @@ Deno.serve(async (req) => {
       total_devices: totalDevices,
       total_countries: totalCountries,
       channels: Object.values(channelStats).sort((a, b) => b.viewer_count - a.viewer_count),
+      all_viewers: allViewers.sort((a, b) => b.watch_duration_seconds - a.watch_duration_seconds),
       timestamp: new Date().toISOString()
     }
 
