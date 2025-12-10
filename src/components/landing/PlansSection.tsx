@@ -23,21 +23,23 @@ const VIEWER_PLANS: Record<string, {
       { text: "1080p HD quality", included: true },
     ],
     expandedPerks: [
-      { text: "4K / HDR quality", included: false },
-      { text: "Premium-only content", included: false },
+      // Included features first
       { text: "Pre-roll, mid-roll & post-roll ads", included: true },
       { text: "Up to 4 mid-roll ads per hour", included: true },
       { text: "Ad countdown & 'Ad X of Y' display", included: true },
-      { text: "Ad skipping", included: false },
       { text: "Play content", included: true },
       { text: "Like (👍) content", included: true },
       { text: "Add to My List", included: true },
       { text: "Continue Watching", included: true },
-      { text: "Custom playlists", included: false },
-      { text: "Offline downloads", included: false },
       { text: "Up to 2 profiles", included: true },
       { text: "Kids profile", included: true },
       { text: "Watch on 1 device", included: true },
+      // Excluded features at bottom
+      { text: "4K / HDR quality", included: false },
+      { text: "Premium-only content", included: false },
+      { text: "Ad skipping", included: false },
+      { text: "Custom playlists", included: false },
+      { text: "Offline downloads", included: false },
     ],
   },
   standard: {
@@ -51,7 +53,7 @@ const VIEWER_PLANS: Record<string, {
       { text: "1080p HD quality", included: true },
     ],
     expandedPerks: [
-      { text: "4K / HDR quality", included: false },
+      // Included features first
       { text: "Pre-roll & mid-roll ads only", included: true },
       { text: "Max 2 mid-roll ads per show", included: true },
       { text: "No post-roll ads", included: true },
@@ -66,6 +68,8 @@ const VIEWER_PLANS: Record<string, {
       { text: "Next To Watch", included: true },
       { text: "Binge mode", included: true },
       { text: "Watch on 2 devices", included: true },
+      // Excluded features at bottom
+      { text: "4K / HDR quality", included: false },
     ],
   },
   premium: {
@@ -78,6 +82,7 @@ const VIEWER_PLANS: Record<string, {
       { text: "4K + HDR quality", included: true },
     ],
     expandedPerks: [
+      // All included for Premium
       { text: "NO ADS. EVER.", included: true },
       { text: "Priority playback / fastest load", included: true },
       { text: "Up to 6 profiles", included: true },
@@ -114,14 +119,16 @@ const CREATOR_PLANS: Record<string, {
       { text: "Custom rows (max 5)", included: true },
     ],
     expandedPerks: [
+      // Included features first
       { text: "Max 100 videos total", included: true },
       { text: "Max 20 videos per row", included: true },
+      { text: "Basic analytics (views, followers)", included: true },
+      // Excluded features at bottom
       { text: "TV seasons/episodes", included: false },
       { text: "Bulk import", included: false },
-      { text: "Ads disabled", included: false },
+      { text: "Platform ads", included: false },
       { text: "Revenue share", included: false },
       { text: "Sponsorships", included: false },
-      { text: "Basic analytics (views, followers)", included: true },
       { text: "Live streaming", included: false },
     ],
   },
@@ -137,6 +144,7 @@ const CREATOR_PLANS: Record<string, {
       { text: "Categories & rows (max 10)", included: true },
     ],
     expandedPerks: [
+      // Included features first
       { text: "Max 500 videos total", included: true },
       { text: "Max 50 videos per row", included: true },
       { text: "Platform ads allowed", included: true },
@@ -145,6 +153,7 @@ const CREATOR_PLANS: Record<string, {
       { text: "Full analytics dashboard", included: true },
       { text: "Watch time & geo data", included: true },
       { text: "Device & top videos stats", included: true },
+      // Excluded features at bottom
       { text: "Live streaming", included: false },
     ],
   },
@@ -159,6 +168,7 @@ const CREATOR_PLANS: Record<string, {
       { text: "Max 20 rows", included: true },
     ],
     expandedPerks: [
+      // All included for Enterprise
       { text: "Max 1,000+ videos", included: true },
       { text: "Max 50 videos per row", included: true },
       { text: "Full ad control (pre/mid/post)", included: true },
