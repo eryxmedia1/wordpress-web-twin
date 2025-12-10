@@ -3,13 +3,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import Header from "@/components/landing/Header";
 import HeroSection from "@/components/landing/HeroSection";
 import PlansSection from "@/components/landing/PlansSection";
-import FaqSection from "@/components/landing/FaqSection";
-import Footer from "@/components/landing/Footer";
 import MobileSplash from "@/components/mobile/MobileSplash";
 import MobileAuthScreen from "@/components/mobile/MobileAuthScreen";
 
 const Index = () => {
-  const [email, setEmail] = useState("");
   const isMobile = useIsMobile();
   const [showSplash, setShowSplash] = useState(true);
   const [splashComplete, setSplashComplete] = useState(false);
@@ -41,10 +38,8 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <HeroSection email={email} setEmail={setEmail} />
+      <HeroSection />
       <PlansSection />
-      <FaqSection email={email} setEmail={setEmail} />
-      <Footer />
     </div>
   );
 };
