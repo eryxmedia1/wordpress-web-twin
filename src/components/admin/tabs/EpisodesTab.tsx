@@ -28,8 +28,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Plus, Trash2, Film, Loader2, GripVertical, X, Upload } from "lucide-react";
-import { VimeoUrlInput } from "@/components/VimeoUrlInput";
-import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
+import { VideoUrlInput } from "@/components/VideoUrlInput";
+import { VideoMetadata } from "@/hooks/useVideoMetadata";
 
 interface TvShow {
   id: string;
@@ -712,11 +712,11 @@ const EpisodesTab = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label>Vimeo URL (auto-fills fields below)</Label>
-              <VimeoUrlInput
+              <Label>Video URL (Vimeo or YouTube - auto-fills fields below)</Label>
+              <VideoUrlInput
                 value={newEpisode.videoUrl}
                 onChange={(value) => setNewEpisode(prev => ({ ...prev, videoUrl: value }))}
-                onMetadataFetched={(metadata: VimeoMetadata) => {
+                onMetadataFetched={(metadata: VideoMetadata) => {
                   setNewEpisode(prev => ({
                     ...prev,
                     title: metadata.title || prev.title,

@@ -32,8 +32,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Pencil, Trash2, Loader2, PlayCircle, GripVertical, Search, Clock, Tv, Radio, Film, List, Settings, Link2 } from "lucide-react";
-import { VimeoUrlInput } from "@/components/VimeoUrlInput";
-import { useVimeoMetadata, VimeoMetadata } from "@/hooks/useVimeoMetadata";
+import { VideoUrlInput } from "@/components/VideoUrlInput";
+import { useVideoMetadata, VideoMetadata } from "@/hooks/useVideoMetadata";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -204,11 +204,11 @@ export default function AdminLiveTVPlaylists() {
   const [midrollBreaks, setMidrollBreaks] = useState<number[]>([]);
   const [newBreakMinutes, setNewBreakMinutes] = useState('');
 
-  // Vimeo URL import
+  // Video URL import
   const [vimeoUrl, setVimeoUrl] = useState('');
-  const [vimeoMetadata, setVimeoMetadata] = useState<VimeoMetadata | null>(null);
+  const [vimeoMetadata, setVimeoMetadata] = useState<VideoMetadata | null>(null);
   const [isAddingVimeo, setIsAddingVimeo] = useState(false);
-  const { fetchMetadata: fetchVimeoMeta, isLoading: isLoadingVimeo } = useVimeoMetadata();
+  const { fetchMetadata: fetchVimeoMeta, isLoading: isLoadingVimeo } = useVideoMetadata();
 
   const [formData, setFormData] = useState({
     playlist_name: '',
@@ -449,7 +449,7 @@ export default function AdminLiveTVPlaylists() {
     }
   };
 
-  const handleVimeoMetadataFetched = (metadata: VimeoMetadata) => {
+  const handleVimeoMetadataFetched = (metadata: VideoMetadata) => {
     setVimeoMetadata(metadata);
   };
 
@@ -1016,12 +1016,12 @@ export default function AdminLiveTVPlaylists() {
                           
                           <TabsContent value="vimeo" className="m-0 p-4 space-y-4">
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium">Paste Vimeo URL</Label>
-                              <VimeoUrlInput
+                              <Label className="text-sm font-medium">Paste Vimeo or YouTube URL</Label>
+                              <VideoUrlInput
                                 value={vimeoUrl}
                                 onChange={setVimeoUrl}
                                 onMetadataFetched={handleVimeoMetadataFetched}
-                                placeholder="https://vimeo.com/123456789"
+                                placeholder="https://vimeo.com/... or https://youtube.com/..."
                               />
                             </div>
                             

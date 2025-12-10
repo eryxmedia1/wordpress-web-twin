@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { VimeoUrlInput } from "@/components/VimeoUrlInput";
-import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
+import { VideoUrlInput } from "@/components/VideoUrlInput";
+import { VideoMetadata } from "@/hooks/useVideoMetadata";
 
 interface Subtitle {
   language: string;
@@ -69,7 +69,7 @@ interface VideoSettingsProps {
   onDownloadUrlChange: (url: string) => void;
   selectedPlans: string[];
   onSelectedPlansChange: (plans: string[]) => void;
-  onVimeoMetadataFetched?: (metadata: VimeoMetadata) => void;
+  onVimeoMetadataFetched?: (metadata: VideoMetadata) => void;
 }
 
 const LANGUAGES = [
@@ -216,8 +216,8 @@ export const VideoSettings = ({
         {/* Main Video Tab */}
         <TabsContent value="main-video" className="space-y-4 mt-4">
           <div>
-            <Label className="text-white">Video URL (Vimeo)</Label>
-            <VimeoUrlInput
+            <Label className="text-white">Video URL (Vimeo or YouTube)</Label>
+            <VideoUrlInput
               value={videoUrl}
               onChange={onVideoUrlChange}
               onMetadataFetched={onVimeoMetadataFetched}

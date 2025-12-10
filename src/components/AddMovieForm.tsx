@@ -5,8 +5,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { supabase, DbContent, DbCategory, DbTag } from "@/integrations/supabase/client";
 import { X, Loader2 } from "lucide-react";
-import { VimeoUrlInput } from "@/components/VimeoUrlInput";
-import { VimeoMetadata } from "@/hooks/useVimeoMetadata";
+import { VideoUrlInput } from "@/components/VideoUrlInput";
+import { VideoMetadata } from "@/hooks/useVideoMetadata";
 import { MembershipPlansSelector } from "@/components/admin/MembershipPlansSelector";
 import { ChannelsSelector } from "@/components/admin/ChannelsSelector";
 import { SubtitlesSelector } from "@/components/admin/SubtitlesSelector";
@@ -630,13 +630,13 @@ const AddMovieForm = () => {
                       name="videoUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Video URL (Vimeo)</FormLabel>
+                          <FormLabel>Video URL (Vimeo or YouTube)</FormLabel>
                           <FormControl>
-                            <VimeoUrlInput
+                            <VideoUrlInput
                               value={field.value}
                               onChange={field.onChange}
-                              onMetadataFetched={(metadata: VimeoMetadata) => {
-                                // Auto-fill fields from Vimeo metadata
+                              onMetadataFetched={(metadata: VideoMetadata) => {
+                                // Auto-fill fields from metadata
                                 if (metadata.title && !form.getValues('title')) {
                                   form.setValue('title', metadata.title);
                                 }
