@@ -14,6 +14,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAds } from "@/hooks/useAds";
 import { AdBreakOverlay } from "@/components/AdBreakOverlay";
+import { useLiveViewerTracking } from "@/hooks/useLiveViewerTracking";
 
 interface Channel {
   id: string;
@@ -96,6 +97,9 @@ export default function LiveTV() {
     onAdStart: () => setIsPlaying(false),
     onAdEnd: () => setIsPlaying(true),
   });
+
+  // Real-time viewer tracking for analytics
+  useLiveViewerTracking(selectedChannel?.id || null, isPlaying && !isAdPlaying);
 
   // Mid-roll ad timer - triggers ad breaks at 15-minute intervals (4 breaks per hour)
   // Using 15 minutes (900 seconds) for 4 mid-rolls per 60-minute period

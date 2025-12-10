@@ -1453,6 +1453,70 @@ export type Database = {
           },
         ]
       }
+      live_channel_active_viewers: {
+        Row: {
+          device_type: string | null
+          geo_city: string | null
+          geo_country: string | null
+          geo_region: string | null
+          id: string
+          last_heartbeat: string | null
+          live_channel_id: string
+          profile_id: string | null
+          session_id: string
+          started_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          device_type?: string | null
+          geo_city?: string | null
+          geo_country?: string | null
+          geo_region?: string | null
+          id?: string
+          last_heartbeat?: string | null
+          live_channel_id: string
+          profile_id?: string | null
+          session_id: string
+          started_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          device_type?: string | null
+          geo_city?: string | null
+          geo_country?: string | null
+          geo_region?: string | null
+          id?: string
+          last_heartbeat?: string | null
+          live_channel_id?: string
+          profile_id?: string | null
+          session_id?: string
+          started_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_channel_active_viewers_live_channel_id_fkey"
+            columns: ["live_channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_channel_active_viewers_live_channel_id_fkey"
+            columns: ["live_channel_id"]
+            isOneToOne: false
+            referencedRelation: "live_channels_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_channel_active_viewers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_channel_favorites: {
         Row: {
           created_at: string | null

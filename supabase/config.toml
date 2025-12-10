@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.detect-geo]
 verify_jwt = false
+
+[functions.get-active-viewers]
+verify_jwt = false
