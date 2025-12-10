@@ -163,15 +163,15 @@ const Plans = () => {
             return (
               <Card 
                 key={plan.id}
-                className={`relative overflow-hidden transition-all duration-300 border border-border ${
+                className={`relative overflow-hidden transition-all duration-300 border border-border bg-card text-card-foreground ${
                   isHighlighted 
                     ? 'ring-2 ring-primary scale-105 shadow-2xl' 
                     : isCurrentPlan 
                     ? 'ring-2 ring-secondary' 
-                    : 'hover:shadow-xl'
+                    : 'hover:shadow-xl hover:border-primary/30'
                 } ${plan.slug === 'premium' 
-                    ? 'bg-gradient-to-b from-[#1a1f2e] to-amber-950/10' 
-                    : 'bg-[#1a1f2e]'
+                    ? 'bg-gradient-to-b from-card to-amber-950/20' 
+                    : ''
                 }`}
               >
                 {isCurrentPlan && (
@@ -250,25 +250,25 @@ const Plans = () => {
           <h2 className="text-2xl font-bold text-center mb-8">Ad Experience Comparison</h2>
           
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-card border border-border rounded-lg p-6 text-center">
+            <div className="bg-card border border-border rounded-lg p-6 text-center text-card-foreground">
               <Users className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
-              <h3 className="font-semibold mb-2">Free</h3>
+              <h3 className="font-semibold mb-2 text-foreground">Free</h3>
               <p className="text-sm text-muted-foreground">
                 Full ad support with pre-roll, mid-roll, and post-roll ads
               </p>
             </div>
             
-            <div className="bg-card border border-primary/30 rounded-lg p-6 text-center">
+            <div className="bg-card border border-primary/30 rounded-lg p-6 text-center text-card-foreground">
               <Star className="w-8 h-8 mx-auto mb-3 text-primary" />
-              <h3 className="font-semibold mb-2">Standard</h3>
+              <h3 className="font-semibold mb-2 text-foreground">Standard</h3>
               <p className="text-sm text-muted-foreground">
                 Limited ads - maximum 2 ad breaks per show or movie
               </p>
             </div>
             
-            <div className="bg-gradient-to-b from-card to-amber-950/10 border border-amber-500/30 rounded-lg p-6 text-center">
+            <div className="bg-gradient-to-b from-card to-amber-950/20 border border-amber-500/30 rounded-lg p-6 text-center text-card-foreground">
               <Crown className="w-8 h-8 mx-auto mb-3 text-amber-500" />
-              <h3 className="font-semibold mb-2">Premium</h3>
+              <h3 className="font-semibold mb-2 text-foreground">Premium</h3>
               <p className="text-sm text-muted-foreground">
                 <span className="font-bold text-amber-500">NO ADS</span> - Completely ad-free experience
               </p>
