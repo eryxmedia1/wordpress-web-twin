@@ -66,6 +66,7 @@ export default function LiveTV() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isLiveStreaming, setIsLiveStreaming] = useState(false);
   const [preRollPlayed, setPreRollPlayed] = useState(false);
+  const [isUserInitiatedChannel, setIsUserInitiatedChannel] = useState(false);
   const [watchTimeSeconds, setWatchTimeSeconds] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
@@ -540,6 +541,7 @@ export default function LiveTV() {
     setIsSeeking(false);
     setCountdown(null);
     setPreRollPlayed(false); // Reset pre-roll for new channel
+    setIsUserInitiatedChannel(true); // Mark as user-initiated selection
     targetOffsetRef.current = 0;
     navigate(`/live/${channel.slug}`, { replace: true });
     
@@ -596,17 +598,17 @@ export default function LiveTV() {
 
   const videoUrl = getVideoUrl();
 
-  // Request pre-roll on initial channel load (not just channel switch)
+  // Request pre-roll only on user-initiated channel selection (not initial page load)
   useEffect(() => {
-    if (selectedChannel && !preRollPlayed && isPlaying && !isAdPlaying) {
+    if (selectedChannel && !preRollPlayed && isPlaying && !isAdPlaying && isUserInitiatedChannel) {
       const requestInitialPreRoll = async () => {
-        console.log('[LiveTV Ads] Requesting pre-roll on initial load');
+        console.log('[LiveTV Ads] Requesting pre-roll for user-selected channel');
         await requestPreRoll();
         setPreRollPlayed(true);
       };
       requestInitialPreRoll();
     }
-  }, [selectedChannel, preRollPlayed, isPlaying, isAdPlaying, requestPreRoll]);
+  }, [selectedChannel, preRollPlayed, isPlaying, isAdPlaying, isUserInitiatedChannel, requestPreRoll]);
 
   // Calculate next ad break time
   const getNextAdBreakIn = () => {

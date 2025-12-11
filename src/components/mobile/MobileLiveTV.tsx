@@ -68,6 +68,7 @@ export default function MobileLiveTV() {
   // Mid-roll ad timer state
   const [watchTimeSeconds, setWatchTimeSeconds] = useState(0);
   const [preRollPlayed, setPreRollPlayed] = useState(false);
+  const [isUserInitiatedChannel, setIsUserInitiatedChannel] = useState(false);
   const midrollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -134,14 +135,14 @@ export default function MobileLiveTV() {
     };
   }, [isPlaying, isAdPlaying, isLiveStreaming, midrollIntervalSeconds, requestMidRoll, canRequestMidRoll]);
 
-  // Request pre-roll on initial channel load
+  // Request pre-roll only on user-initiated channel selection (not initial page load)
   useEffect(() => {
-    if (selectedChannel && isPlaying && !isAdPlaying && !preRollPlayed && !isLiveStreaming) {
-      console.log('[MobileLiveTV] Requesting pre-roll ad');
+    if (selectedChannel && isPlaying && !isAdPlaying && !preRollPlayed && !isLiveStreaming && isUserInitiatedChannel) {
+      console.log('[MobileLiveTV] Requesting pre-roll ad for user-selected channel');
       requestPreRoll();
       setPreRollPlayed(true);
     }
-  }, [selectedChannel, isPlaying, isAdPlaying, preRollPlayed, isLiveStreaming, requestPreRoll]);
+  }, [selectedChannel, isPlaying, isAdPlaying, preRollPlayed, isLiveStreaming, isUserInitiatedChannel, requestPreRoll]);
 
   // Track view to channel_views when playback starts
   const viewTrackedRef = useRef<string | null>(null);
@@ -457,6 +458,7 @@ export default function MobileLiveTV() {
     setIsSeeking(false);
     setPreRollPlayed(false); // Reset pre-roll for new channel
     setWatchTimeSeconds(0); // Reset watch time
+    setIsUserInitiatedChannel(true); // Mark as user-initiated selection
     targetOffsetRef.current = 0;
     navigate(`/live/${channel.slug}`, { replace: true });
   };
