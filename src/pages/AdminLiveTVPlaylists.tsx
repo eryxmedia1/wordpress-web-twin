@@ -97,7 +97,20 @@ interface Video {
   poster_url: string | null;
   duration: string | null;
   type: string;
+  channels: string[] | null;
 }
+
+const CHANNEL_OPTIONS = [
+  { value: 'all', label: 'All Content' },
+  { value: 'Zoe RatedTV', label: 'Zoe RatedTV' },
+  { value: 'MadFaceTV', label: 'MadFaceTV' },
+  { value: 'AyiTV', label: 'AyiTV' },
+  { value: 'MyPureTV', label: 'MyPureTV' },
+  { value: 'Yard MonTV', label: 'Yard MonTV' },
+  { value: 'Indie Films', label: 'Indie Films' },
+  { value: 'Movie Channel', label: 'Movie Channel' },
+  { value: 'More Networks', label: 'More Networks' },
+];
 
 interface Episode {
   id: string;
@@ -197,6 +210,9 @@ export default function AdminLiveTVPlaylists() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAddingEpisodes, setIsAddingEpisodes] = useState(false);
+  const [channelFilter, setChannelFilter] = useState<string>('all');
+  const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
+  const [isAddingSelected, setIsAddingSelected] = useState(false);
 
   // Midroll configuration
   const [midrollDialogOpen, setMidrollDialogOpen] = useState(false);
@@ -277,33 +293,41 @@ export default function AdminLiveTVPlaylists() {
     fetchPlaylistItems();
   }, [fetchPlaylistItems]);
 
-  const searchVideos = useCallback(async (query: string) => {
-    if (!query.trim()) {
+  const searchVideos = useCallback(async (query: string, channel: string) => {
+    if (!query.trim() && channel === 'all') {
       setSearchResults([]);
       setEpisodicShows([]);
       return;
     }
     setIsSearching(true);
     
-    const { data } = await supabase
+    let queryBuilder = supabase
       .from('contents')
-      .select('id, title, poster_url, duration, type')
-      .ilike('title', `%${query}%`)
-      .limit(20);
+      .select('id, title, poster_url, duration, type, channels');
+    
+    if (query.trim()) {
+      queryBuilder = queryBuilder.ilike('title', `%${query}%`);
+    }
+    
+    if (channel !== 'all') {
+      queryBuilder = queryBuilder.contains('channels', [channel]);
+    }
+    
+    const { data } = await queryBuilder.limit(50);
     
     if (data) {
       const shows = data.filter(v => v.type === 'show');
       const others = data.filter(v => v.type !== 'show');
-      setEpisodicShows(shows);
-      setSearchResults(others);
+      setEpisodicShows(shows as Video[]);
+      setSearchResults(others as Video[]);
     }
     setIsSearching(false);
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => searchVideos(searchQuery), 300);
+    const timer = setTimeout(() => searchVideos(searchQuery, channelFilter), 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, searchVideos]);
+  }, [searchQuery, channelFilter, searchVideos]);
 
   const resetForm = () => {
     setFormData({
@@ -446,6 +470,61 @@ export default function AdminLiveTVPlaylists() {
       fetchPlaylistItems();
     } catch (error: any) {
       toast.error(error.message);
+    }
+  };
+
+  const handleAddSelectedVideos = async () => {
+    if (!selectedPlaylist || selectedVideoIds.size === 0) return;
+    setIsAddingSelected(true);
+    
+    try {
+      const allVideos = [...searchResults, ...episodicShows];
+      const videosToAdd = allVideos.filter(v => selectedVideoIds.has(v.id));
+      
+      let orderIndex = playlistItems.length;
+      
+      for (const video of videosToAdd) {
+        orderIndex++;
+        const durationSeconds = parseDuration(video.duration || '');
+        await supabase.from('live_playlist_items').insert({
+          channel_playlist_id: selectedPlaylist.id,
+          video_id: video.id,
+          order_index: orderIndex,
+          duration_seconds: durationSeconds || null,
+        });
+      }
+      
+      toast.success(`${videosToAdd.length} video(s) added`);
+      setSelectedVideoIds(new Set());
+      setSearchQuery('');
+      setChannelFilter('all');
+      setIsSearchOpen(false);
+      fetchPlaylistItems();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsAddingSelected(false);
+    }
+  };
+
+  const toggleVideoSelection = (videoId: string) => {
+    setSelectedVideoIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(videoId)) {
+        newSet.delete(videoId);
+      } else {
+        newSet.add(videoId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const allIds = [...searchResults, ...episodicShows].map(v => v.id);
+    if (selectedVideoIds.size === allIds.length) {
+      setSelectedVideoIds(new Set());
+    } else {
+      setSelectedVideoIds(new Set(allIds));
     }
   };
 
@@ -915,12 +994,15 @@ export default function AdminLiveTVPlaylists() {
                       if (!open) {
                         setVimeoUrl('');
                         setVimeoMetadata(null);
+                        setSelectedVideoIds(new Set());
+                        setChannelFilter('all');
+                        setSearchQuery('');
                       }
                     }}>
                       <PopoverTrigger asChild>
                         <Button><Plus className="h-4 w-4 mr-2" />Add Video</Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[420px] p-0" align="end">
+                      <PopoverContent className="w-[480px] p-0" align="end">
                         <Tabs defaultValue="search" className="w-full">
                           <TabsList className="w-full grid grid-cols-2 h-auto p-1">
                             <TabsTrigger value="search" className="text-sm py-2">
@@ -934,13 +1016,54 @@ export default function AdminLiveTVPlaylists() {
                           </TabsList>
                           
                           <TabsContent value="search" className="m-0">
-                            <div className="p-3 border-b">
+                            <div className="p-3 border-b space-y-2">
                               <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search videos..." className="pl-9" autoFocus />
                               </div>
+                              <Select value={channelFilter} onValueChange={setChannelFilter}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Filter by channel" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {CHANNEL_OPTIONS.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
-                            <ScrollArea className="h-80">
+                            
+                            {/* Select All / Add Selected bar */}
+                            {(searchResults.length > 0 || episodicShows.length > 0) && (
+                              <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    id="select-all"
+                                    checked={selectedVideoIds.size === [...searchResults, ...episodicShows].length && selectedVideoIds.size > 0}
+                                    onCheckedChange={toggleSelectAll}
+                                  />
+                                  <label htmlFor="select-all" className="text-xs font-medium cursor-pointer">
+                                    Select All ({searchResults.length + episodicShows.length})
+                                  </label>
+                                </div>
+                                {selectedVideoIds.size > 0 && (
+                                  <Button 
+                                    size="sm" 
+                                    onClick={handleAddSelectedVideos}
+                                    disabled={isAddingSelected}
+                                  >
+                                    {isAddingSelected ? (
+                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    ) : (
+                                      <Plus className="h-3 w-3 mr-1" />
+                                    )}
+                                    Add {selectedVideoIds.size} Selected
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                            
+                            <ScrollArea className="h-72">
                               {isSearching || isAddingEpisodes ? (
                                 <div className="flex flex-col items-center justify-center p-4 gap-2">
                                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -951,15 +1074,20 @@ export default function AdminLiveTVPlaylists() {
                                   {episodicShows.length > 0 && (
                                     <div className="mb-3">
                                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2 flex items-center gap-1">
-                                        <List className="h-3 w-3" /> TV Shows (Add All Episodes)
+                                        <List className="h-3 w-3" /> TV Shows
                                       </p>
                                       <div className="space-y-1">
                                         {episodicShows.map((show) => (
-                                          <button
+                                          <div
                                             key={show.id}
-                                            onClick={() => handleAddEpisodicShow(show)}
-                                            className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent text-left border border-primary/30 bg-primary/5"
+                                            className={`flex items-center gap-2 p-2 rounded border transition-colors ${
+                                              selectedVideoIds.has(show.id) ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+                                            }`}
                                           >
+                                            <Checkbox
+                                              checked={selectedVideoIds.has(show.id)}
+                                              onCheckedChange={() => toggleVideoSelection(show.id)}
+                                            />
                                             {show.poster_url ? (
                                               <img src={show.poster_url} alt={show.title} className="w-16 h-10 object-cover rounded" />
                                             ) : (
@@ -969,10 +1097,21 @@ export default function AdminLiveTVPlaylists() {
                                             )}
                                             <div className="flex-1 min-w-0">
                                               <p className="text-sm font-medium truncate">{show.title}</p>
-                                              <p className="text-xs text-primary">Click to add all episodes</p>
+                                              <p className="text-xs text-muted-foreground">{show.duration || 'N/A'}</p>
                                             </div>
-                                            <Badge variant="secondary"><List className="h-3 w-3 mr-1" />Series</Badge>
-                                          </button>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleAddEpisodicShow(show);
+                                              }}
+                                              className="text-xs"
+                                            >
+                                              <List className="h-3 w-3 mr-1" />
+                                              All Eps
+                                            </Button>
+                                          </div>
                                         ))}
                                       </div>
                                     </div>
@@ -987,27 +1126,51 @@ export default function AdminLiveTVPlaylists() {
                                       )}
                                       <div className="space-y-1">
                                         {searchResults.map((video) => (
-                                          <button key={video.id} onClick={() => handleAddVideo(video)} className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent text-left">
+                                          <div 
+                                            key={video.id} 
+                                            className={`flex items-center gap-2 p-2 rounded border transition-colors cursor-pointer ${
+                                              selectedVideoIds.has(video.id) ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+                                            }`}
+                                            onClick={() => toggleVideoSelection(video.id)}
+                                          >
+                                            <Checkbox
+                                              checked={selectedVideoIds.has(video.id)}
+                                              onCheckedChange={() => toggleVideoSelection(video.id)}
+                                              onClick={(e) => e.stopPropagation()}
+                                            />
                                             {video.poster_url ? (
                                               <img src={video.poster_url} alt={video.title} className="w-16 h-10 object-cover rounded" />
                                             ) : (
-                                              <div className="w-16 h-10 bg-muted rounded" />
+                                              <div className="w-16 h-10 bg-muted rounded flex items-center justify-center">
+                                                <Film className="h-4 w-4 text-muted-foreground" />
+                                              </div>
                                             )}
                                             <div className="flex-1 min-w-0">
                                               <p className="text-sm font-medium truncate">{video.title}</p>
                                               <p className="text-xs text-muted-foreground">{video.type} • {video.duration || 'N/A'}</p>
                                             </div>
-                                          </button>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleAddVideo(video);
+                                              }}
+                                              title="Add single video"
+                                            >
+                                              <Plus className="h-4 w-4" />
+                                            </Button>
+                                          </div>
                                         ))}
                                       </div>
                                     </div>
                                   )}
 
-                                  {searchQuery && searchResults.length === 0 && episodicShows.length === 0 && (
+                                  {(searchQuery || channelFilter !== 'all') && searchResults.length === 0 && episodicShows.length === 0 && (
                                     <p className="p-4 text-center text-muted-foreground">No videos found</p>
                                   )}
-                                  {!searchQuery && (
-                                    <p className="p-4 text-center text-muted-foreground">Start typing to search</p>
+                                  {!searchQuery && channelFilter === 'all' && (
+                                    <p className="p-4 text-center text-muted-foreground">Start typing to search or select a channel</p>
                                   )}
                                 </div>
                               )}
