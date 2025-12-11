@@ -309,11 +309,14 @@ export default function AdminLiveTVPlaylists() {
       queryBuilder = queryBuilder.ilike('title', `%${query}%`);
     }
     
-    if (channel !== 'all') {
+    // Special handling for Movie Channel - show all movies
+    if (channel === 'Movie Channel') {
+      queryBuilder = queryBuilder.eq('type', 'movie');
+    } else if (channel !== 'all') {
       queryBuilder = queryBuilder.contains('channels', [channel]);
     }
     
-    const { data } = await queryBuilder.limit(50);
+    const { data } = await queryBuilder.limit(100);
     
     if (data) {
       const shows = data.filter(v => v.type === 'show');
