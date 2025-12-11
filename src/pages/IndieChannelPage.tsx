@@ -509,11 +509,16 @@ const IndieChannelPage = () => {
   };
 
   // Group content by genre for genre-based rows
+  const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+  
   const genreGroups = contents.reduce((acc, content) => {
     if (content.genre) {
       // Split genres if they contain commas (e.g., "Action, Adventure, Drama")
       const genres = content.genre.split(',').map(g => g.trim()).filter(g => g);
       genres.forEach(genre => {
+        // Skip UUID-like genres
+        if (uuidPattern.test(genre)) return;
+        
         if (!acc[genre]) {
           acc[genre] = [];
         }
@@ -530,6 +535,16 @@ const IndieChannelPage = () => {
   const sortedGenres = Object.keys(genreGroups)
     .filter(genre => genreGroups[genre].length > 0)
     .sort((a, b) => a.localeCompare(b));
+
+  // Create African Movies group (Drama + Romance for movie-channel)
+  const africanMovies = slug === "movie-channel" 
+    ? contents.filter(c => {
+        if (!c.genre) return false;
+        if (uuidPattern.test(c.genre)) return false;
+        const lowerGenre = c.genre.toLowerCase();
+        return lowerGenre.includes('drama') || lowerGenre.includes('romance');
+      })
+    : [];
 
   const contentRows = contents.length > 0 && (
     <div className="space-y-8 p-4 md:p-8">
@@ -551,6 +566,25 @@ const IndieChannelPage = () => {
           />
         )
       ))}
+
+      {/* African Movies Row - Only for movie-channel */}
+      {africanMovies.length > 0 && (
+        isMobile ? (
+          <MobileContentRow
+            title="African Movies"
+            items={mapToContentRow(shuffleArray(africanMovies))}
+            onItemClick={handleMoreInfo}
+            seeAllLink="/category/african-movies"
+          />
+        ) : (
+          <ContentRow
+            title="African Movies"
+            contents={mapToContentRow(shuffleArray(africanMovies))}
+            onMoreInfo={handleMoreInfo}
+            seeAllLink="/category/african-movies"
+          />
+        )
+      )}
 
       {/* Latest Videos - show randomized content */}
       {isMobile ? (
