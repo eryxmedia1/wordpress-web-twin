@@ -85,6 +85,7 @@ const MobileYardMonTVRow = ({ onItemClick }: MobileYardMonTVRowProps) => {
       title="Yard MonTV"
       items={items}
       onItemClick={onItemClick}
+      seeAllLink="/indie-channel/yard-montv"
     />
   );
 };

@@ -72,10 +72,22 @@ const YardMonTVRow = ({ onMoreInfo }: YardMonTVRowProps) => {
 
   if (loading || contents.length === 0) return null;
 
+  const mappedContents = contents.map((item) => ({
+    id: item.id,
+    title: item.title,
+    posterUrl: item.poster_url || "/placeholder.svg",
+    rating: item.rating || undefined,
+    year: item.release_year?.toString() || undefined,
+    category: item.genre || undefined,
+    videoUrl: item.video_url,
+    trailerUrl: item.trailer_url,
+  }));
+
   return (
     <ContentRow
       title="Yard MonTV"
-      contents={contents}
+      contents={mappedContents}
+      seeAllLink="/indie-channel/yard-montv"
       onMoreInfo={onMoreInfo}
     />
   );
