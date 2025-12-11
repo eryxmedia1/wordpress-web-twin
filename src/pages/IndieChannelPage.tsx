@@ -498,6 +498,29 @@ const IndieChannelPage = () => {
     </div>
   );
 
+  // Group content by genre for genre-based rows
+  const genreGroups = contents.reduce((acc, content) => {
+    if (content.genre) {
+      // Split genres if they contain commas (e.g., "Action, Adventure, Drama")
+      const genres = content.genre.split(',').map(g => g.trim()).filter(g => g);
+      genres.forEach(genre => {
+        if (!acc[genre]) {
+          acc[genre] = [];
+        }
+        // Avoid duplicates
+        if (!acc[genre].some(c => c.id === content.id)) {
+          acc[genre].push(content);
+        }
+      });
+    }
+    return acc;
+  }, {} as Record<string, Content[]>);
+
+  // Sort genre names alphabetically and filter out empty groups
+  const sortedGenres = Object.keys(genreGroups)
+    .filter(genre => genreGroups[genre].length > 0)
+    .sort((a, b) => a.localeCompare(b));
+
   const contentRows = contents.length > 0 && (
     <div className="space-y-8 p-4 md:p-8">
       {/* Custom Category Rows */}
@@ -533,6 +556,25 @@ const IndieChannelPage = () => {
           onMoreInfo={handleMoreInfo}
         />
       )}
+
+      {/* Genre-based Rows */}
+      {sortedGenres.map((genre) => (
+        isMobile ? (
+          <MobileContentRow
+            key={`genre-${genre}`}
+            title={genre}
+            items={mapToContentRow(genreGroups[genre])}
+            onItemClick={handleMoreInfo}
+          />
+        ) : (
+          <ContentRow
+            key={`genre-${genre}`}
+            title={genre}
+            contents={mapToContentRow(genreGroups[genre])}
+            onMoreInfo={handleMoreInfo}
+          />
+        )
+      ))}
 
       {/* All Videos (if more than 10) */}
       {contents.length > 10 && (
