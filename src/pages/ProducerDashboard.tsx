@@ -949,23 +949,27 @@ const ProducerDashboard = () => {
                       placeholder="https://... or upload"
                       className="flex-1"
                     />
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(file, 'logo', setUploadingLogo, setSettingsLogoUrl);
-                        }}
-                        disabled={uploadingLogo}
-                      />
-                      <Button type="button" variant="outline" size="icon" disabled={uploadingLogo} asChild>
-                        <span>
-                          {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                        </span>
-                      </Button>
-                    </label>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      disabled={uploadingLogo}
+                      onClick={() => document.getElementById('logo-upload-input')?.click()}
+                    >
+                      {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    </Button>
+                    <input
+                      id="logo-upload-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file, 'logo', setUploadingLogo, setSettingsLogoUrl);
+                        e.target.value = '';
+                      }}
+                      disabled={uploadingLogo}
+                    />
                   </div>
                   {settingsLogoUrl && (
                     <img src={settingsLogoUrl} alt="Logo" className="mt-2 h-16 w-16 object-cover rounded" />
@@ -980,23 +984,27 @@ const ProducerDashboard = () => {
                       placeholder="https://... or upload"
                       className="flex-1"
                     />
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(file, 'backdrop', setUploadingBackdrop, setSettingsBackdropUrl);
-                        }}
-                        disabled={uploadingBackdrop}
-                      />
-                      <Button type="button" variant="outline" size="icon" disabled={uploadingBackdrop} asChild>
-                        <span>
-                          {uploadingBackdrop ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                        </span>
-                      </Button>
-                    </label>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      disabled={uploadingBackdrop}
+                      onClick={() => document.getElementById('backdrop-upload-input')?.click()}
+                    >
+                      {uploadingBackdrop ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    </Button>
+                    <input
+                      id="backdrop-upload-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file, 'backdrop', setUploadingBackdrop, setSettingsBackdropUrl);
+                        e.target.value = '';
+                      }}
+                      disabled={uploadingBackdrop}
+                    />
                   </div>
                   {settingsBackdropUrl && (
                     <img src={settingsBackdropUrl} alt="Backdrop" className="mt-2 h-24 w-full object-cover rounded" />
