@@ -134,12 +134,16 @@ export const ChannelsSelector = ({ selectedChannels, onChannelsChange }: Channel
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
-          {allChannels.map((channel) => {
+          {/* Deduplicate channels - prefer indie channels over static ones */}
+          {[...new Set(allChannels)].map((channel, index) => {
             const isSelected = selectedChannels.includes(channel);
-            const isIndieChannel = indieChannels.some(c => c.name === channel);
+            const indieChannel = indieChannels.find(c => c.name === channel);
+            const isIndieChannel = !!indieChannel;
+            // Use indie channel ID if available, otherwise use index-prefixed name for uniqueness
+            const uniqueKey = indieChannel?.id || `static-${index}-${channel}`;
             return (
               <div
-                key={channel}
+                key={uniqueKey}
                 className={`flex items-center space-x-2 p-3 rounded-lg transition-colors cursor-pointer ${
                   isSelected ? 'bg-primary/20 border border-primary' : 'bg-muted/50 hover:bg-muted'
                 }`}
@@ -147,13 +151,13 @@ export const ChannelsSelector = ({ selectedChannels, onChannelsChange }: Channel
               >
                 <input
                   type="checkbox"
-                  id={`channel-${channel}`}
+                  id={`channel-${uniqueKey}`}
                   checked={isSelected}
                   onChange={() => {}}
                   className="rounded bg-gray-700 border-gray-600 pointer-events-none"
                 />
                 <Label
-                  htmlFor={`channel-${channel}`}
+                  htmlFor={`channel-${uniqueKey}`}
                   className="cursor-pointer text-sm font-medium pointer-events-none flex-1"
                 >
                   {channel}
