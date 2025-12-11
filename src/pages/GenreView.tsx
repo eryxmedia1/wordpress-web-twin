@@ -1,12 +1,11 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Play, Info, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import GenresList from "@/components/GenresList";
 import { supabase } from "@/integrations/supabase/client";
-import ReactPlayer from "react-player";
+import HoverPreviewCard from "@/components/HoverPreviewCard";
+import ContentDetailModal from "@/components/ContentDetailModal";
 
 interface ContentItem {
   id: string;
@@ -20,6 +19,7 @@ interface ContentItem {
   description: string | null;
   trailer_url: string | null;
   video_url: string | null;
+  duration: string | null;
 }
 
 const GenreView = () => {
@@ -27,6 +27,7 @@ const GenreView = () => {
   const [movies, setMovies] = useState<ContentItem[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   
   useEffect(() => {
     const fetchGenreContent = async () => {
@@ -34,7 +35,7 @@ const GenreView = () => {
       
       let query = supabase
         .from('contents')
-        .select('id, title, poster_url, backdrop_url, genre, release_year, rating, type, description, trailer_url, video_url')
+        .select('id, title, poster_url, backdrop_url, genre, release_year, rating, type, description, trailer_url, video_url, duration')
         .not('poster_url', 'is', null);
       
       if (genreId) {
@@ -84,73 +85,27 @@ const GenreView = () => {
                 {movies.map((movie) => (
                   <div 
                     key={movie.id}
-                    className={`transition-all duration-300 ease-in-out ${
-                      hoveredId === movie.id ? "w-[350px]" : "w-[180px]"
+                    className={`relative transition-all duration-300 ease-in-out ${
+                      hoveredId === movie.id ? "w-[350px] z-50" : "w-[180px]"
                     }`}
                     onMouseEnter={() => setHoveredId(movie.id)}
                     onMouseLeave={() => setHoveredId(null)}
                   >
                     {hoveredId === movie.id ? (
-                      <div className="h-full w-full bg-card rounded-lg overflow-hidden border border-border shadow-xl animate-fade-in">
-                        <div className="relative h-[280px]">
-                          {/* Auto-play trailer/video on hover */}
-                          {(movie.trailer_url || movie.video_url) ? (
-                            <ReactPlayer
-                              url={movie.trailer_url || movie.video_url || ''}
-                              playing={true}
-                              muted={true}
-                              loop={true}
-                              width="100%"
-                              height="100%"
-                              style={{ position: 'absolute', top: 0, left: 0 }}
-                              config={{
-                                file: {
-                                  attributes: {
-                                    style: { objectFit: 'cover', width: '100%', height: '100%' }
-                                  }
-                                }
-                              }}
-                            />
-                          ) : (
-                            <img 
-                              src={movie.poster_url || '/placeholder.svg'}
-                              alt={movie.title}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = '/placeholder.svg';
-                              }}
-                            />
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
-                          
-                          <div className="absolute bottom-0 left-0 right-0 p-3">
-                            <h3 className="font-bold text-white truncate mb-1">{movie.title}</h3>
-                            <div className="text-xs text-gray-300 mb-3 flex items-center">
-                              {movie.release_year} {movie.genre && `• ${movie.genre}`}
-                              {movie.rating && 
-                                <span className="ml-auto bg-primary text-primary-foreground px-1.5 py-0.5 rounded-sm">
-                                  {movie.rating}
-                                </span>
-                              }
-                            </div>
-                            
-                            <div className="flex space-x-2">
-                              <Link to={`/watch/${movie.id}?trailer=true`}>
-                                <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-4">
-                                  <Play className="h-4 w-4 mr-1" />
-                                  Trailer
-                                </Button>
-                              </Link>
-                              <Link to={`/watch/${movie.id}`}>
-                                <Button variant="outline" size="sm" className="rounded-full border-border hover:bg-muted px-4">
-                                  <Info className="h-4 w-4 mr-1" />
-                                  Detail
-                                </Button>
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <HoverPreviewCard
+                        content={{
+                          id: movie.id,
+                          title: movie.title,
+                          posterUrl: movie.poster_url || '/placeholder.svg',
+                          videoUrl: movie.video_url,
+                          trailerUrl: movie.trailer_url,
+                          year: movie.release_year?.toString(),
+                          rating: movie.rating || undefined,
+                          genre: movie.genre || undefined,
+                          duration: movie.duration || undefined,
+                        }}
+                        onMoreInfo={(id) => setSelectedContentId(id)}
+                      />
                     ) : (
                       <div className="block relative cursor-pointer overflow-hidden">
                         <div className="relative aspect-[2/3] overflow-hidden rounded-md mb-2">
@@ -185,6 +140,12 @@ const GenreView = () => {
           </div>
         )}
       </main>
+      
+      <ContentDetailModal
+        contentId={selectedContentId}
+        isOpen={!!selectedContentId}
+        onClose={() => setSelectedContentId(null)}
+      />
     </div>
   );
 };
