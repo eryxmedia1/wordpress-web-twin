@@ -856,6 +856,7 @@ const Watch = () => {
                   setPlayerReady(true);
                   
                   // Delay seek slightly to ensure player is fully initialized
+                  // CRITICAL: Do NOT start playing until after seek completes
                   setTimeout(() => {
                     if (playerRef.current && !hasInitialSeek.current) {
                       let seekPosition: number | null = null;
@@ -875,9 +876,10 @@ const Watch = () => {
                       
                       hasInitialSeek.current = true;
                     }
-                  }, 500); // Small delay for Vimeo to be fully ready
-                  
-                  setIsPlaying(true);
+                    
+                    // Start playing AFTER seek is complete to prevent restart from beginning
+                    setIsPlaying(true);
+                  }, 750); // Increased delay for Vimeo to be fully ready before seeking
                 }}
                 onEnded={handleVideoEnded}
                 onError={(e) => console.error("Player error:", e)}
@@ -889,7 +891,7 @@ const Watch = () => {
                     playerOptions: {
                       responsive: true,
                       playsinline: true,
-                      autoplay: true,
+                      autoplay: false, // Disabled - we control play timing after seek
                       muted: false,
                       controls: true,
                       quality: 'auto',
@@ -905,7 +907,7 @@ const Watch = () => {
                     attributes: {
                       playsInline: true,
                       crossOrigin: "anonymous",
-                      autoPlay: true,
+                      autoPlay: false, // Disabled - we control play timing after seek
                       preload: "auto",
                     },
                     forceVideo: true,
