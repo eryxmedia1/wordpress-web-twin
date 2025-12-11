@@ -136,9 +136,13 @@ const Signup = () => {
 
   const getPlanColor = (slug: string) => {
     switch (slug) {
-      case 'premium': return 'border-amber-500 bg-amber-500/10';
-      case 'standard': return 'border-primary bg-primary/10';
-      default: return 'border-gray-400 bg-gray-100';
+      case "premium":
+        return "border-amber-500 bg-amber-500/10";
+      case "standard":
+        return "border-primary bg-primary/10";
+      default:
+        // FREE PLAN — make background same dark color as other plans
+        return "border-border bg-slate-900";
     }
   };
 
