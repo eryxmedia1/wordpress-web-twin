@@ -273,7 +273,7 @@ const Signup = () => {
                   className={`border-2 p-6 rounded-lg cursor-pointer transition-all relative ${
                     selectedPlan === plan.slug 
                       ? getPlanColor(plan.slug)
-                      : 'border-border bg-card hover:border-primary/50'
+                      : 'border-border bg-slate-800 hover:border-primary/50'
                   }`}
                   onClick={() => handlePlanSelect(plan.slug)}
                 >
