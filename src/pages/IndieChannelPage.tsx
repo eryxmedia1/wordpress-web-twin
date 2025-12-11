@@ -498,6 +498,16 @@ const IndieChannelPage = () => {
     </div>
   );
 
+  // Shuffle helper function
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   // Group content by genre for genre-based rows
   const genreGroups = contents.reduce((acc, content) => {
     if (content.genre) {
@@ -529,30 +539,30 @@ const IndieChannelPage = () => {
           <MobileContentRow
             key={category.id}
             title={category.name}
-            items={mapToContentRow(category.items)}
+            items={mapToContentRow(shuffleArray(category.items))}
             onItemClick={handleMoreInfo}
           />
         ) : (
           <ContentRow
             key={category.id}
             title={category.name}
-            contents={mapToContentRow(category.items)}
+            contents={mapToContentRow(shuffleArray(category.items))}
             onMoreInfo={handleMoreInfo}
           />
         )
       ))}
 
-      {/* Latest Videos - show remaining content not in categories */}
+      {/* Latest Videos - show randomized content */}
       {isMobile ? (
         <MobileContentRow
           title="Latest Videos"
-          items={mapToContentRow(contents.slice(0, 10))}
+          items={mapToContentRow(shuffleArray(contents).slice(0, 10))}
           onItemClick={handleMoreInfo}
         />
       ) : (
         <ContentRow
           title="Latest Videos"
-          contents={mapToContentRow(contents.slice(0, 10))}
+          contents={mapToContentRow(shuffleArray(contents).slice(0, 10))}
           onMoreInfo={handleMoreInfo}
         />
       )}
@@ -563,14 +573,14 @@ const IndieChannelPage = () => {
           <MobileContentRow
             key={`genre-${genre}`}
             title={genre}
-            items={mapToContentRow(genreGroups[genre])}
+            items={mapToContentRow(shuffleArray(genreGroups[genre]))}
             onItemClick={handleMoreInfo}
           />
         ) : (
           <ContentRow
             key={`genre-${genre}`}
             title={genre}
-            contents={mapToContentRow(genreGroups[genre])}
+            contents={mapToContentRow(shuffleArray(genreGroups[genre]))}
             onMoreInfo={handleMoreInfo}
           />
         )
@@ -581,13 +591,13 @@ const IndieChannelPage = () => {
         isMobile ? (
           <MobileContentRow
             title="All Videos"
-            items={mapToContentRow(contents.slice(10))}
+            items={mapToContentRow(shuffleArray(contents))}
             onItemClick={handleMoreInfo}
           />
         ) : (
           <ContentRow
             title="All Videos"
-            contents={mapToContentRow(contents.slice(10))}
+            contents={mapToContentRow(shuffleArray(contents))}
             onMoreInfo={handleMoreInfo}
           />
         )
