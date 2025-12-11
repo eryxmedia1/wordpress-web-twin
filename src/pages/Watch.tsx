@@ -115,6 +115,7 @@ const Watch = () => {
   const viewRecordId = useRef<string | null>(null);
   const watchStartTime = useRef<number | null>(null);
   const totalWatchedSeconds = useRef(0);
+  const preAdPosition = useRef<number | null>(null); // Store position before ad break
 
   // Get content midroll config for useAds
   const contentMidrollConfig = useMemo(() => {
@@ -147,7 +148,15 @@ const Watch = () => {
     membershipTier: userPlan || 'free',
     deviceType: isMobile ? 'mobile' : 'desktop',
     contentMidrollConfig,
-    onAdStart: () => setIsPlaying(false),
+    onAdStart: () => {
+      // Capture current playback position before ad starts
+      if (playerRef.current) {
+        preAdPosition.current = playerRef.current.getCurrentTime();
+        console.log("Captured pre-ad position:", preAdPosition.current);
+      }
+      hasInitialSeek.current = false; // Reset so seek happens after ad
+      setIsPlaying(false);
+    },
     onAdEnd: () => setIsPlaying(true),
   });
 
@@ -157,6 +166,7 @@ const Watch = () => {
   // Reset seek flag when navigating to new content or episode
   useEffect(() => {
     hasInitialSeek.current = false;
+    preAdPosition.current = null; // Clear pre-ad position on navigation
     viewTracked.current = false;
     viewRecordId.current = null;
     watchStartTime.current = null;
@@ -842,21 +852,30 @@ const Watch = () => {
                 onProgress={handleProgress}
                 onDuration={handleDuration}
                 onReady={() => {
-                  console.log("Player ready, saved progress:", progress);
+                  console.log("Player ready, saved progress:", progress, "preAdPosition:", preAdPosition.current);
                   setPlayerReady(true);
                   
                   // Delay seek slightly to ensure player is fully initialized
-                  // This is especially important for Vimeo which needs a moment after onReady
-                  if (progress > 0 && progress < 95 && !hasInitialSeek.current && playerRef.current) {
-                    setTimeout(() => {
-                      if (playerRef.current && !hasInitialSeek.current) {
-                        const seekPosition = progress / 100;
-                        console.log("Seeking to position after delay:", seekPosition);
+                  setTimeout(() => {
+                    if (playerRef.current && !hasInitialSeek.current) {
+                      let seekPosition: number | null = null;
+                      
+                      // Check if returning from ad break - use pre-ad position
+                      if (preAdPosition.current !== null && preAdPosition.current > 0) {
+                        seekPosition = preAdPosition.current;
+                        console.log("Resuming from pre-ad position (seconds):", seekPosition);
+                        playerRef.current.seekTo(seekPosition, 'seconds');
+                        preAdPosition.current = null; // Clear after use
+                      } else if (progress > 0 && progress < 95) {
+                        // Initial load - seek to saved database progress (as fraction)
+                        seekPosition = progress / 100;
+                        console.log("Seeking to saved progress (fraction):", seekPosition);
                         playerRef.current.seekTo(seekPosition, 'fraction');
-                        hasInitialSeek.current = true;
                       }
-                    }, 500); // Small delay for Vimeo to be fully ready
-                  }
+                      
+                      hasInitialSeek.current = true;
+                    }
+                  }, 500); // Small delay for Vimeo to be fully ready
                   
                   setIsPlaying(true);
                 }}
