@@ -46,25 +46,17 @@ const AfricanMoviesRow = ({ onMoreInfo }: AfricanMoviesRowProps) => {
         return;
       }
 
-      // Fetch movies with Drama/Romance genres (common for African/Nigerian films)
-      // Also filter out any content with UUID-like genres
+      // Fetch movies with African or Nigerian in genre
       const { data: movies } = await supabase
         .from("contents")
         .select("id, title, poster_url, rating, release_year, genre, video_url, trailer_url")
         .eq("indie_channel_id", channel.id)
-        .or("genre.ilike.%Drama%,genre.ilike.%Romance%")
+        .or("genre.ilike.%African%,genre.ilike.%Nigerian%")
         .order("created_at", { ascending: false })
         .limit(30);
 
       if (movies) {
-        // Filter out any movies with UUID-like genres
-        const validMovies = movies.filter(m => {
-          if (!m.genre) return false;
-          // UUID pattern check - exclude if genre looks like a UUID
-          const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-          return !uuidPattern.test(m.genre);
-        });
-        setContents(shuffleArray(validMovies));
+        setContents(shuffleArray(movies));
       }
 
       setLoading(false);

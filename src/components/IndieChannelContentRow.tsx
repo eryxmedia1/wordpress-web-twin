@@ -25,6 +25,16 @@ interface IndieChannel {
   logo_url: string | null;
 }
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 const IndieChannelContentRow = ({ channelSlug, onMoreInfo }: IndieChannelContentRowProps) => {
   const [channel, setChannel] = useState<IndieChannel | null>(null);
   const [contents, setContents] = useState<Content[]>([]);
@@ -56,7 +66,7 @@ const IndieChannelContentRow = ({ channelSlug, onMoreInfo }: IndieChannelContent
         .limit(20);
 
       if (contentData) {
-        setContents(contentData);
+        setContents(shuffleArray(contentData));
       }
 
       setLoading(false);
