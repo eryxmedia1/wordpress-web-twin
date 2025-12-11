@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import GenresList from "@/components/GenresList";
 import { supabase } from "@/integrations/supabase/client";
+import ReactPlayer from "react-player";
 
 interface ContentItem {
   id: string;
@@ -17,6 +18,8 @@ interface ContentItem {
   rating: string | null;
   type: string;
   description: string | null;
+  trailer_url: string | null;
+  video_url: string | null;
 }
 
 const GenreView = () => {
@@ -31,7 +34,7 @@ const GenreView = () => {
       
       let query = supabase
         .from('contents')
-        .select('id, title, poster_url, backdrop_url, genre, release_year, rating, type, description')
+        .select('id, title, poster_url, backdrop_url, genre, release_year, rating, type, description, trailer_url, video_url')
         .not('poster_url', 'is', null);
       
       if (genreId) {
@@ -89,16 +92,36 @@ const GenreView = () => {
                   >
                     {hoveredId === movie.id ? (
                       <div className="h-full w-full bg-card rounded-lg overflow-hidden border border-border shadow-xl animate-fade-in">
-                        <div className="relative h-full">
-                          <img 
-                            src={movie.poster_url || '/placeholder.svg'}
-                            alt={movie.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = '/placeholder.svg';
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+                        <div className="relative h-[280px]">
+                          {/* Auto-play trailer/video on hover */}
+                          {(movie.trailer_url || movie.video_url) ? (
+                            <ReactPlayer
+                              url={movie.trailer_url || movie.video_url || ''}
+                              playing={true}
+                              muted={true}
+                              loop={true}
+                              width="100%"
+                              height="100%"
+                              style={{ position: 'absolute', top: 0, left: 0 }}
+                              config={{
+                                file: {
+                                  attributes: {
+                                    style: { objectFit: 'cover', width: '100%', height: '100%' }
+                                  }
+                                }
+                              }}
+                            />
+                          ) : (
+                            <img 
+                              src={movie.poster_url || '/placeholder.svg'}
+                              alt={movie.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = '/placeholder.svg';
+                              }}
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
                           
                           <div className="absolute bottom-0 left-0 right-0 p-3">
                             <h3 className="font-bold text-white truncate mb-1">{movie.title}</h3>
