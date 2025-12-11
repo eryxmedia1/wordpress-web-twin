@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -51,8 +52,89 @@ import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
+// Auto-refresh component that handles visibility changes and service worker updates
+function AppRefreshHandler() {
+  const lastVisibleRef = useRef<number>(Date.now());
+  const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+  useEffect(() => {
+    // Check for service worker updates
+    const checkForUpdates = async () => {
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.getRegistration();
+          if (registration) {
+            // Check for waiting service worker (new version available)
+            if (registration.waiting) {
+              console.log('[App] New version available, reloading...');
+              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+              window.location.reload();
+              return;
+            }
+            // Check for updates
+            await registration.update();
+          }
+        } catch (error) {
+          console.error('[App] Service worker check failed:', error);
+        }
+      }
+    };
+
+    // Handle visibility change - refresh data when returning to app after being away
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const now = Date.now();
+        const timeAway = now - lastVisibleRef.current;
+        
+        console.log(`[App] Tab became visible after ${Math.round(timeAway / 1000)}s`);
+        
+        if (timeAway > STALE_THRESHOLD_MS) {
+          console.log('[App] Data may be stale, invalidating queries and checking for updates...');
+          // Invalidate all queries to force refresh
+          queryClient.invalidateQueries();
+          // Check for app updates
+          checkForUpdates();
+        }
+        
+        lastVisibleRef.current = now;
+      } else {
+        // Record when user left
+        lastVisibleRef.current = Date.now();
+      }
+    };
+
+    // Handle online/offline
+    const handleOnline = () => {
+      console.log('[App] Network restored, invalidating queries...');
+      queryClient.invalidateQueries();
+    };
+
+    // Initial check on mount
+    checkForUpdates();
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+
+    // Listen for service worker updates
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('[App] Service worker updated, reloading...');
+        window.location.reload();
+      });
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <AppRefreshHandler />
     <AuthProvider>
       <ProfileProvider>
         <TooltipProvider>

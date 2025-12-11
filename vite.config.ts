@@ -51,13 +51,28 @@ export default defineConfig(({ mode }) => ({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB limit
         runtimeCaching: [
           {
+            // Live TV and dynamic content - very short cache
+            urlPattern: /^https:\/\/.*\.supabase\.co\/functions\/v1\/(get-live-segment|select-ad|detect-geo|get-active-viewers).*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-live-cache',
+              networkTimeoutSeconds: 10,
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 // 1 minute for live data
+              }
+            }
+          },
+          {
+            // Other Supabase API calls - 5 minute cache
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-cache',
+              networkTimeoutSeconds: 15,
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 5 // 5 minutes (reduced from 24 hours)
               }
             }
           }

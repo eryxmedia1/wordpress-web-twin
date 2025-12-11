@@ -468,6 +468,17 @@ export function useAds(options: UseAdsOptions = {}) {
   }, []);
 
   // Countdown timer
+  // Filter out ads with invalid video URLs
+  const getValidAds = useCallback((ads: Ad[]): Ad[] => {
+    return ads.filter(ad => {
+      const isValid = ad.video_url && ad.video_url.trim() !== '';
+      if (!isValid) {
+        console.warn(`[useAds] Skipping ad "${ad.name}" - no valid video URL`);
+      }
+      return isValid;
+    });
+  }, []);
+
   useEffect(() => {
     if (countdownSeconds > 0 && showCountdown) {
       const timer = setTimeout(() => {
@@ -475,18 +486,37 @@ export function useAds(options: UseAdsOptions = {}) {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (countdownSeconds === 0 && showCountdown && adQueue.length > 0) {
+      // Filter out invalid ads before starting
+      const validAds = getValidAds(adQueue);
+      
+      if (validAds.length === 0) {
+        console.log('[useAds] No valid ads in queue, skipping ad break');
+        setShowCountdown(false);
+        setAdQueue([]);
+        setAdPosition(null);
+        return;
+      }
+      
+      // Update queue with only valid ads
+      if (validAds.length !== adQueue.length) {
+        setAdQueue(validAds);
+        // Re-index tracking IDs to match valid ads
+        const validTrackingIds = trackingIds.slice(0, validAds.length);
+        setTrackingIds(validTrackingIds);
+      }
+      
       // Countdown finished, start playing ad pod
       setCurrentAdIndex(0);
-      setCurrentAd(adQueue[0]);
+      setCurrentAd(validAds[0]);
       setShowCountdown(false);
       setIsAdPlaying(true);
       options.onAdStart?.();
       // Track first ad impression
       if (trackingIds[0]) {
-        trackImpression(adQueue[0].id, trackingIds[0], adPosition || 'mid');
+        trackImpression(validAds[0].id, trackingIds[0], adPosition || 'mid');
       }
     }
-  }, [countdownSeconds, showCountdown, adQueue, adPosition, options, trackImpression, trackingIds]);
+  }, [countdownSeconds, showCountdown, adQueue, adPosition, options, trackImpression, trackingIds, getValidAds]);
 
   // Called when current ad finishes playing
   const onAdComplete = useCallback(() => {
