@@ -364,7 +364,7 @@ export default function AdminLiveTVChannels() {
                   {editingChannel ? 'Edit Channel' : 'Create New Channel'}
                 </DialogTitle>
               </DialogHeader>
-              <ScrollArea className="flex-1 min-h-0 pr-4">
+              <ScrollArea className="flex-1 min-h-0 pr-4 [&>div>div]:!block" type="always">
                 <div className="space-y-4 py-4">
                   <div>
                     <Label>Channel Name *</Label>
