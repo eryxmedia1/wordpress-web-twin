@@ -313,16 +313,16 @@ const Signup = () => {
                   </ul>
                   
                   {plan.included_channels && plan.included_channels.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-2">Included Channels:</p>
+                    <div className="mt-4 pt-4 border-t border-gray-600">
+                      <p className="text-xs text-gray-400 mb-2">Included Channels:</p>
                       <div className="flex flex-wrap gap-1">
                         {plan.included_channels.slice(0, 3).map((channel, idx) => (
-                          <span key={idx} className="text-xs bg-muted px-2 py-0.5 rounded">
+                          <span key={idx} className="text-xs bg-slate-700 text-white px-2 py-0.5 rounded">
                             {channel}
                           </span>
                         ))}
                         {plan.included_channels.length > 3 && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-gray-400">
                             +{plan.included_channels.length - 3} more
                           </span>
                         )}
