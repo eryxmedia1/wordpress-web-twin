@@ -24,13 +24,17 @@ const genres: Genre[] = [
   { id: "drama", name: "Drama", icon: "drama" },
   { id: "horror", name: "Horror", icon: "film" },
   { id: "romance", name: "Romance", icon: "book" },
-  { id: "sci-fi", name: "Sci-Fi", icon: "tv" },
   { id: "documentary", name: "Documentary", icon: "video" },
   { id: "thriller", name: "Thriller", icon: "film" },
-  { id: "animation", name: "Animation", icon: "video" },
   { id: "family", name: "Family", icon: "tv" },
-  { id: "mystery", name: "Mystery", icon: "book" },
-  { id: "adventure", name: "Adventure", icon: "drama" }
+  { id: "crime", name: "Crime", icon: "film" },
+  { id: "reality", name: "Reality", icon: "video" },
+  { id: "music", name: "Music", icon: "music" },
+  { id: "educational", name: "Educational", icon: "book" },
+  { id: "gospel", name: "Gospel", icon: "music" },
+  { id: "adventure", name: "Adventure", icon: "drama" },
+  { id: "animation", name: "Animation", icon: "video" },
+  { id: "history", name: "History", icon: "book" }
 ];
 
 interface GenresListProps {
