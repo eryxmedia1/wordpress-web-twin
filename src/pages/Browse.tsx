@@ -21,6 +21,7 @@ import NextToWatchRow from "@/components/NextToWatchRow";
 import ChannelRow from "@/components/ChannelRow";
 import LiveTVRow from "@/components/LiveTVRow";
 import IndieChannelsRow from "@/components/IndieChannelsRow";
+import IndieChannelContentRow from "@/components/IndieChannelContentRow";
 import MobileLayout from "@/components/mobile/MobileLayout";
 import MobileHeroCarousel from "@/components/mobile/MobileHeroCarousel";
 import MobileContentRow from "@/components/mobile/MobileContentRow";
@@ -31,6 +32,7 @@ import MobileChannelRow from "@/components/mobile/MobileChannelRow";
 import MobileContentDetailModal from "@/components/mobile/MobileContentDetailModal";
 import MobileLiveTVRow from "@/components/mobile/MobileLiveTVRow";
 import MobileIndieChannelsRow from "@/components/mobile/MobileIndieChannelsRow";
+import MobileIndieChannelContentRow from "@/components/mobile/MobileIndieChannelContentRow";
 
 interface Content {
   id: string;
@@ -229,6 +231,9 @@ const Browse = () => {
             seeAllLink="/category/we-think-youll-love"
           />
 
+          {/* Movie Channel Row - Above Top 10 */}
+          <MobileIndieChannelContentRow channelSlug="movie-channel" onItemClick={handleMoreInfo} />
+
           {/* Top 10 with large numbers - Above New on Zoe RatedTV */}
           {top10.length > 0 && (
             <MobileTop10Row
@@ -335,6 +340,9 @@ const Browse = () => {
 
           {/* Next To Watch */}
           <NextToWatchRow onMoreInfo={handleMoreInfo} />
+
+          {/* Movie Channel Row - Above Top 10 */}
+          <IndieChannelContentRow channelSlug="movie-channel" onMoreInfo={handleMoreInfo} />
 
           {/* Top 10 Shows on Zoe RatedTV - Large numbers behind posters (Above New on Zoe) */}
           {top10.length > 0 && (
