@@ -291,11 +291,11 @@ const Signup = () => {
                     {getPlanIcon(plan.slug)}
                   </div>
                   
-                  <h3 className="text-xl font-bold mb-2 text-center text-foreground">{plan.name}</h3>
-                  <p className="text-3xl font-bold mb-4 text-center text-foreground">
+                  <h3 className="text-xl font-bold mb-2 text-center text-white">{plan.name}</h3>
+                  <p className="text-3xl font-bold mb-4 text-center text-white">
                     {plan.price === 0 || plan.price === null ? 'Free' : `$${plan.price.toFixed(2)}`}
                     {plan.price !== 0 && plan.price !== null && (
-                      <span className="text-sm font-normal text-muted-foreground">/month</span>
+                      <span className="text-sm font-normal text-gray-400">/month</span>
                     )}
                   </p>
                   
@@ -305,9 +305,9 @@ const Signup = () => {
                         <Check className={`w-4 h-4 mr-2 mt-0.5 flex-shrink-0 ${
                           plan.slug === 'premium' ? 'text-amber-500' : 
                           plan.slug === 'standard' ? 'text-primary' : 
-                          'text-muted-foreground'
+                          'text-green-500'
                         }`} />
-                        <span className="text-foreground">{feature}</span>
+                        <span className="text-gray-200">{feature}</span>
                       </li>
                     ))}
                   </ul>

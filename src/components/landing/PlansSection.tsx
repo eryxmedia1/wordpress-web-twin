@@ -261,10 +261,10 @@ const PlansSection = () => {
                     Popular
                   </div>
                 )}
-                <h3 className="text-xl font-bold mb-4">{plan.name}</h3>
-                <p className="text-3xl font-bold mb-6">
+                <h3 className="text-xl font-bold mb-4 text-white">{plan.name}</h3>
+                <p className="text-3xl font-bold mb-6 text-white">
                   ${plan.price === 0 ? "0" : getPrice(plan.price)}
-                  <span className="text-sm font-normal text-muted-foreground">/{isAnnual ? 'year' : 'month'}</span>
+                  <span className="text-sm font-normal text-gray-400">/{isAnnual ? 'year' : 'month'}</span>
                 </p>
                 
                 {/* Basic Perks */}
@@ -274,20 +274,20 @@ const PlansSection = () => {
                       <span className={perk.included ? "text-green-500" : "text-red-500"} style={{ marginRight: '0.5rem' }}>
                         {perk.included ? "✓" : "✗"}
                       </span>
-                      <span className={!perk.included ? "text-muted-foreground" : ""}>{perk.text}</span>
+                      <span className={perk.included ? "text-gray-200" : "text-gray-500"}>{perk.text}</span>
                     </li>
                   ))}
                 </ul>
 
                 {/* Expanded Perks */}
                 {isExpanded && (
-                  <ul className="space-y-3 mt-3 pt-3 border-t border-border">
+                  <ul className="space-y-3 mt-3 pt-3 border-t border-gray-600">
                     {plan.expandedPerks.map((perk, i) => (
                       <li key={i} className="flex items-center">
                         <span className={perk.included ? "text-green-500" : "text-red-500"} style={{ marginRight: '0.5rem' }}>
                           {perk.included ? "✓" : "✗"}
                         </span>
-                        <span className={!perk.included ? "text-muted-foreground" : ""}>{perk.text}</span>
+                        <span className={perk.included ? "text-gray-200" : "text-gray-500"}>{perk.text}</span>
                       </li>
                     ))}
                   </ul>
