@@ -147,10 +147,25 @@ export function AdBreakOverlay({
     );
   }
 
-  // No ad to show
-  if (!ad || !ad.video_url) {
-    console.log('AdBreakOverlay: No ad or video URL', { ad });
+  // No ad to show - call onAdComplete to skip to next ad or end break
+  if (!ad) {
+    console.log('AdBreakOverlay: No ad provided');
     return null;
+  }
+
+  // If ad has no valid video URL, skip it immediately
+  if (!ad.video_url || ad.video_url.trim() === '') {
+    console.log('AdBreakOverlay: Ad has no valid video URL, skipping', { adName: ad.name });
+    // Use setTimeout to avoid calling onAdComplete during render
+    setTimeout(() => onAdComplete(), 0);
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-2" />
+          <p className="text-white/60 text-sm">Loading next ad...</p>
+        </div>
+      </div>
+    );
   }
 
   // Transform Vimeo URL to playable format (fallback if edge function didn't transform)

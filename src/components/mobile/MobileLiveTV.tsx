@@ -312,14 +312,23 @@ export default function MobileLiveTV() {
     fetchChannels();
   }, [channelSlug]);
 
+  // Loading error state
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
   // Fetch current segment for selected channel (playlist-based fallback)
   const fetchLiveSegment = useCallback(async (isInitialLoad = false) => {
     if (!selectedChannel) return;
     
     // If we're live streaming via Mux, skip playlist segment fetch
     if (isLiveStreaming && selectedChannel.playback_url) {
+      setLoadError(null);
       return;
     }
+
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
       const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/get-live-segment?channel=${selectedChannel.slug}`;
@@ -328,7 +337,12 @@ export default function MobileLiveTV() {
         headers: {
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRqdHZzbG9qeGtrY3JwY29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjUxNjcsImV4cCI6MjA2MjYwMTE2N30.TC4eACBOJsfggnuB3OyOK7x4O9yp7bjzOP5Tr9_jHds',
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+      setLoadError(null);
+      setRetryCount(0);
 
       if (res.ok) {
         const data = await res.json();
@@ -358,10 +372,36 @@ export default function MobileLiveTV() {
           setLiveSegment(errorData);
         }
       }
-    } catch (error) {
-      console.error('Error fetching live segment:', error);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.error('[MobileLiveTV] Request timed out');
+        setLoadError('Connection timed out. Tap to retry.');
+      } else {
+        console.error('Error fetching live segment:', error);
+        setLoadError('Failed to load stream. Tap to retry.');
+      }
+      
+      // Auto-retry up to 3 times
+      if (isInitialLoad && retryCount < 3) {
+        const delay = Math.pow(2, retryCount) * 1000;
+        console.log(`[MobileLiveTV] Auto-retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          fetchLiveSegment(true);
+        }, delay);
+      }
     }
-  }, [selectedChannel, isLiveStreaming]);
+  }, [selectedChannel, isLiveStreaming, retryCount]);
+
+  // Manual retry function
+  const handleRetry = useCallback(() => {
+    setLoadError(null);
+    setRetryCount(0);
+    setIsLoading(true);
+    fetchLiveSegment(true);
+  }, [fetchLiveSegment]);
 
   // Check for Mux stream first, then fall back to playlist
   useEffect(() => {
@@ -565,8 +605,16 @@ export default function MobileLiveTV() {
           </Button>
         </div>
 
-        {/* Loading Overlay */}
-        {(isSeeking || (!isPlaying && videoUrl)) && (
+        {/* Loading/Error Overlay */}
+        {loadError ? (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black">
+            <Radio className="h-10 w-10 text-muted-foreground mb-3" />
+            <p className="text-white text-sm mb-3">{loadError}</p>
+            <Button onClick={handleRetry} variant="default" size="sm">
+              Tap to Retry
+            </Button>
+          </div>
+        ) : (isSeeking || (!isPlaying && videoUrl)) && (
           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black">
             <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
             <p className="text-white text-sm">Joining live stream...</p>

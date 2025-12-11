@@ -368,14 +368,23 @@ export default function LiveTV() {
     fetchChannels();
   }, [channelSlug]);
 
+  // Loading state with error handling
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
   // Fetch current segment for selected channel (playlist-based fallback)
   const fetchLiveSegment = useCallback(async (isInitialLoad = false) => {
     if (!selectedChannel) return;
     
     // If we're live streaming via Mux, skip playlist segment fetch
     if (isLiveStreaming && selectedChannel.playback_url) {
+      setLoadError(null);
       return;
     }
+
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
       const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/get-live-segment?channel=${selectedChannel.slug}`;
@@ -386,7 +395,12 @@ export default function LiveTV() {
           'Authorization': `Bearer ${session.data.session?.access_token || ''}`,
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRqdHZzbG9qeGtrY3JwY29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjUxNjcsImV4cCI6MjA2MjYwMTE2N30.TC4eACBOJsfggnuB3OyOK7x4O9yp7bjzOP5Tr9_jHds',
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+      setLoadError(null);
+      setRetryCount(0);
 
       if (res.ok) {
         const data = await res.json();
@@ -419,10 +433,36 @@ export default function LiveTV() {
           setLiveSegment(errorData);
         }
       }
-    } catch (error) {
-      console.error('Error fetching live segment:', error);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.error('[LiveTV] Request timed out');
+        setLoadError('Connection timed out. Tap to retry.');
+      } else {
+        console.error('Error fetching live segment:', error);
+        setLoadError('Failed to load stream. Tap to retry.');
+      }
+      
+      // Auto-retry up to 3 times with exponential backoff
+      if (isInitialLoad && retryCount < 3) {
+        const delay = Math.pow(2, retryCount) * 1000;
+        console.log(`[LiveTV] Auto-retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          fetchLiveSegment(true);
+        }, delay);
+      }
     }
-  }, [selectedChannel, isLiveStreaming]);
+  }, [selectedChannel, isLiveStreaming, retryCount]);
+
+  // Manual retry function
+  const handleRetry = useCallback(() => {
+    setLoadError(null);
+    setRetryCount(0);
+    setIsLoading(true);
+    fetchLiveSegment(true);
+  }, [fetchLiveSegment]);
 
   // Countdown timer (no longer used for seeking - keeping for backwards compatibility)
   useEffect(() => {
@@ -639,7 +679,16 @@ export default function LiveTV() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {isLoading ? (
+        {loadError ? (
+          <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+            <Radio className="h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-xl font-bold mb-2">Connection Issue</h2>
+            <p className="text-muted-foreground mb-4">{loadError}</p>
+            <Button onClick={handleRetry} variant="default">
+              Tap to Retry
+            </Button>
+          </div>
+        ) : isLoading ? (
           <div className="flex items-center justify-center h-[60vh]">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
           </div>
