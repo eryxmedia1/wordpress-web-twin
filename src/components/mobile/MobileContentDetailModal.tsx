@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import MobileBottomNav from "./MobileBottomNav";
 import ReactPlayer from "react-player";
+import { toast } from "sonner";
 
 interface MobileContentDetailModalProps {
   contentId: string | null;
@@ -132,27 +133,75 @@ const MobileContentDetailModal = ({ contentId, isOpen, onClose }: MobileContentD
     fetchContent();
   }, [contentId, isOpen, currentProfile?.id]);
 
-  const toggleMyList = async () => {
-    if (!currentProfile?.id || !contentId) return;
+  const toggleMyList = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentProfile?.id) {
+      toast.error("Please select a profile first");
+      return;
+    }
+    if (!contentId) return;
 
-    if (isInList) {
-      await supabase.from("favorites").delete().eq("profile_id", currentProfile.id).eq("content_id", contentId);
-      setIsInList(false);
-    } else {
-      await supabase.from("favorites").insert({ profile_id: currentProfile.id, content_id: contentId });
-      setIsInList(true);
+    try {
+      if (isInList) {
+        const { error } = await supabase
+          .from("favorites")
+          .delete()
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", contentId);
+        
+        if (error) throw error;
+        setIsInList(false);
+        toast.success(`Removed "${content?.title}" from My List`);
+      } else {
+        const { error } = await supabase
+          .from("favorites")
+          .insert({ profile_id: currentProfile.id, content_id: contentId });
+        
+        if (error) throw error;
+        setIsInList(true);
+        toast.success(`Added "${content?.title}" to My List`);
+      }
+    } catch (error) {
+      console.error("Error updating My List:", error);
+      toast.error("Failed to update My List");
     }
   };
 
-  const toggleLike = async () => {
-    if (!currentProfile?.id || !contentId) return;
+  const toggleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentProfile?.id) {
+      toast.error("Please select a profile first");
+      return;
+    }
+    if (!contentId) return;
 
-    if (isLiked) {
-      await supabase.from("likes").delete().eq("profile_id", currentProfile.id).eq("content_id", contentId);
-      setIsLiked(false);
-    } else {
-      await supabase.from("likes").insert({ profile_id: currentProfile.id, content_id: contentId, rating: 1 });
-      setIsLiked(true);
+    try {
+      if (isLiked) {
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq("profile_id", currentProfile.id)
+          .eq("content_id", contentId);
+        
+        if (error) throw error;
+        setIsLiked(false);
+        toast.success("Removed like");
+      } else {
+        const { error } = await supabase
+          .from("likes")
+          .insert({ profile_id: currentProfile.id, content_id: contentId, rating: 1 });
+        
+        if (error) throw error;
+        setIsLiked(true);
+        toast.success("Liked!");
+      }
+    } catch (error) {
+      console.error("Error updating likes:", error);
+      toast.error("Failed to update likes");
     }
   };
 
@@ -269,7 +318,11 @@ const MobileContentDetailModal = ({ contentId, isOpen, onClose }: MobileContentD
           )}
 
           <div className="flex gap-4 justify-center pt-2">
-            <button onClick={toggleMyList} className="flex flex-col items-center gap-1">
+            <button 
+              type="button"
+              onClick={(e) => toggleMyList(e)} 
+              className="flex flex-col items-center gap-1 touch-manipulation"
+            >
               <div
                 className={cn(
                   "w-10 h-10 rounded-full border-2 flex items-center justify-center transition-colors",
@@ -281,7 +334,11 @@ const MobileContentDetailModal = ({ contentId, isOpen, onClose }: MobileContentD
               <span className="text-xs text-muted-foreground">My List</span>
             </button>
 
-            <button onClick={toggleLike} className="flex flex-col items-center gap-1">
+            <button 
+              type="button"
+              onClick={(e) => toggleLike(e)} 
+              className="flex flex-col items-center gap-1 touch-manipulation"
+            >
               <div
                 className={cn(
                   "w-10 h-10 rounded-full border-2 flex items-center justify-center transition-colors",
