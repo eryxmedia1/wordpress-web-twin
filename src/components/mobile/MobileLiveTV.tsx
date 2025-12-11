@@ -332,12 +332,23 @@ export default function MobileLiveTV() {
 
       if (res.ok) {
         const data = await res.json();
+        console.log('[MobileLiveTV] Segment data:', { 
+          videoUrl: data.videoUrl?.substring(0, 50),
+          offsetSeconds: data.offsetSeconds,
+          title: data.nowPlaying?.title 
+        });
         setLiveSegment(data);
         
         if (isInitialLoad && data.videoUrl && data.offsetSeconds > 0) {
+          // Store target offset for seeking - critical for join-in-progress
           targetOffsetRef.current = data.offsetSeconds;
+          console.log('[MobileLiveTV] Setting up seek to offset:', data.offsetSeconds);
           setIsSeeking(true);
+          setIsPlaying(false); // Don't play until seek completes
         } else if (isInitialLoad && data.videoUrl) {
+          // No offset needed, start from beginning
+          console.log('[MobileLiveTV] No offset needed, starting from beginning');
+          targetOffsetRef.current = 0;
           setIsSeeking(false);
           setIsPlaying(true);
         }
@@ -414,14 +425,27 @@ export default function MobileLiveTV() {
     fetchLiveSegment(true);
   };
 
+  // Handle player ready - perform seek for join-in-progress
   const handlePlayerReady = () => {
+    console.log('[MobileLiveTV] Player ready. isSeeking:', isSeeking, 'targetOffset:', targetOffsetRef.current, 'isLiveStreaming:', isLiveStreaming);
+    
+    // For live Mux streams, start playing immediately
+    if (isLiveStreaming && selectedChannel?.playback_url) {
+      setIsPlaying(true);
+      return;
+    }
+    
+    // If we need to seek to a specific offset (join-in-progress)
     if (isSeeking && targetOffsetRef.current > 0) {
+      console.log('[MobileLiveTV] Seeking to offset:', targetOffsetRef.current, 'seconds');
       playerRef.current?.seekTo(targetOffsetRef.current, 'seconds');
       setTimeout(() => {
+        console.log('[MobileLiveTV] Seek complete, starting playback');
         setIsSeeking(false);
         setIsPlaying(true);
-      }, 300);
+      }, 500);
     } else if (!isSeeking && (liveSegment?.videoUrl || selectedChannel?.playback_url)) {
+      console.log('[MobileLiveTV] No seek needed, starting playback');
       setIsPlaying(true);
     }
   };

@@ -390,16 +390,24 @@ export default function LiveTV() {
 
       if (res.ok) {
         const data = await res.json();
+        console.log('[LiveTV] Segment data:', { 
+          videoUrl: data.videoUrl?.substring(0, 50),
+          offsetSeconds: data.offsetSeconds,
+          title: data.nowPlaying?.title 
+        });
         setLiveSegment(data);
         
         if (isInitialLoad && data.videoUrl && data.offsetSeconds > 0) {
-          // Store target offset for seeking
+          // Store target offset for seeking - this is critical for join-in-progress
           targetOffsetRef.current = data.offsetSeconds;
-          // Show countdown while we prepare to seek
-          setCountdown(3);
+          console.log('[LiveTV] Setting up seek to offset:', data.offsetSeconds);
+          // Mark as needing to seek, player will handle it when ready
           setIsSeeking(true);
+          setIsPlaying(false); // Don't play until seek completes
         } else if (isInitialLoad && data.videoUrl) {
-          // No offset needed, can start immediately
+          // No offset needed (beginning of video), can start immediately
+          console.log('[LiveTV] No offset needed, starting from beginning');
+          targetOffsetRef.current = 0;
           setIsSeeking(false);
           setIsPlaying(true);
         }
@@ -416,7 +424,7 @@ export default function LiveTV() {
     }
   }, [selectedChannel, isLiveStreaming]);
 
-  // Countdown timer
+  // Countdown timer (no longer used for seeking - keeping for backwards compatibility)
   useEffect(() => {
     if (countdown === null || countdown <= 0) return;
     
@@ -426,21 +434,6 @@ export default function LiveTV() {
     
     return () => clearTimeout(timer);
   }, [countdown]);
-
-  // When countdown finishes, trigger the seek
-  useEffect(() => {
-    if (countdown === 0 || countdown === null) {
-      if (isSeeking && playerRef.current && targetOffsetRef.current > 0) {
-        // Perform the seek
-        playerRef.current.seekTo(targetOffsetRef.current, 'seconds');
-        // Wait a brief moment then start playing
-        seekTimeoutRef.current = setTimeout(() => {
-          setIsSeeking(false);
-          setIsPlaying(true);
-        }, 300);
-      }
-    }
-  }, [countdown, isSeeking]);
 
   // Check for Mux stream first, then fall back to playlist
   useEffect(() => {
@@ -525,23 +518,30 @@ export default function LiveTV() {
     fetchLiveSegment(true);
   };
 
-  // Handle player ready
+  // Handle player ready - this is where we perform the seek for join-in-progress
   const handlePlayerReady = () => {
+    console.log('[LiveTV] Player ready. isSeeking:', isSeeking, 'targetOffset:', targetOffsetRef.current, 'isLiveStreaming:', isLiveStreaming);
+    
     // For live Mux streams, start playing immediately
     if (isLiveStreaming && selectedChannel?.playback_url) {
       setIsPlaying(true);
       return;
     }
     
-    if (isSeeking && countdown === null && targetOffsetRef.current > 0) {
-      // Player is ready and countdown finished, perform seek
+    // If we need to seek to a specific offset (join-in-progress)
+    if (isSeeking && targetOffsetRef.current > 0) {
+      console.log('[LiveTV] Seeking to offset:', targetOffsetRef.current, 'seconds');
+      // Perform the seek
       playerRef.current?.seekTo(targetOffsetRef.current, 'seconds');
-      setTimeout(() => {
+      // Wait for seek to complete, then start playing
+      seekTimeoutRef.current = setTimeout(() => {
+        console.log('[LiveTV] Seek complete, starting playback');
         setIsSeeking(false);
         setIsPlaying(true);
-      }, 300);
+      }, 500); // Give more time for seek to complete
     } else if (!isSeeking && liveSegment?.videoUrl) {
-      // No seeking needed, start playing
+      // No seeking needed, start playing from beginning
+      console.log('[LiveTV] No seek needed, starting playback');
       setIsPlaying(true);
     }
   };
@@ -695,22 +695,15 @@ export default function LiveTV() {
                 {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
               </Button>
 
-              {/* Countdown/Loading Overlay - Don't show for live Mux streams */}
+              {/* Loading Overlay - Don't show for live Mux streams */}
               {!isLiveStreaming && (isSeeking || (!isPlaying && liveSegment?.videoUrl)) && (
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black">
-                  {countdown !== null && countdown > 0 ? (
-                    <>
-                      <div className="text-6xl font-bold text-primary mb-4">{countdown}</div>
-                      <p className="text-lg text-white">Joining live stream...</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {liveSegment?.nowPlaying?.title}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                      <p className="text-white">Syncing to live position...</p>
-                    </>
+                  <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                  <p className="text-white">Syncing to live position...</p>
+                  {liveSegment?.nowPlaying?.title && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {liveSegment.nowPlaying.title}
+                    </p>
                   )}
                 </div>
               )}
