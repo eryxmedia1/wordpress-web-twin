@@ -100,16 +100,27 @@ interface Video {
   channels: string[] | null;
 }
 
+const FILTER_TYPES = [
+  { value: 'none', label: 'No Filter' },
+  { value: 'channel', label: 'By Channel' },
+  { value: 'tag', label: 'By Tag' },
+  { value: 'category', label: 'By Category' },
+  { value: 'genre', label: 'By Genre' },
+  { value: 'type', label: 'By Type' },
+];
+
 const CHANNEL_OPTIONS = [
-  { value: 'all', label: 'All Content' },
-  { value: 'Zoe RatedTV', label: 'Zoe RatedTV' },
-  { value: 'MadFaceTV', label: 'MadFaceTV' },
-  { value: 'AyiTV', label: 'AyiTV' },
-  { value: 'MyPureTV', label: 'MyPureTV' },
-  { value: 'Yard MonTV', label: 'Yard MonTV' },
-  { value: 'Indie Films', label: 'Indie Films' },
-  { value: 'Movie Channel', label: 'Movie Channel' },
-  { value: 'More Networks', label: 'More Networks' },
+  'Zoe RatedTV', 'MadFaceTV', 'AyiTV', 'MyPureTV', 'Yard MonTV', 
+  'Indie Films', 'Movie Channel', 'More Networks', 'Boss Mogul TV',
+  'Cap Village Media', 'Podcast Universe', 'Funny Videos', 'Caught On Camera',
+  'Dramatic Videos',
+];
+
+const TYPE_OPTIONS = [
+  { value: 'movie', label: 'Movies' },
+  { value: 'show', label: 'TV Shows' },
+  { value: 'video', label: 'Videos' },
+  { value: 'podcast', label: 'Podcasts' },
 ];
 
 interface Episode {
@@ -210,9 +221,15 @@ export default function AdminLiveTVPlaylists() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAddingEpisodes, setIsAddingEpisodes] = useState(false);
-  const [channelFilter, setChannelFilter] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>('none');
+  const [filterValue, setFilterValue] = useState<string>('');
   const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
   const [isAddingSelected, setIsAddingSelected] = useState(false);
+  
+  // Filter options from database
+  const [availableTags, setAvailableTags] = useState<{id: string; name: string; slug: string}[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<{id: string; name: string; slug: string}[]>([]);
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
 
   // Midroll configuration
   const [midrollDialogOpen, setMidrollDialogOpen] = useState(false);
@@ -287,50 +304,109 @@ export default function AdminLiveTVPlaylists() {
   useEffect(() => {
     fetchChannel();
     fetchPlaylists();
+    
+    // Fetch filter options
+    const fetchFilterOptions = async () => {
+      const [tagsRes, catsRes, genresRes] = await Promise.all([
+        supabase.from('tags').select('id, name, slug').order('name'),
+        supabase.from('categories').select('id, name, slug').order('name'),
+        supabase.from('contents').select('genre').not('genre', 'is', null),
+      ]);
+      
+      if (tagsRes.data) setAvailableTags(tagsRes.data);
+      if (catsRes.data) setAvailableCategories(catsRes.data);
+      if (genresRes.data) {
+        const uniqueGenres = [...new Set(genresRes.data.map(c => c.genre).filter(Boolean))] as string[];
+        setAvailableGenres(uniqueGenres.sort());
+      }
+    };
+    fetchFilterOptions();
   }, [channelId]);
 
   useEffect(() => {
     fetchPlaylistItems();
   }, [fetchPlaylistItems]);
 
-  const searchVideos = useCallback(async (query: string, channel: string) => {
-    if (!query.trim() && channel === 'all') {
+  const searchVideos = useCallback(async (query: string, fType: string, fValue: string) => {
+    if (!query.trim() && fType === 'none') {
       setSearchResults([]);
       setEpisodicShows([]);
       return;
     }
     setIsSearching(true);
     
-    let queryBuilder = supabase
-      .from('contents')
-      .select('id, title, poster_url, duration, type, channels');
-    
-    if (query.trim()) {
-      queryBuilder = queryBuilder.ilike('title', `%${query}%`);
-    }
-    
-    // Special handling for Movie Channel - show all movies
-    if (channel === 'Movie Channel') {
-      queryBuilder = queryBuilder.eq('type', 'movie');
-    } else if (channel !== 'all') {
-      queryBuilder = queryBuilder.contains('channels', [channel]);
-    }
-    
-    const { data } = await queryBuilder.limit(100);
-    
-    if (data) {
+    try {
+      let data: any[] = [];
+      
+      if (fType === 'tag' && fValue) {
+        // Search by tag - need to join with content_tags
+        const { data: taggedContent } = await supabase
+          .from('content_tags')
+          .select('content:contents(id, title, poster_url, duration, type, channels)')
+          .eq('tag_id', fValue);
+        
+        if (taggedContent) {
+          data = taggedContent.map(tc => tc.content).filter(Boolean);
+          if (query.trim()) {
+            data = data.filter(v => v.title?.toLowerCase().includes(query.toLowerCase()));
+          }
+        }
+      } else {
+        // Standard query
+        let queryBuilder = supabase
+          .from('contents')
+          .select('id, title, poster_url, duration, type, channels');
+        
+        if (query.trim()) {
+          queryBuilder = queryBuilder.ilike('title', `%${query}%`);
+        }
+        
+        // Apply filter based on type
+        if (fType === 'channel' && fValue) {
+          if (fValue === 'Movie Channel') {
+            queryBuilder = queryBuilder.eq('type', 'movie');
+          } else {
+            queryBuilder = queryBuilder.contains('channels', [fValue]);
+          }
+        } else if (fType === 'genre' && fValue) {
+          queryBuilder = queryBuilder.ilike('genre', `%${fValue}%`);
+        } else if (fType === 'type' && fValue) {
+          queryBuilder = queryBuilder.eq('type', fValue as any);
+        } else if (fType === 'category' && fValue) {
+          // Need separate query for category
+          const { data: catContent } = await supabase
+            .from('playlist_items')
+            .select('content:contents(id, title, poster_url, duration, type, channels), playlist:playlists!inner(slug)')
+            .eq('playlist.slug', fValue);
+          
+          if (catContent) {
+            data = catContent.map(pc => pc.content).filter(Boolean);
+            if (query.trim()) {
+              data = data.filter(v => v.title?.toLowerCase().includes(query.toLowerCase()));
+            }
+          }
+        }
+        
+        if (fType !== 'category' || !fValue) {
+          const result = await queryBuilder.limit(100);
+          if (result.data) data = result.data;
+        }
+      }
+      
       const shows = data.filter(v => v.type === 'show');
       const others = data.filter(v => v.type !== 'show');
       setEpisodicShows(shows as Video[]);
       setSearchResults(others as Video[]);
+    } catch (error) {
+      console.error('Search error:', error);
     }
     setIsSearching(false);
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => searchVideos(searchQuery, channelFilter), 300);
+    const timer = setTimeout(() => searchVideos(searchQuery, filterType, filterValue), 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, channelFilter, searchVideos]);
+  }, [searchQuery, filterType, filterValue, searchVideos]);
 
   const resetForm = () => {
     setFormData({
@@ -500,7 +576,8 @@ export default function AdminLiveTVPlaylists() {
       toast.success(`${videosToAdd.length} video(s) added`);
       setSelectedVideoIds(new Set());
       setSearchQuery('');
-      setChannelFilter('all');
+      setFilterType('none');
+      setFilterValue('');
       setIsSearchOpen(false);
       fetchPlaylistItems();
     } catch (error: any) {
@@ -998,7 +1075,8 @@ export default function AdminLiveTVPlaylists() {
                         setVimeoUrl('');
                         setVimeoMetadata(null);
                         setSelectedVideoIds(new Set());
-                        setChannelFilter('all');
+                        setFilterType('none');
+                        setFilterValue('');
                         setSearchQuery('');
                       }
                     }}>
@@ -1024,16 +1102,89 @@ export default function AdminLiveTVPlaylists() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search videos..." className="pl-9" autoFocus />
                               </div>
-                              <Select value={channelFilter} onValueChange={setChannelFilter}>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Filter by channel" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {CHANNEL_OPTIONS.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <div className="flex gap-2">
+                                <Select value={filterType} onValueChange={(val) => { setFilterType(val); setFilterValue(''); }}>
+                                  <SelectTrigger className="w-[130px]">
+                                    <SelectValue placeholder="Filter by..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {FILTER_TYPES.map((ft) => (
+                                      <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                
+                                {filterType === 'channel' && (
+                                  <Select value={filterValue} onValueChange={setFilterValue}>
+                                    <SelectTrigger className="flex-1">
+                                      <SelectValue placeholder="Select channel..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {CHANNEL_OPTIONS.map((ch) => (
+                                        <SelectItem key={ch} value={ch}>{ch}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                                
+                                {filterType === 'tag' && (
+                                  <Select value={filterValue} onValueChange={setFilterValue}>
+                                    <SelectTrigger className="flex-1">
+                                      <SelectValue placeholder="Select tag..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <ScrollArea className="h-60">
+                                        {availableTags.map((tag) => (
+                                          <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>
+                                        ))}
+                                      </ScrollArea>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                                
+                                {filterType === 'category' && (
+                                  <Select value={filterValue} onValueChange={setFilterValue}>
+                                    <SelectTrigger className="flex-1">
+                                      <SelectValue placeholder="Select category..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <ScrollArea className="h-60">
+                                        {availableCategories.map((cat) => (
+                                          <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
+                                        ))}
+                                      </ScrollArea>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                                
+                                {filterType === 'genre' && (
+                                  <Select value={filterValue} onValueChange={setFilterValue}>
+                                    <SelectTrigger className="flex-1">
+                                      <SelectValue placeholder="Select genre..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <ScrollArea className="h-60">
+                                        {availableGenres.map((g) => (
+                                          <SelectItem key={g} value={g}>{g}</SelectItem>
+                                        ))}
+                                      </ScrollArea>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                                
+                                {filterType === 'type' && (
+                                  <Select value={filterValue} onValueChange={setFilterValue}>
+                                    <SelectTrigger className="flex-1">
+                                      <SelectValue placeholder="Select type..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {TYPE_OPTIONS.map((t) => (
+                                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
                             </div>
                             
                             {/* Select All / Add Selected bar */}
@@ -1169,11 +1320,11 @@ export default function AdminLiveTVPlaylists() {
                                     </div>
                                   )}
 
-                                  {(searchQuery || channelFilter !== 'all') && searchResults.length === 0 && episodicShows.length === 0 && (
+                                  {(searchQuery || filterType !== 'none') && searchResults.length === 0 && episodicShows.length === 0 && (
                                     <p className="p-4 text-center text-muted-foreground">No videos found</p>
                                   )}
-                                  {!searchQuery && channelFilter === 'all' && (
-                                    <p className="p-4 text-center text-muted-foreground">Start typing to search or select a channel</p>
+                                  {!searchQuery && filterType === 'none' && (
+                                    <p className="p-4 text-center text-muted-foreground">Start typing to search or select a filter</p>
                                   )}
                                 </div>
                               )}
