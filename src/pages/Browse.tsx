@@ -22,6 +22,7 @@ import ChannelRow from "@/components/ChannelRow";
 import LiveTVRow from "@/components/LiveTVRow";
 import IndieChannelsRow from "@/components/IndieChannelsRow";
 import IndieChannelContentRow from "@/components/IndieChannelContentRow";
+import AfricanMoviesRow from "@/components/AfricanMoviesRow";
 import MobileLayout from "@/components/mobile/MobileLayout";
 import MobileHeroCarousel from "@/components/mobile/MobileHeroCarousel";
 import MobileContentRow from "@/components/mobile/MobileContentRow";
@@ -33,6 +34,7 @@ import MobileContentDetailModal from "@/components/mobile/MobileContentDetailMod
 import MobileLiveTVRow from "@/components/mobile/MobileLiveTVRow";
 import MobileIndieChannelsRow from "@/components/mobile/MobileIndieChannelsRow";
 import MobileIndieChannelContentRow from "@/components/mobile/MobileIndieChannelContentRow";
+import MobileAfricanMoviesRow from "@/components/mobile/MobileAfricanMoviesRow";
 
 interface Content {
   id: string;
@@ -234,6 +236,9 @@ const Browse = () => {
           {/* Movie Channel Row - Above Top 10 */}
           <MobileIndieChannelContentRow channelSlug="movie-channel" onItemClick={handleMoreInfo} />
 
+          {/* African Movies Row */}
+          <MobileAfricanMoviesRow onItemClick={handleMoreInfo} />
+
           {/* Top 10 with large numbers - Above New on Zoe RatedTV */}
           {top10.length > 0 && (
             <MobileTop10Row
@@ -343,6 +348,9 @@ const Browse = () => {
 
           {/* Movie Channel Row - Above Top 10 */}
           <IndieChannelContentRow channelSlug="movie-channel" onMoreInfo={handleMoreInfo} />
+
+          {/* African Movies Row */}
+          <AfricanMoviesRow onMoreInfo={handleMoreInfo} />
 
           {/* Top 10 Shows on Zoe RatedTV - Large numbers behind posters (Above New on Zoe) */}
           {top10.length > 0 && (

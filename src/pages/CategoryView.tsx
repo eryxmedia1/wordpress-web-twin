@@ -88,8 +88,14 @@ const CategoryView = () => {
         return "Top 10 on Zoe RatedTV";
       case "we-think-youll-love":
         return "We Think You'll Love These";
+      case "african-movies":
+        return "African Movies";
       default:
         // Channel names - convert slug back to title case
+        // Skip if it looks like a UUID
+        if (category && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(category)) {
+          return "Content";
+        }
         return category?.split('-').map(word => 
           word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ') || "All Content";
@@ -253,6 +259,40 @@ const CategoryView = () => {
           
           const result = await query;
           data = (result.data || []) as ContentItem[];
+          break;
+        }
+
+        case "african-movies": {
+          // First get movie-channel indie channel
+          const { data: channel } = await supabase
+            .from("indie_channels")
+            .select("id")
+            .eq("slug", "movie-channel")
+            .eq("is_active", true)
+            .single();
+
+          if (channel) {
+            let query = supabase
+              .from("contents")
+              .select("*")
+              .eq("indie_channel_id", channel.id)
+              .or("genre.ilike.%Drama%,genre.ilike.%Romance%")
+              .order(column, { ascending })
+              .range(offset, offset + ITEMS_PER_PAGE - 1);
+            
+            if (selectedGenre) query = query.ilike("genre", `%${selectedGenre}%`);
+            if (selectedYear) query = query.eq("release_year", parseInt(selectedYear));
+            if (selectedRating) query = query.eq("rating", selectedRating);
+            
+            const result = await query;
+            // Filter out UUID genres
+            const validData = (result.data || []).filter((item: any) => {
+              if (!item.genre) return false;
+              const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+              return !uuidPattern.test(item.genre);
+            });
+            data = validData as ContentItem[];
+          }
           break;
         }
 
