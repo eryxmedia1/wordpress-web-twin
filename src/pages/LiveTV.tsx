@@ -545,14 +545,8 @@ export default function LiveTV() {
     targetOffsetRef.current = 0;
     navigate(`/live/${channel.slug}`, { replace: true });
     
-    // Request pre-roll ad when switching channels
-    if (!isLiveStreaming) {
-      const hasPreRoll = await requestPreRoll();
-      setPreRollPlayed(true);
-      if (!hasPreRoll) {
-        setIsPlaying(true);
-      }
-    }
+    // Pre-roll ads disabled for Live TV - mid-roll and post-roll only
+    setIsPlaying(true);
   };
 
   const handleVideoEnd = () => {
@@ -598,17 +592,7 @@ export default function LiveTV() {
 
   const videoUrl = getVideoUrl();
 
-  // Request pre-roll only on user-initiated channel selection (not initial page load)
-  useEffect(() => {
-    if (selectedChannel && !preRollPlayed && isPlaying && !isAdPlaying && isUserInitiatedChannel) {
-      const requestInitialPreRoll = async () => {
-        console.log('[LiveTV Ads] Requesting pre-roll for user-selected channel');
-        await requestPreRoll();
-        setPreRollPlayed(true);
-      };
-      requestInitialPreRoll();
-    }
-  }, [selectedChannel, preRollPlayed, isPlaying, isAdPlaying, isUserInitiatedChannel, requestPreRoll]);
+  // Pre-roll ads disabled for Live TV - only mid-roll ads are used
 
   // Calculate next ad break time
   const getNextAdBreakIn = () => {

@@ -135,14 +135,7 @@ export default function MobileLiveTV() {
     };
   }, [isPlaying, isAdPlaying, isLiveStreaming, midrollIntervalSeconds, requestMidRoll, canRequestMidRoll]);
 
-  // Request pre-roll only on user-initiated channel selection (not initial page load)
-  useEffect(() => {
-    if (selectedChannel && isPlaying && !isAdPlaying && !preRollPlayed && !isLiveStreaming && isUserInitiatedChannel) {
-      console.log('[MobileLiveTV] Requesting pre-roll ad for user-selected channel');
-      requestPreRoll();
-      setPreRollPlayed(true);
-    }
-  }, [selectedChannel, isPlaying, isAdPlaying, preRollPlayed, isLiveStreaming, isUserInitiatedChannel, requestPreRoll]);
+  // Pre-roll ads disabled for Live TV - only mid-roll ads are used
 
   // Track view to channel_views when playback starts
   const viewTrackedRef = useRef<string | null>(null);
