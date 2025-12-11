@@ -358,13 +358,13 @@ export default function AdminLiveTVChannels() {
                 Add Channel
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
               <DialogHeader className="flex-shrink-0">
                 <DialogTitle>
                   {editingChannel ? 'Edit Channel' : 'Create New Channel'}
                 </DialogTitle>
               </DialogHeader>
-              <ScrollArea className="flex-1 min-h-0 pr-4 [&>div>div]:!block" type="always">
+              <div className="flex-1 overflow-y-auto pr-2">
                 <div className="space-y-4 py-4">
                   <div>
                     <Label>Channel Name *</Label>
@@ -527,7 +527,7 @@ export default function AdminLiveTVChannels() {
                     />
                   </div>
                 </div>
-              </ScrollArea>
+              </div>
               <div className="flex-shrink-0 pt-4 border-t border-border">
                 <Button onClick={handleSave} className="w-full" disabled={isSaving || formData.allowed_tiers.length === 0}>
                   {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
