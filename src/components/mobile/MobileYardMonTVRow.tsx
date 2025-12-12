@@ -78,6 +78,9 @@ const MobileYardMonTVRow = ({ onItemClick }: MobileYardMonTVRowProps) => {
     posterUrl: content.poster_url || "/placeholder.svg",
     rating: content.rating,
     year: content.release_year?.toString(),
+    videoUrl: content.video_url,
+    trailerUrl: content.trailer_url,
+    genre: content.genre,
   }));
 
   return (

@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import { ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import MobileContentRow from "./MobileContentRow";
 
 interface Content {
   id: string;
   title: string;
   poster_url: string | null;
   rating: string | null;
+  release_year: number | null;
+  genre: string | null;
+  video_url: string | null;
+  trailer_url: string | null;
 }
 
 interface MobileChannelRowProps {
@@ -17,7 +20,6 @@ interface MobileChannelRowProps {
 }
 
 const MobileChannelRow = ({ channelName, onItemClick, seeAllLink }: MobileChannelRowProps) => {
-  const navigate = useNavigate();
   const [items, setItems] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -25,7 +27,7 @@ const MobileChannelRow = ({ channelName, onItemClick, seeAllLink }: MobileChanne
     const fetchChannelContent = async () => {
       const { data, error } = await supabase
         .from("contents")
-        .select("id, title, poster_url, rating, channels")
+        .select("id, title, poster_url, rating, release_year, genre, video_url, trailer_url, channels")
         .contains("channels", [channelName])
         .order("created_at", { ascending: false })
         .limit(15);
@@ -39,62 +41,26 @@ const MobileChannelRow = ({ channelName, onItemClick, seeAllLink }: MobileChanne
     fetchChannelContent();
   }, [channelName]);
 
-  const handleSeeAll = () => {
-    if (seeAllLink) {
-      navigate(seeAllLink);
-    }
-  };
-
   if (isLoading || items.length === 0) return null;
 
+  const mappedItems = items.map((item) => ({
+    id: item.id,
+    title: item.title,
+    posterUrl: item.poster_url || "/placeholder.svg",
+    rating: item.rating || undefined,
+    year: item.release_year?.toString() || undefined,
+    genre: item.genre || undefined,
+    videoUrl: item.video_url,
+    trailerUrl: item.trailer_url,
+  }));
+
   return (
-    <div className="py-2">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 mb-3">
-        <h2 className="text-base font-semibold text-foreground">{channelName}</h2>
-        {seeAllLink && (
-          <button 
-            onClick={handleSeeAll}
-            className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
-          >
-            See All
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Horizontal Scroll */}
-      <div className="flex gap-2.5 overflow-x-auto scrollbar-hide px-4">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            onClick={() => onItemClick(item.id)}
-            className="flex-shrink-0 w-[110px] cursor-pointer group"
-          >
-            {/* Poster Card */}
-            <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-card">
-              <img
-                src={item.poster_url || "/placeholder.svg"}
-                alt={item.title}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-
-              {/* Rating Badge */}
-              {item.rating && (
-                <div className="absolute top-1.5 left-1.5 bg-background/80 px-1.5 py-0.5 rounded text-[10px] font-medium text-foreground">
-                  {item.rating}
-                </div>
-              )}
-            </div>
-
-            {/* Title */}
-            <p className="mt-1.5 text-xs text-foreground line-clamp-2 leading-tight">
-              {item.title}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
+    <MobileContentRow
+      title={channelName}
+      items={mappedItems}
+      onItemClick={onItemClick}
+      seeAllLink={seeAllLink}
+    />
   );
 };
 
