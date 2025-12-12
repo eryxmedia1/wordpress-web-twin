@@ -26,7 +26,9 @@ import {
   RefreshCw,
   Calendar,
   Play,
-  Activity
+  Activity,
+  Film,
+  Video
 } from "lucide-react";
 import {
   PieChart,
@@ -188,6 +190,14 @@ const AdminChannelAnalytics = () => {
   const [deviceStats, setDeviceStats] = useState<{ device: string; count: number }[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>('all');
   const [viewsOverTime, setViewsOverTime] = useState<{ date: string; views: number; hours: number }[]>([]);
+  
+  // Breakdown stats by content type
+  const [liveTvHours, setLiveTvHours] = useState(0);
+  const [liveTvViews, setLiveTvViews] = useState(0);
+  const [vodHours, setVodHours] = useState(0);
+  const [vodViews, setVodViews] = useState(0);
+  const [indieHours, setIndieHours] = useState(0);
+  const [indieViews, setIndieViews] = useState(0);
   
   // Live viewer stats
   const [liveViewerStats, setLiveViewerStats] = useState<LiveViewerStats | null>(null);
@@ -443,8 +453,27 @@ const AdminChannelAnalytics = () => {
     setChannelStats(stats);
 
     const views = allViews || [];
+    
+    // Calculate breakdown by content type
+    const liveViews = views.filter(v => v.live_channel_id !== null);
+    const indieViews = views.filter(v => v.indie_channel_id !== null);
+    const vodContentViews = views.filter(v => v.content_id !== null && v.live_channel_id === null && v.indie_channel_id === null);
+    
+    const liveTvTotalSeconds = liveViews.reduce((s, v) => s + (v.duration_seconds || 0), 0);
+    const indieTotalSeconds = indieViews.reduce((s, v) => s + (v.duration_seconds || 0), 0);
+    const vodTotalSeconds = vodContentViews.reduce((s, v) => s + (v.duration_seconds || 0), 0);
+    
+    setLiveTvViews(liveViews.length);
+    setLiveTvHours(Math.round(liveTvTotalSeconds / 3600 * 10) / 10);
+    setIndieViews(indieViews.length);
+    setIndieHours(Math.round(indieTotalSeconds / 3600 * 10) / 10);
+    setVodViews(vodContentViews.length);
+    setVodHours(Math.round(vodTotalSeconds / 3600 * 10) / 10);
+    
+    // Total across all content types
+    const totalSeconds = liveTvTotalSeconds + indieTotalSeconds + vodTotalSeconds;
     setTotalViews(views.length);
-    setTotalWatchHours(Math.round(views.reduce((s, v) => s + (v.duration_seconds || 0), 0) / 3600));
+    setTotalWatchHours(Math.round(totalSeconds / 3600 * 10) / 10);
     setTotalSubscribers((indieSubCount || 0));
 
     // Calculate views over time - respecting the date range filter
@@ -753,6 +782,63 @@ const AdminChannelAnalytics = () => {
                 {channelStats.length}
               </div>
               <p className="text-sm text-white/70 mt-1">active channels</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Watch Hours Breakdown Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* Live TV Hours */}
+          <Card className="border border-border/50 bg-card/50">
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-red-500/10">
+                  <Radio className="w-5 h-5 text-red-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Live TV</span>
+                    <span className="text-xs text-muted-foreground">{liveTvViews.toLocaleString()} views</span>
+                  </div>
+                  <div className="text-2xl font-bold text-foreground">{liveTvHours.toLocaleString()}h</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* VOD Hours (Movies & Shows) */}
+          <Card className="border border-border/50 bg-card/50">
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-blue-500/10">
+                  <Film className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Movies & Shows</span>
+                    <span className="text-xs text-muted-foreground">{vodViews.toLocaleString()} views</span>
+                  </div>
+                  <div className="text-2xl font-bold text-foreground">{vodHours.toLocaleString()}h</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Indie Channel Hours */}
+          <Card className="border border-border/50 bg-card/50">
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-purple-500/10">
+                  <Video className="w-5 h-5 text-purple-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Indie Channels</span>
+                    <span className="text-xs text-muted-foreground">{indieViews.toLocaleString()} views</span>
+                  </div>
+                  <div className="text-2xl font-bold text-foreground">{indieHours.toLocaleString()}h</div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
