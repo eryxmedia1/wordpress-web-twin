@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ArrowLeft, Filter, ChevronDown, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Filter, ChevronDown, X, Loader2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -486,6 +486,22 @@ const CategoryView = () => {
     }
 
     if (items.length === 0) {
+      // Special empty state for My List
+      if (category === "my-list") {
+        return (
+          <div className="text-center py-20 px-4">
+            <Heart className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="text-2xl font-semibold mb-2">Your list is empty</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Start adding movies and shows to your list by clicking the + icon on any title you want to save for later.
+            </p>
+            <Button onClick={() => navigate("/browse")} className="bg-primary text-primary-foreground">
+              Browse Content
+            </Button>
+          </div>
+        );
+      }
+
       return (
         <div className="text-center py-20">
           <p className="text-xl text-muted-foreground">No content found.</p>
