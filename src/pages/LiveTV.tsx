@@ -217,30 +217,50 @@ export default function LiveTV() {
     trackView();
   }, [selectedChannel?.id, isPlaying, isAdPlaying, currentProfile?.id]);
 
-  // Update view duration periodically
+  // Update view duration periodically - fixed to properly track cumulative duration
+  const cumulativeDurationRef = useRef<number>(0);
+  const lastUpdateTimeRef = useRef<number>(0);
+  
   useEffect(() => {
-    if (!viewRecordIdRef.current || !isPlaying) return;
+    if (!viewRecordIdRef.current) return;
 
     const updateDuration = async () => {
-      const durationSeconds = Math.floor((Date.now() - viewStartTimeRef.current) / 1000);
+      if (!viewRecordIdRef.current || !isPlaying) return;
+      
+      const now = Date.now();
+      if (lastUpdateTimeRef.current > 0) {
+        // Add time since last update to cumulative duration
+        cumulativeDurationRef.current += Math.floor((now - lastUpdateTimeRef.current) / 1000);
+      }
+      lastUpdateTimeRef.current = now;
+      
+      console.log('[LiveTV] Updating duration:', cumulativeDurationRef.current, 'seconds');
       
       await supabase
         .from('channel_views')
-        .update({ duration_seconds: durationSeconds })
+        .update({ duration_seconds: cumulativeDurationRef.current })
         .eq('id', viewRecordIdRef.current);
     };
 
-    // Update every 30 seconds
-    const interval = setInterval(updateDuration, 30000);
+    // Initialize tracking when playing starts
+    if (isPlaying && lastUpdateTimeRef.current === 0) {
+      lastUpdateTimeRef.current = Date.now();
+    }
+
+    // Update every 15 seconds for more accurate tracking
+    const interval = setInterval(updateDuration, 15000);
 
     return () => {
       clearInterval(interval);
-      // Final update on unmount
-      if (viewRecordIdRef.current) {
-        const durationSeconds = Math.floor((Date.now() - viewStartTimeRef.current) / 1000);
+      // Final update on unmount/pause
+      if (viewRecordIdRef.current && isPlaying) {
+        const now = Date.now();
+        if (lastUpdateTimeRef.current > 0) {
+          cumulativeDurationRef.current += Math.floor((now - lastUpdateTimeRef.current) / 1000);
+        }
         supabase
           .from('channel_views')
-          .update({ duration_seconds: durationSeconds })
+          .update({ duration_seconds: cumulativeDurationRef.current })
           .eq('id', viewRecordIdRef.current);
       }
     };
@@ -251,6 +271,8 @@ export default function LiveTV() {
     return () => {
       viewTrackedRef.current = null;
       viewRecordIdRef.current = null;
+      cumulativeDurationRef.current = 0;
+      lastUpdateTimeRef.current = 0;
     };
   }, [selectedChannel?.id]);
 
