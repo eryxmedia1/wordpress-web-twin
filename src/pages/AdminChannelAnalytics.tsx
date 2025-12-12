@@ -197,6 +197,9 @@ const AdminChannelAnalytics = () => {
   // Selected channel for detail view
   const [selectedChannel, setSelectedChannel] = useState<ChannelDetailStats | null>(null);
   const [channelDetailLoading, setChannelDetailLoading] = useState(false);
+  
+  // Top channels sort option
+  const [topChannelsSortBy, setTopChannelsSortBy] = useState<'views' | 'followers' | 'hours'>('views');
 
   // Get date filter for queries
   const getDateFilter = useCallback((range: DateRange): string | null => {
@@ -919,16 +922,37 @@ const AdminChannelAnalytics = () => {
 
           {/* Top Channels */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Play className="w-5 h-5 text-primary" />
-                Top Performing Channels
-              </CardTitle>
-              <CardDescription>Channels ranked by views</CardDescription>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Play className="w-5 h-5 text-primary" />
+                  Top Performing Channels
+                </CardTitle>
+                <Select value={topChannelsSortBy} onValueChange={(v) => setTopChannelsSortBy(v as 'views' | 'followers' | 'hours')}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="views">By Views</SelectItem>
+                    <SelectItem value="followers">By Followers</SelectItem>
+                    <SelectItem value="hours">By Hours Watched</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <CardDescription>
+                Channels ranked by {topChannelsSortBy === 'views' ? 'views' : topChannelsSortBy === 'followers' ? 'followers' : 'hours watched'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {channelStats.slice(0, 5).map((channel, i) => (
+                {[...channelStats]
+                  .sort((a, b) => {
+                    if (topChannelsSortBy === 'views') return b.totalViews - a.totalViews;
+                    if (topChannelsSortBy === 'followers') return b.subscribers - a.subscribers;
+                    return b.totalWatchHours - a.totalWatchHours;
+                  })
+                  .slice(0, 5)
+                  .map((channel, i) => (
                   <div 
                     key={channel.id} 
                     className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
@@ -959,8 +983,16 @@ const AdminChannelAnalytics = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-lg">{channel.totalViews.toLocaleString()}</div>
-                      <div className="text-xs text-muted-foreground">{channel.totalWatchHours}h watched</div>
+                      <div className="font-bold text-lg">
+                        {topChannelsSortBy === 'views' && channel.totalViews.toLocaleString()}
+                        {topChannelsSortBy === 'followers' && channel.subscribers.toLocaleString()}
+                        {topChannelsSortBy === 'hours' && `${channel.totalWatchHours}h`}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {topChannelsSortBy === 'views' && `${channel.totalWatchHours}h watched`}
+                        {topChannelsSortBy === 'followers' && `${channel.totalViews.toLocaleString()} views`}
+                        {topChannelsSortBy === 'hours' && `${channel.totalViews.toLocaleString()} views`}
+                      </div>
                     </div>
                   </div>
                 ))}
