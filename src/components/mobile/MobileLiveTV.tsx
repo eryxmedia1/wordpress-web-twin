@@ -135,7 +135,7 @@ export default function MobileLiveTV() {
     };
   }, [isPlaying, isAdPlaying, isLiveStreaming, midrollIntervalSeconds, requestMidRoll, canRequestMidRoll]);
 
-  // Pre-roll ads disabled for Live TV - only mid-roll ads are used
+  // Pre-roll ads enabled for Live TV when user selects a channel
 
   // Track view to channel_views when playback starts
   const viewTrackedRef = useRef<string | null>(null);
@@ -466,7 +466,7 @@ export default function MobileLiveTV() {
     };
   }, [selectedChannel, fetchLiveSegment, checkMuxStreamStatus, isLiveStreaming]);
 
-  const handleChannelSelect = (channel: Channel) => {
+  const handleChannelSelect = async (channel: Channel) => {
     setSelectedChannel(channel);
     setLiveSegment(null);
     setIsPlaying(false);
@@ -476,6 +476,15 @@ export default function MobileLiveTV() {
     setIsUserInitiatedChannel(true); // Mark as user-initiated selection
     targetOffsetRef.current = 0;
     navigate(`/live/${channel.slug}`, { replace: true });
+    
+    // Request pre-roll ad when user selects a channel
+    const hasPreRoll = await requestPreRoll();
+    if (!hasPreRoll) {
+      // No pre-roll ads, start playing immediately
+      setIsPlaying(true);
+    }
+    // If pre-roll exists, playback will start after ad completes via onAdEnd callback
+    setPreRollPlayed(true);
   };
 
   const handleVideoEnd = () => {
