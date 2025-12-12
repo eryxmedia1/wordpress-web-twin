@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import AdminNavbar from "@/components/AdminNavbar";
@@ -8,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   BarChart3, 
   Eye, 
@@ -23,7 +23,9 @@ import {
   Tv,
   Radio,
   RefreshCw,
-  Calendar
+  Calendar,
+  ArrowLeft,
+  X
 } from "lucide-react";
 
 interface ChannelStats {
@@ -80,6 +82,21 @@ interface LiveViewerStats {
   timestamp: string;
 }
 
+interface ChannelDetailStats {
+  channel: ChannelStats;
+  geoByCountry: GeoData[];
+  geoByRegion: GeoData[];
+  geoByCity: GeoData[];
+  deviceStats: { device: string; count: number }[];
+  recentViews: Array<{
+    watched_at: string;
+    duration_seconds: number;
+    geo_country: string | null;
+    geo_city: string | null;
+    device_type: string | null;
+  }>;
+}
+
 type DateRange = 'today' | 'week' | 'month' | 'year' | 'all';
 
 const AdminChannelAnalytics = () => {
@@ -98,6 +115,10 @@ const AdminChannelAnalytics = () => {
   const [liveViewerStats, setLiveViewerStats] = useState<LiveViewerStats | null>(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Selected channel for detail view
+  const [selectedChannel, setSelectedChannel] = useState<ChannelDetailStats | null>(null);
+  const [channelDetailLoading, setChannelDetailLoading] = useState(false);
 
   // Get date filter for queries
   const getDateFilter = useCallback((range: DateRange): string | null => {
@@ -121,6 +142,16 @@ const AdminChannelAnalytics = () => {
         return null;
     }
   }, []);
+
+  const getDateRangeLabel = (range: DateRange) => {
+    switch (range) {
+      case 'today': return 'Today';
+      case 'week': return 'Last 7 Days';
+      case 'month': return 'Last 30 Days';
+      case 'year': return 'Last Year';
+      default: return 'All Time';
+    }
+  };
 
   useEffect(() => {
     fetchAnalytics();
@@ -151,6 +182,103 @@ const AdminChannelAnalytics = () => {
       setLiveLoading(false);
     }
   }, []);
+
+  const fetchChannelDetails = useCallback(async (channel: ChannelStats) => {
+    setChannelDetailLoading(true);
+    const dateFilter = getDateFilter(dateRange);
+
+    try {
+      // Fetch views for this specific channel
+      let viewsQuery = supabase.from("channel_views").select("*");
+      
+      if (channel.type === 'indie') {
+        viewsQuery = viewsQuery.eq("indie_channel_id", channel.id);
+      } else {
+        viewsQuery = viewsQuery.eq("live_channel_id", channel.id);
+      }
+      
+      if (dateFilter) {
+        viewsQuery = viewsQuery.gte("watched_at", dateFilter);
+      }
+      
+      viewsQuery = viewsQuery.order("watched_at", { ascending: false }).limit(100);
+      
+      const { data: views } = await viewsQuery;
+
+      // Calculate geo stats for this channel
+      const countryMap = new Map<string, { views: number; seconds: number }>();
+      const regionMap = new Map<string, { views: number; seconds: number }>();
+      const cityMap = new Map<string, { views: number; seconds: number }>();
+      const deviceMap = new Map<string, number>();
+
+      (views || []).forEach(v => {
+        const country = v.geo_country || "Unknown";
+        const region = v.geo_region || "Unknown";
+        const city = v.geo_city || "Unknown";
+        const device = v.device_type || "Unknown";
+
+        const countryData = countryMap.get(country) || { views: 0, seconds: 0 };
+        countryMap.set(country, { 
+          views: countryData.views + 1, 
+          seconds: countryData.seconds + (v.duration_seconds || 0) 
+        });
+
+        const regionData = regionMap.get(region) || { views: 0, seconds: 0 };
+        regionMap.set(region, {
+          views: regionData.views + 1,
+          seconds: regionData.seconds + (v.duration_seconds || 0)
+        });
+
+        const cityData = cityMap.get(city) || { views: 0, seconds: 0 };
+        cityMap.set(city, {
+          views: cityData.views + 1,
+          seconds: cityData.seconds + (v.duration_seconds || 0)
+        });
+
+        deviceMap.set(device, (deviceMap.get(device) || 0) + 1);
+      });
+
+      const channelGeoByCountry = Array.from(countryMap.entries())
+        .map(([location, data]) => ({ location, views: data.views, watchHours: Math.round(data.seconds / 3600) }))
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 10);
+
+      const channelGeoByRegion = Array.from(regionMap.entries())
+        .map(([location, data]) => ({ location, views: data.views, watchHours: Math.round(data.seconds / 3600) }))
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 10);
+
+      const channelGeoByCity = Array.from(cityMap.entries())
+        .map(([location, data]) => ({ location, views: data.views, watchHours: Math.round(data.seconds / 3600) }))
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 10);
+
+      const channelDeviceStats = Array.from(deviceMap.entries())
+        .map(([device, count]) => ({ device, count }))
+        .sort((a, b) => b.count - a.count);
+
+      const recentViews = (views || []).slice(0, 20).map(v => ({
+        watched_at: v.watched_at,
+        duration_seconds: v.duration_seconds || 0,
+        geo_country: v.geo_country,
+        geo_city: v.geo_city,
+        device_type: v.device_type
+      }));
+
+      setSelectedChannel({
+        channel,
+        geoByCountry: channelGeoByCountry,
+        geoByRegion: channelGeoByRegion,
+        geoByCity: channelGeoByCity,
+        deviceStats: channelDeviceStats,
+        recentViews
+      });
+    } catch (error) {
+      console.error('Error fetching channel details:', error);
+    } finally {
+      setChannelDetailLoading(false);
+    }
+  }, [dateRange, getDateFilter]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -222,6 +350,12 @@ const AdminChannelAnalytics = () => {
           ).pop() || "Unknown"
         : "Unknown";
 
+      // Get live channel favorites count
+      const { count: liveSubs } = await supabase
+        .from("live_channel_favorites")
+        .select("*", { count: "exact", head: true })
+        .eq("live_channel_id", channel.id);
+
       stats.push({
         id: channel.id,
         name: channel.name,
@@ -230,7 +364,7 @@ const AdminChannelAnalytics = () => {
         type: 'live',
         totalViews: channelViews.length,
         totalWatchHours: Math.round(totalSeconds / 3600),
-        subscribers: 0,
+        subscribers: liveSubs || 0,
         topCountry
       });
     }
@@ -241,7 +375,7 @@ const AdminChannelAnalytics = () => {
     const views = allViews || [];
     setTotalViews(views.length);
     setTotalWatchHours(Math.round(views.reduce((s, v) => s + (v.duration_seconds || 0), 0) / 3600));
-    setTotalSubscribers(indieSubCount || 0);
+    setTotalSubscribers((indieSubCount || 0));
 
     // Calculate geo stats
     const countryMap = new Map<string, { views: number; seconds: number }>();
@@ -318,6 +452,11 @@ const AdminChannelAnalytics = () => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${mins}m`;
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   if (loading) {
@@ -768,10 +907,12 @@ const AdminChannelAnalytics = () => {
                         <TableCell>{channel.subscribers.toLocaleString()}</TableCell>
                         <TableCell>{channel.topCountry}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={channel.type === 'indie' ? `/producer/${channel.slug}` : `/admin/livetv`}>
-                              View
-                            </Link>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => fetchChannelDetails(channel)}
+                          >
+                            View Details
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -866,28 +1007,29 @@ const AdminChannelAnalytics = () => {
           <TabsContent value="devices">
             <Card>
               <CardHeader>
-                <CardTitle>Device Breakdown</CardTitle>
-                <CardDescription>See what devices viewers are using</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Monitor className="w-5 h-5" />
+                  Device Breakdown
+                </CardTitle>
+                <CardDescription>See what devices your viewers are using</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {deviceStats.map((item, i) => (
-                    <Card key={i}>
-                      <CardContent className="pt-4">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-full bg-primary/10">
-                            {getDeviceIcon(item.device)}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {deviceStats.map((stat) => (
+                    <Card key={stat.device}>
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {getDeviceIcon(stat.device)}
+                            <span className="font-medium capitalize">{stat.device}</span>
                           </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground capitalize">{item.device}</p>
-                            <p className="text-2xl font-bold">{item.count.toLocaleString()}</p>
-                          </div>
+                          <span className="text-2xl font-bold">{stat.count}</span>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
                   {deviceStats.length === 0 && (
-                    <p className="text-muted-foreground text-center py-4 col-span-3">No data yet</p>
+                    <p className="text-muted-foreground col-span-4 text-center py-8">No device data yet</p>
                   )}
                 </div>
               </CardContent>
@@ -895,6 +1037,209 @@ const AdminChannelAnalytics = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Channel Detail Modal */}
+      <Dialog open={!!selectedChannel} onOpenChange={() => setSelectedChannel(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {channelDetailLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : selectedChannel ? (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded bg-muted overflow-hidden">
+                    {selectedChannel.channel.logo_url ? (
+                      <img src={selectedChannel.channel.logo_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-xl font-bold text-muted-foreground">
+                          {selectedChannel.channel.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl">{selectedChannel.channel.name}</DialogTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        selectedChannel.channel.type === 'indie' 
+                          ? 'bg-purple-500/20 text-purple-400' 
+                          : 'bg-blue-500/20 text-blue-400'
+                      }`}>
+                        {selectedChannel.channel.type === 'indie' ? 'Indie Channel' : 'Live TV'}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {getDateRangeLabel(dateRange)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Views</span>
+                    </div>
+                    <div className="text-2xl font-bold mt-1">
+                      {selectedChannel.channel.totalViews.toLocaleString()}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Watch Hours</span>
+                    </div>
+                    <div className="text-2xl font-bold mt-1">
+                      {selectedChannel.channel.totalWatchHours}h
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Subscribers</span>
+                    </div>
+                    <div className="text-2xl font-bold mt-1">
+                      {selectedChannel.channel.subscribers.toLocaleString()}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Top Country</span>
+                    </div>
+                    <div className="text-2xl font-bold mt-1">
+                      {selectedChannel.channel.topCountry}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Geography & Devices */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Globe className="w-4 h-4" />
+                      Top Countries
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {selectedChannel.geoByCountry.slice(0, 5).map((item, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <span className="text-sm">{item.location}</span>
+                          <span className="font-medium">{item.views}</span>
+                        </div>
+                      ))}
+                      {selectedChannel.geoByCountry.length === 0 && (
+                        <p className="text-muted-foreground text-sm">No data</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Monitor className="w-4 h-4" />
+                      Devices
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {selectedChannel.deviceStats.map((stat) => (
+                        <div key={stat.device} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {getDeviceIcon(stat.device)}
+                            <span className="text-sm capitalize">{stat.device}</span>
+                          </div>
+                          <span className="font-medium">{stat.count}</span>
+                        </div>
+                      ))}
+                      {selectedChannel.deviceStats.length === 0 && (
+                        <p className="text-muted-foreground text-sm">No data</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Top Cities */}
+              <Card className="mt-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Building className="w-4 h-4" />
+                    Top Cities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    {selectedChannel.geoByCity.slice(0, 10).map((item, i) => (
+                      <div key={i} className="text-center p-2 rounded bg-muted/50">
+                        <div className="font-medium">{item.views}</div>
+                        <div className="text-xs text-muted-foreground truncate">{item.location}</div>
+                      </div>
+                    ))}
+                    {selectedChannel.geoByCity.length === 0 && (
+                      <p className="text-muted-foreground text-sm col-span-5">No city data</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Views */}
+              {selectedChannel.recentViews.length > 0 && (
+                <Card className="mt-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Recent Views</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Duration</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>Device</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedChannel.recentViews.map((view, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-sm">{formatDate(view.watched_at)}</TableCell>
+                            <TableCell>{formatDuration(view.duration_seconds)}</TableCell>
+                            <TableCell className="text-sm">
+                              {[view.geo_city, view.geo_country].filter(Boolean).join(', ') || 'Unknown'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {getDeviceIcon(view.device_type || 'unknown')}
+                                <span className="text-sm capitalize">{view.device_type || 'Unknown'}</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
