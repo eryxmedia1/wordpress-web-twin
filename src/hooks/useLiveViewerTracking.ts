@@ -152,10 +152,10 @@ export const useLiveViewerTracking = (channelId: string | null, isPlaying: boole
       registerSession(channelId);
     });
 
-    // Set up heartbeat every 30 seconds
+    // Set up heartbeat every 45 seconds (must be < 2 min cleanup threshold)
     heartbeatIntervalRef.current = setInterval(() => {
       sendHeartbeat();
-    }, 30000);
+    }, 45000);
 
     // Cleanup function
     return () => {

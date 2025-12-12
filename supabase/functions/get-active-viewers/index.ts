@@ -15,14 +15,15 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get viewers with heartbeat within last 2 minutes (active)
-    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+    // Get viewers with heartbeat within last 3 minutes (active)
+    // This accounts for 45-second heartbeat intervals with some buffer
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString()
 
-    // First, clean up stale sessions (older than 2 minutes)
+    // First, clean up stale sessions (older than 3 minutes)
     await supabase
       .from('live_channel_active_viewers')
       .delete()
-      .lt('last_heartbeat', twoMinutesAgo)
+      .lt('last_heartbeat', threeMinutesAgo)
 
     // Get all active viewers with user and profile info
     const { data: activeViewers, error } = await supabase
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
         started_at,
         last_heartbeat
       `)
-      .gte('last_heartbeat', twoMinutesAgo)
+      .gte('last_heartbeat', threeMinutesAgo)
 
     if (error) {
       console.error('Error fetching active viewers:', error)

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   BarChart3, 
   Eye, 
@@ -21,7 +22,8 @@ import {
   Smartphone,
   Tv,
   Radio,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from "lucide-react";
 
 interface ChannelStats {
@@ -78,6 +80,8 @@ interface LiveViewerStats {
   timestamp: string;
 }
 
+type DateRange = 'today' | 'week' | 'month' | 'year' | 'all';
+
 const AdminChannelAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [channelStats, setChannelStats] = useState<ChannelStats[]>([]);
@@ -88,23 +92,47 @@ const AdminChannelAnalytics = () => {
   const [geoByRegion, setGeoByRegion] = useState<GeoData[]>([]);
   const [geoByCity, setGeoByCity] = useState<GeoData[]>([]);
   const [deviceStats, setDeviceStats] = useState<{ device: string; count: number }[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange>('all');
   
   // Live viewer stats
   const [liveViewerStats, setLiveViewerStats] = useState<LiveViewerStats | null>(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+  // Get date filter for queries
+  const getDateFilter = useCallback((range: DateRange): string | null => {
+    const now = new Date();
+    switch (range) {
+      case 'today':
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      case 'week':
+        const weekAgo = new Date(now);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return weekAgo.toISOString();
+      case 'month':
+        const monthAgo = new Date(now);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        return monthAgo.toISOString();
+      case 'year':
+        const yearAgo = new Date(now);
+        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+        return yearAgo.toISOString();
+      default:
+        return null;
+    }
+  }, []);
+
   useEffect(() => {
     fetchAnalytics();
     fetchLiveViewers();
     
-    // Auto-refresh live viewers every 30 seconds
+    // Auto-refresh live viewers every 2 minutes (120000ms)
     const interval = setInterval(() => {
       fetchLiveViewers();
-    }, 30000);
+    }, 120000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [dateRange]);
 
   const fetchLiveViewers = useCallback(async () => {
     setLiveLoading(true);
@@ -127,6 +155,8 @@ const AdminChannelAnalytics = () => {
   const fetchAnalytics = async () => {
     setLoading(true);
 
+    const dateFilter = getDateFilter(dateRange);
+
     // Fetch indie channels
     const { data: indieChannels } = await supabase
       .from("indie_channels")
@@ -137,10 +167,12 @@ const AdminChannelAnalytics = () => {
       .from("live_channels")
       .select("id, name, slug, logo_url");
 
-    // Fetch all channel views
-    const { data: allViews } = await supabase
-      .from("channel_views")
-      .select("*");
+    // Fetch channel views with date filter
+    let viewsQuery = supabase.from("channel_views").select("*");
+    if (dateFilter) {
+      viewsQuery = viewsQuery.gte("watched_at", dateFilter);
+    }
+    const { data: allViews } = await viewsQuery;
 
     // Fetch all subscribers
     const { count: indieSubCount } = await supabase
@@ -668,8 +700,27 @@ const AdminChannelAnalytics = () => {
           <TabsContent value="channels">
             <Card>
               <CardHeader>
-                <CardTitle>All Channels Performance</CardTitle>
-                <CardDescription>View analytics for all indie and live channels</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>All Channels Performance</CardTitle>
+                    <CardDescription>View analytics for all indie and live channels</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <Select value={dateRange} onValueChange={(value: DateRange) => setDateRange(value)}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Time period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="week">Last 7 Days</SelectItem>
+                        <SelectItem value="month">Last 30 Days</SelectItem>
+                        <SelectItem value="year">Last Year</SelectItem>
+                        <SelectItem value="all">All Time</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
