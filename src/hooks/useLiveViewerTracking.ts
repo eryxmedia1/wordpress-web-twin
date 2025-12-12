@@ -70,9 +70,16 @@ export const useLiveViewerTracking = (channelId: string | null, isPlaying: boole
     });
 
     try {
+      // First try to delete any existing session with same ID to ensure clean insert
+      await supabase
+        .from('live_channel_active_viewers')
+        .delete()
+        .eq('session_id', sessionId);
+
+      // Now insert the new session
       const { error } = await supabase
         .from('live_channel_active_viewers')
-        .upsert({
+        .insert({
           session_id: sessionId,
           live_channel_id: chId,
           device_type: deviceType,
@@ -83,10 +90,10 @@ export const useLiveViewerTracking = (channelId: string | null, isPlaying: boole
           started_at: new Date().toISOString(),
           user_id: user?.id || null,
           profile_id: user?.id ? (currentProfile?.id || null) : null
-        }, { onConflict: 'session_id' });
+        });
 
       if (error) {
-        console.error('Error registering viewer session:', error);
+        console.error('Error registering viewer session:', error.message, error.details, error.hint);
       } else {
         console.log('Successfully registered viewer session:', sessionId);
         isTrackingRef.current = true;
