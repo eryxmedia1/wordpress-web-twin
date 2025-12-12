@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Play, Plus, X, Volume2, VolumeX, RotateCcw } from "lucide-react";
+import { Play, Plus, X, Volume2, VolumeX, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,44 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
     loop: true,
     dragFree: false,
   });
+
+  // Auto-slide every 8 seconds
+  const autoSlideRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetAutoSlide = useCallback(() => {
+    if (autoSlideRef.current) {
+      clearInterval(autoSlideRef.current);
+    }
+    autoSlideRef.current = setInterval(() => {
+      if (emblaApi) {
+        emblaApi.scrollNext();
+      }
+    }, 8000);
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    resetAutoSlide();
+    return () => {
+      if (autoSlideRef.current) {
+        clearInterval(autoSlideRef.current);
+      }
+    };
+  }, [emblaApi, resetAutoSlide]);
+
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) {
+      emblaApi.scrollPrev();
+      resetAutoSlide();
+    }
+  }, [emblaApi, resetAutoSlide]);
+
+  const scrollNext = useCallback(() => {
+    if (emblaApi) {
+      emblaApi.scrollNext();
+      resetAutoSlide();
+    }
+  }, [emblaApi, resetAutoSlide]);
 
   // Fetch initial favorites
   useEffect(() => {
@@ -463,6 +501,26 @@ const MobileHeroCarousel = ({ contents, onMoreInfo }: MobileHeroCarouselProps) =
           })}
         </div>
       </div>
+
+      {/* Navigation Arrows */}
+      {shuffledContents.length > 1 && (
+        <>
+          <button
+            onClick={scrollPrev}
+            className="absolute left-1 top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-full bg-background/40 backdrop-blur-sm border border-foreground/20 transition-all hover:bg-background/60 active:scale-95"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="w-5 h-5 text-foreground" />
+          </button>
+          <button
+            onClick={scrollNext}
+            className="absolute right-1 top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-full bg-background/40 backdrop-blur-sm border border-foreground/20 transition-all hover:bg-background/60 active:scale-95"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="w-5 h-5 text-foreground" />
+          </button>
+        </>
+      )}
 
       {/* Pagination Dots */}
       <div className="flex justify-center gap-1.5 mt-4">
