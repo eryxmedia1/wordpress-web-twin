@@ -36,7 +36,7 @@ const MobileSearchPage = ({ onItemClick }: MobileSearchPageProps) => {
   }, []);
 
   useEffect(() => {
-    if (query) {
+    if (query || activeFilter) {
       performSearch(query);
     } else {
       setResults([]);
@@ -60,9 +60,14 @@ const MobileSearchPage = ({ onItemClick }: MobileSearchPageProps) => {
 
     let queryBuilder = supabase
       .from("contents")
-      .select("id, title, poster_url, rating, release_year, type, genre")
-      .ilike("title", `%${term}%`);
+      .select("id, title, poster_url, rating, release_year, type, genre");
 
+    // Apply search term if provided
+    if (term) {
+      queryBuilder = queryBuilder.ilike("title", `%${term}%`);
+    }
+
+    // Apply filters
     if (activeFilter) {
       if (activeFilter === "Movies") {
         queryBuilder = queryBuilder.eq("type", "movie");
@@ -72,6 +77,8 @@ const MobileSearchPage = ({ onItemClick }: MobileSearchPageProps) => {
         queryBuilder = queryBuilder.ilike("genre", `%${activeFilter}%`);
       }
     }
+
+    queryBuilder = queryBuilder.order("created_at", { ascending: false });
 
     const { data } = await queryBuilder.limit(50);
 
@@ -92,18 +99,23 @@ const MobileSearchPage = ({ onItemClick }: MobileSearchPageProps) => {
     setSearchTerm("");
     setSearchParams({});
     setResults([]);
+    setActiveFilter(null);
   };
 
   const handleFilterClick = (filter: string) => {
     setActiveFilter(activeFilter === filter ? null : filter);
   };
 
-  const displayContent = query ? results : trendingContent;
-  const displayTitle = query
+  const displayContent = (query || activeFilter) ? results : trendingContent;
+  const displayTitle = activeFilter
     ? isLoading
       ? "Searching..."
-      : `${results.length} results`
-    : "Trending Now";
+      : `${results.length} ${activeFilter}`
+    : query
+      ? isLoading
+        ? "Searching..."
+        : `${results.length} results`
+      : "Trending Now";
 
   return (
     <MobileLayout hideHeader>
