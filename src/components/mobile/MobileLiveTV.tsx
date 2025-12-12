@@ -216,47 +216,59 @@ export default function MobileLiveTV() {
   const cumulativeDurationRef = useRef<number>(0);
   const lastUpdateTimeRef = useRef<number>(0);
   
+  // Initialize tracking start time when playback begins
   useEffect(() => {
-    if (!viewRecordIdRef.current) return;
+    if (isPlaying && viewRecordIdRef.current && lastUpdateTimeRef.current === 0) {
+      lastUpdateTimeRef.current = Date.now();
+      console.log('[MobileLiveTV] Duration tracking started at:', new Date().toISOString());
+    }
+  }, [isPlaying]);
+  
+  useEffect(() => {
+    if (!viewRecordIdRef.current || !isPlaying) return;
 
     const updateDuration = async () => {
-      if (!viewRecordIdRef.current || !isPlaying) return;
+      if (!viewRecordIdRef.current) return;
       
       const now = Date.now();
       if (lastUpdateTimeRef.current > 0) {
         // Add time since last update to cumulative duration
-        cumulativeDurationRef.current += Math.floor((now - lastUpdateTimeRef.current) / 1000);
+        const elapsed = Math.floor((now - lastUpdateTimeRef.current) / 1000);
+        cumulativeDurationRef.current += elapsed;
+        console.log('[MobileLiveTV] Adding', elapsed, 'seconds. Total:', cumulativeDurationRef.current, 'seconds');
       }
       lastUpdateTimeRef.current = now;
       
-      console.log('[MobileLiveTV] Updating duration:', cumulativeDurationRef.current, 'seconds');
-      
-      await supabase
+      const { error } = await supabase
         .from('channel_views')
         .update({ duration_seconds: cumulativeDurationRef.current })
         .eq('id', viewRecordIdRef.current);
+      
+      if (error) {
+        console.error('[MobileLiveTV] Error updating duration:', error);
+      }
     };
 
-    // Initialize tracking when playing starts
-    if (isPlaying && lastUpdateTimeRef.current === 0) {
-      lastUpdateTimeRef.current = Date.now();
-    }
-
-    // Update every 15 seconds for more accurate tracking
-    const interval = setInterval(updateDuration, 15000);
+    // Update every 10 seconds for more accurate tracking
+    const interval = setInterval(updateDuration, 10000);
 
     return () => {
       clearInterval(interval);
-      // Final update on unmount/pause
-      if (viewRecordIdRef.current && isPlaying) {
+      // Final update on cleanup - capture time since last update
+      if (viewRecordIdRef.current && lastUpdateTimeRef.current > 0) {
         const now = Date.now();
-        if (lastUpdateTimeRef.current > 0) {
-          cumulativeDurationRef.current += Math.floor((now - lastUpdateTimeRef.current) / 1000);
-        }
+        const elapsed = Math.floor((now - lastUpdateTimeRef.current) / 1000);
+        cumulativeDurationRef.current += elapsed;
+        console.log('[MobileLiveTV] Final update:', cumulativeDurationRef.current, 'seconds');
+        
+        // Use .then() instead of await since this is cleanup
         supabase
           .from('channel_views')
           .update({ duration_seconds: cumulativeDurationRef.current })
-          .eq('id', viewRecordIdRef.current);
+          .eq('id', viewRecordIdRef.current)
+          .then(({ error }) => {
+            if (error) console.error('[MobileLiveTV] Error on final update:', error);
+          });
       }
     };
   }, [isPlaying]);

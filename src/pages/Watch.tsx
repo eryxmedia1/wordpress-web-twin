@@ -250,15 +250,21 @@ const Watch = () => {
       : 0;
     totalWatchedSeconds.current += watchedSeconds;
 
+    console.log('[Watch] Updating duration:', totalWatchedSeconds.current, 'seconds');
+
     try {
-      await supabase.from('channel_views')
+      const { error } = await supabase.from('channel_views')
         .update({
           duration_seconds: totalWatchedSeconds.current,
           progress_percent: Math.round(finalProgress ?? progress),
         })
         .eq('id', viewRecordId.current);
+      
+      if (error) {
+        console.error('[Watch] Error updating view duration:', error);
+      }
     } catch (error) {
-      console.error('Error updating view duration:', error);
+      console.error('[Watch] Exception updating view duration:', error);
     }
 
     // Reset the start time for next play session
@@ -276,6 +282,33 @@ const Watch = () => {
       watchStartTime.current = null;
     }
   }, [isPlaying]);
+
+  // Periodic duration update every 10 seconds while playing
+  useEffect(() => {
+    if (!isPlaying || !viewRecordId.current) return;
+
+    const interval = setInterval(async () => {
+      if (!viewRecordId.current || !watchStartTime.current) return;
+      
+      const watchedSeconds = Math.floor((Date.now() - watchStartTime.current) / 1000);
+      const total = totalWatchedSeconds.current + watchedSeconds;
+      
+      console.log('[Watch] Periodic update:', total, 'seconds');
+      
+      const { error } = await supabase.from('channel_views')
+        .update({
+          duration_seconds: total,
+          progress_percent: Math.round(progress),
+        })
+        .eq('id', viewRecordId.current);
+      
+      if (error) {
+        console.error('[Watch] Error in periodic update:', error);
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, progress]);
 
   // Update duration when leaving page
   useEffect(() => {
