@@ -31,7 +31,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, PlayCircle, GripVertical, Search, Clock, Tv, Radio, Film, List, Settings, Link2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, PlayCircle, GripVertical, Search, Clock, Tv, Radio, Film, List, Settings, Link2, Shuffle } from "lucide-react";
 import { VideoUrlInput } from "@/components/VideoUrlInput";
 import { useVideoMetadata, VideoMetadata } from "@/hooks/useVideoMetadata";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
@@ -818,6 +818,37 @@ export default function AdminLiveTVPlaylists() {
     }
   };
 
+  const handleRandomizePlaylist = async () => {
+    if (playlistItems.length < 2) {
+      toast.error('Need at least 2 items to randomize');
+      return;
+    }
+    
+    try {
+      // Fisher-Yates shuffle
+      const shuffled = [...playlistItems];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      
+      // Assign new order indices
+      const reorderedItems = shuffled.map((item, idx) => ({ ...item, order_index: idx + 1 }));
+      setPlaylistItems(reorderedItems);
+      
+      // Update database
+      for (const item of reorderedItems) {
+        await supabase.from('live_playlist_items').update({ order_index: item.order_index }).eq('id', item.id);
+      }
+      
+      toast.success('Playlist randomized');
+    } catch (error) {
+      console.error('Failed to randomize:', error);
+      toast.error('Failed to randomize playlist');
+      fetchPlaylistItems();
+    }
+  };
+
   function parseDuration(duration: string): number {
     if (!duration) return 0;
     if (/^\d+$/.test(duration)) return parseInt(duration, 10);
@@ -1069,20 +1100,28 @@ export default function AdminLiveTVPlaylists() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>{selectedPlaylist.playlist_name} - Schedule</CardTitle>
-                    <Popover open={isSearchOpen} onOpenChange={(open) => {
-                      setIsSearchOpen(open);
-                      if (!open) {
-                        setVimeoUrl('');
-                        setVimeoMetadata(null);
-                        setSelectedVideoIds(new Set());
-                        setFilterType('none');
-                        setFilterValue('');
-                        setSearchQuery('');
-                      }
-                    }}>
-                      <PopoverTrigger asChild>
-                        <Button><Plus className="h-4 w-4 mr-2" />Add Video</Button>
-                      </PopoverTrigger>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={handleRandomizePlaylist}
+                        disabled={playlistItems.length < 2}
+                      >
+                        <Shuffle className="h-4 w-4 mr-2" />Shuffle
+                      </Button>
+                      <Popover open={isSearchOpen} onOpenChange={(open) => {
+                        setIsSearchOpen(open);
+                        if (!open) {
+                          setVimeoUrl('');
+                          setVimeoMetadata(null);
+                          setSelectedVideoIds(new Set());
+                          setFilterType('none');
+                          setFilterValue('');
+                          setSearchQuery('');
+                        }
+                      }}>
+                        <PopoverTrigger asChild>
+                          <Button><Plus className="h-4 w-4 mr-2" />Add Video</Button>
+                        </PopoverTrigger>
                       <PopoverContent className="w-[480px] p-0" align="end">
                         <Tabs defaultValue="search" className="w-full">
                           <TabsList className="w-full grid grid-cols-2 h-auto p-1">
@@ -1376,6 +1415,7 @@ export default function AdminLiveTVPlaylists() {
                         </Tabs>
                       </PopoverContent>
                     </Popover>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
