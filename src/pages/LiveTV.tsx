@@ -564,11 +564,18 @@ export default function LiveTV() {
     setCountdown(null);
     setPreRollPlayed(false); // Reset pre-roll for new channel
     setIsUserInitiatedChannel(true); // Mark as user-initiated selection
+    setWatchTimeSeconds(0); // Reset watch time for new channel
     targetOffsetRef.current = 0;
     navigate(`/live/${channel.slug}`, { replace: true });
     
-    // Pre-roll ads disabled for Live TV - mid-roll and post-roll only
-    setIsPlaying(true);
+    // Request pre-roll ad when user selects a channel
+    const hasPreRoll = await requestPreRoll();
+    if (!hasPreRoll) {
+      // No pre-roll ads, start playing immediately
+      setIsPlaying(true);
+    }
+    // If pre-roll exists, playback will start after ad completes via onAdEnd callback
+    setPreRollPlayed(true);
   };
 
   const handleVideoEnd = () => {
@@ -614,7 +621,7 @@ export default function LiveTV() {
 
   const videoUrl = getVideoUrl();
 
-  // Pre-roll ads disabled for Live TV - only mid-roll ads are used
+  // Pre-roll ads enabled for Live TV when user selects a channel
 
   // Calculate next ad break time
   const getNextAdBreakIn = () => {
