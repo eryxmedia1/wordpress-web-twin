@@ -128,6 +128,54 @@ const CHART_COLORS = {
 
 const DEVICE_COLORS = [CHART_COLORS.blue, CHART_COLORS.green, CHART_COLORS.orange, CHART_COLORS.pink];
 
+// Country code to flag emoji helper
+const getCountryFlag = (countryCode: string | null): string => {
+  if (!countryCode) return '🌍';
+  const code = countryCode.toUpperCase().trim();
+  
+  // Handle full country names by mapping to codes
+  const countryNameToCode: Record<string, string> = {
+    'UNITED STATES': 'US', 'USA': 'US', 'AMERICA': 'US',
+    'UNITED KINGDOM': 'GB', 'UK': 'GB', 'GREAT BRITAIN': 'GB', 'ENGLAND': 'GB',
+    'CANADA': 'CA', 'GERMANY': 'DE', 'FRANCE': 'FR', 'JAPAN': 'JP',
+    'CHINA': 'CN', 'INDIA': 'IN', 'BRAZIL': 'BR', 'AUSTRALIA': 'AU',
+    'MEXICO': 'MX', 'SPAIN': 'ES', 'ITALY': 'IT', 'NETHERLANDS': 'NL',
+    'RUSSIA': 'RU', 'SOUTH KOREA': 'KR', 'KOREA': 'KR', 'JAMAICA': 'JM',
+    'NIGERIA': 'NG', 'SOUTH AFRICA': 'ZA', 'KENYA': 'KE', 'GHANA': 'GH',
+    'EGYPT': 'EG', 'MOROCCO': 'MA', 'UNKNOWN': '🌍'
+  };
+  
+  const mappedCode = countryNameToCode[code] || code;
+  
+  // If it's not a 2-letter code after mapping, return globe
+  if (mappedCode.length !== 2) return '🌍';
+  
+  // Convert 2-letter country code to flag emoji
+  const codePoints = mappedCode
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  
+  try {
+    return String.fromCodePoint(...codePoints);
+  } catch {
+    return '🌍';
+  }
+};
+
+// Country code to full name helper
+const getCountryName = (code: string | null): string => {
+  if (!code) return 'Unknown';
+  const codeToName: Record<string, string> = {
+    'US': 'United States', 'GB': 'United Kingdom', 'CA': 'Canada',
+    'DE': 'Germany', 'FR': 'France', 'JP': 'Japan', 'CN': 'China',
+    'IN': 'India', 'BR': 'Brazil', 'AU': 'Australia', 'MX': 'Mexico',
+    'ES': 'Spain', 'IT': 'Italy', 'NL': 'Netherlands', 'RU': 'Russia',
+    'KR': 'South Korea', 'JM': 'Jamaica', 'NG': 'Nigeria', 'ZA': 'South Africa',
+    'KE': 'Kenya', 'GH': 'Ghana', 'EG': 'Egypt', 'MA': 'Morocco'
+  };
+  return codeToName[code.toUpperCase()] || code;
+};
+
 const AdminChannelAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [channelStats, setChannelStats] = useState<ChannelStats[]>([]);
@@ -396,26 +444,86 @@ const AdminChannelAnalytics = () => {
     setTotalWatchHours(Math.round(views.reduce((s, v) => s + (v.duration_seconds || 0), 0) / 3600));
     setTotalSubscribers((indieSubCount || 0));
 
-    // Calculate views over time
+    // Calculate views over time - respecting the date range filter
     const viewsByDate = new Map<string, { views: number; seconds: number }>();
-    views.forEach(v => {
-      const date = new Date(v.watched_at).toLocaleDateString();
-      const existing = viewsByDate.get(date) || { views: 0, seconds: 0 };
-      viewsByDate.set(date, {
-        views: existing.views + 1,
-        seconds: existing.seconds + (v.duration_seconds || 0)
-      });
-    });
+    const now = new Date();
     
-    const sortedDates = Array.from(viewsByDate.entries())
-      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-      .slice(-14)
-      .map(([date, data]) => ({
-        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        views: data.views,
-        hours: Math.round(data.seconds / 3600)
-      }));
-    setViewsOverTime(sortedDates);
+    if (dateRange === 'today') {
+      // Group by hour for today
+      views.forEach(v => {
+        const viewDate = new Date(v.watched_at);
+        const hour = viewDate.getHours();
+        const key = `${hour}:00`;
+        const existing = viewsByDate.get(key) || { views: 0, seconds: 0 };
+        viewsByDate.set(key, {
+          views: existing.views + 1,
+          seconds: existing.seconds + (v.duration_seconds || 0)
+        });
+      });
+      
+      // Fill in all 24 hours
+      const sortedHours = [];
+      for (let i = 0; i <= now.getHours(); i++) {
+        const key = `${i}:00`;
+        const data = viewsByDate.get(key) || { views: 0, seconds: 0 };
+        sortedHours.push({
+          date: key,
+          views: data.views,
+          hours: Math.round(data.seconds / 3600)
+        });
+      }
+      setViewsOverTime(sortedHours);
+    } else {
+      // Group by date for other ranges
+      views.forEach(v => {
+        const date = new Date(v.watched_at).toLocaleDateString();
+        const existing = viewsByDate.get(date) || { views: 0, seconds: 0 };
+        viewsByDate.set(date, {
+          views: existing.views + 1,
+          seconds: existing.seconds + (v.duration_seconds || 0)
+        });
+      });
+      
+      // Determine how many days to show
+      let daysToShow = 14;
+      if (dateRange === 'week') daysToShow = 7;
+      else if (dateRange === 'month') daysToShow = 30;
+      else if (dateRange === 'year') daysToShow = 12; // Show monthly for year
+      
+      if (dateRange === 'year') {
+        // Aggregate by month for yearly view
+        const viewsByMonth = new Map<string, { views: number; seconds: number }>();
+        views.forEach(v => {
+          const viewDate = new Date(v.watched_at);
+          const monthKey = viewDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+          const existing = viewsByMonth.get(monthKey) || { views: 0, seconds: 0 };
+          viewsByMonth.set(monthKey, {
+            views: existing.views + 1,
+            seconds: existing.seconds + (v.duration_seconds || 0)
+          });
+        });
+        
+        const sortedMonths = Array.from(viewsByMonth.entries())
+          .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+          .slice(-12)
+          .map(([date, data]) => ({
+            date,
+            views: data.views,
+            hours: Math.round(data.seconds / 3600)
+          }));
+        setViewsOverTime(sortedMonths);
+      } else {
+        const sortedDates = Array.from(viewsByDate.entries())
+          .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+          .slice(-daysToShow)
+          .map(([date, data]) => ({
+            date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            views: data.views,
+            hours: Math.round(data.seconds / 3600)
+          }));
+        setViewsOverTime(sortedDates);
+      }
+    }
 
     const countryMap = new Map<string, { views: number; seconds: number }>();
     const regionMap = new Map<string, { views: number; seconds: number }>();
@@ -785,7 +893,10 @@ const AdminChannelAnalytics = () => {
                 {geoChartData.map((country, i) => (
                   <div key={i} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{country.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{getCountryFlag(country.name)}</span>
+                        <span className="text-sm font-medium">{getCountryName(country.name)}</span>
+                      </div>
                       <span className="text-sm text-muted-foreground">{country.views} views</span>
                     </div>
                     <div className="relative h-2 rounded-full bg-muted overflow-hidden">
@@ -1088,7 +1199,10 @@ const AdminChannelAnalytics = () => {
                                     </div>
                                   </TableCell>
                                   <TableCell>
-                                    {[viewer.geo_city, viewer.geo_country].filter(Boolean).join(', ') || 'Unknown'}
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg">{getCountryFlag(viewer.geo_country)}</span>
+                                      {[viewer.geo_city, getCountryName(viewer.geo_country)].filter(Boolean).join(', ') || 'Unknown'}
+                                    </div>
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
                                     {formatDuration(viewer.watch_duration_seconds)}
@@ -1127,10 +1241,8 @@ const AdminChannelAnalytics = () => {
                     {geoByCountry.map((item, i) => (
                       <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                            {i + 1}
-                          </div>
-                          <span className="font-medium">{item.location}</span>
+                          <span className="text-2xl">{getCountryFlag(item.location)}</span>
+                          <span className="font-medium">{getCountryName(item.location)}</span>
                         </div>
                         <div className="text-right">
                           <div className="font-bold">{item.views}</div>
@@ -1289,8 +1401,9 @@ const AdminChannelAnalytics = () => {
                       <Globe className="w-4 h-4 text-orange-400" />
                       <span className="text-sm text-muted-foreground">Top Country</span>
                     </div>
-                    <div className="text-xl font-bold mt-1 truncate">
-                      {selectedChannel.channel.topCountry}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-2xl">{getCountryFlag(selectedChannel.channel.topCountry)}</span>
+                      <span className="text-lg font-bold truncate">{getCountryName(selectedChannel.channel.topCountry)}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -1310,10 +1423,8 @@ const AdminChannelAnalytics = () => {
                       {selectedChannel.geoByCountry.slice(0, 5).map((item, i) => (
                         <div key={i} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                              {i + 1}
-                            </div>
-                            <span className="text-sm">{item.location}</span>
+                            <span className="text-xl">{getCountryFlag(item.location)}</span>
+                            <span className="text-sm">{getCountryName(item.location)}</span>
                           </div>
                           <span className="font-medium">{item.views}</span>
                         </div>
