@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Star, Info, Play, Plus, Check, ThumbsUp, ListVideo, ChevronDown, SkipForward, Zap } from "lucide-react";
+import { ArrowLeft, Star, Info, Play, Plus, Check, ThumbsUp, ListVideo, ChevronDown, SkipForward, Zap, Subtitles } from "lucide-react";
+import { useSubtitles, Subtitle } from "@/hooks/useSubtitles";
+import { ClosedCaptionButton } from "@/components/ClosedCaptionButton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -46,6 +48,8 @@ interface ContentData {
   vast_ad_postroll: string | null;
   type?: string;
   midroll_config?: MidrollConfig;
+  // subtitles stored as JSON in DB, parsed to Subtitle[] at runtime
+  subtitles?: unknown;
 }
 
 interface EpisodeData {
@@ -116,6 +120,26 @@ const Watch = () => {
   const watchStartTime = useRef<number | null>(null);
   const totalWatchedSeconds = useRef(0);
   const preAdPosition = useRef<number | null>(null); // Store position before ad break
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
+
+  // Parse subtitles from JSON
+  const parsedSubtitles = useMemo((): Subtitle[] => {
+    if (!content?.subtitles) return [];
+    if (Array.isArray(content.subtitles)) {
+      return content.subtitles as Subtitle[];
+    }
+    return [];
+  }, [content?.subtitles]);
+
+  // Subtitles/Closed Captions hook
+  const {
+    captionsEnabled,
+    selectedLanguage,
+    availableLanguages,
+    hasSubtitles,
+    toggleCaptions,
+    selectLanguage,
+  } = useSubtitles({ subtitles: parsedSubtitles, videoElement });
 
   // Get content midroll config for useAds
   const contentMidrollConfig = useMemo(() => {
@@ -888,6 +912,17 @@ const Watch = () => {
                   console.log("Player ready, saved progress:", progress, "preAdPosition:", preAdPosition.current);
                   setPlayerReady(true);
                   
+                  // Get video element for subtitle track injection
+                  if (playerRef.current) {
+                    const internalPlayer = playerRef.current.getInternalPlayer();
+                    if (internalPlayer instanceof HTMLVideoElement) {
+                      setVideoElement(internalPlayer);
+                    } else if (internalPlayer?.getIframe) {
+                      // Vimeo player - captions handled via Vimeo's API
+                      console.log("Vimeo player detected - using Vimeo captions");
+                    }
+                  }
+                  
                   // Delay seek slightly to ensure player is fully initialized
                   // CRITICAL: Do NOT start playing until after seek completes
                   setTimeout(() => {
@@ -944,25 +979,44 @@ const Watch = () => {
                       preload: "auto",
                     },
                     forceVideo: true,
+                    tracks: parsedSubtitles.map((sub, idx) => ({
+                      kind: 'subtitles',
+                      src: sub.vttUrl,
+                      srcLang: sub.language.toLowerCase().slice(0, 2),
+                      label: sub.language,
+                      default: idx === 0 && captionsEnabled,
+                    })),
                   }
                 }}
               />
             </div>
           </div>
           
-          {/* Top Controls - Back button and Episode Selector */}
+          {/* Top Controls - Back button, CC, and Episode Selector */}
           <div className="absolute top-20 left-4 right-4 z-20 flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-foreground bg-background/50 hover:bg-background/70"
-              onClick={() => {
-                saveProgress(progress);
-                setShowVideo(false);
-              }}
-            >
-              <ArrowLeft className="h-6 w-6" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-foreground bg-background/50 hover:bg-background/70"
+                onClick={() => {
+                  saveProgress(progress);
+                  setShowVideo(false);
+                }}
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+              
+              {/* Closed Captions Button */}
+              <ClosedCaptionButton
+                captionsEnabled={captionsEnabled}
+                selectedLanguage={selectedLanguage}
+                availableLanguages={availableLanguages}
+                hasSubtitles={hasSubtitles}
+                onToggle={toggleCaptions}
+                onSelectLanguage={selectLanguage}
+              />
+            </div>
 
             {/* Episode Selector Dropdown - Only show for episodic content */}
             {allEpisodes.length > 0 && episodeId && (
