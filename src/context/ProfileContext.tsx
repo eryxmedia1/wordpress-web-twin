@@ -50,7 +50,8 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
   const fetchProfiles = async () => {
     if (!user) {
       setProfiles([]);
-      setCurrentProfile(null);
+      // DON'T clear currentProfile here - keep it during auth transitions
+      // It will be cleared explicitly on logout via clearProfile()
       setUserTier('free');
       setIsLoading(false);
       return;
@@ -96,7 +97,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchProfiles();
-  }, [user]);
+  }, [user?.id]); // Use user?.id to prevent re-fetches on object reference changes
 
   const selectProfile = (profile: UserProfile) => {
     setCurrentProfile(profile);
