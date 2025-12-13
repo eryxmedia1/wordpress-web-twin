@@ -190,19 +190,46 @@ export default function CastingShowDetail() {
         .eq('id', talentProfile.id)
         .single();
 
+      // Get selected role names for the notification
+      const selectedRoleNames = roles
+        .filter(r => selectedRoles.has(r.id))
+        .map(r => r.title);
+
       // Use the existing casting_call_id field - we'll use show.id as reference
-      const { error } = await supabase
+      const { data: appData, error } = await supabase
         .from('casting_applications')
         .insert({
-          casting_call_id: show.id, // Using existing field
+          casting_call_id: show.id,
+          show_id: show.id,
+          role_ids: Array.from(selectedRoles),
           talent_id: talentProfile.id,
           profile_snapshot: profileData as any,
           status: 'new',
           pay_acceptance_timestamp: new Date().toISOString(),
           terms_acceptance_timestamp: new Date().toISOString(),
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Send email notifications via edge function
+      try {
+        await supabase.functions.invoke('send-casting-notification', {
+          body: {
+            applicationId: appData.id,
+            applicantName: profileData?.name || 'Applicant',
+            applicantEmail: profileData?.email || user.email,
+            showTitle: show.title,
+            roleNames: selectedRoleNames,
+            reelUrl: profileData?.video_reel_url,
+            location: profileData?.city ? `${profileData.city}, ${profileData.state || ''}` : undefined,
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send notification email:', emailError);
+        // Don't fail the whole application if email fails
+      }
 
       toast.success('Application submitted successfully!');
       setSelectedRoles(new Set());

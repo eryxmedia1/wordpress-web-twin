@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.get-active-viewers]
 verify_jwt = false
+
+[functions.send-casting-notification]
+verify_jwt = false
