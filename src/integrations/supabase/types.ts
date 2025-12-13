@@ -1602,6 +1602,7 @@ export type Database = {
           gear_required: string | null
           id: string
           is_remote: boolean | null
+          is_template: boolean | null
           location: string | null
           pay_amount: string | null
           rate_type: string | null
@@ -1611,6 +1612,7 @@ export type Database = {
           show_id: string | null
           sort_order: number | null
           status: string | null
+          template_position_id: string | null
           terms_conditions: string | null
           title: string
           updated_at: string | null
@@ -1623,6 +1625,7 @@ export type Database = {
           gear_required?: string | null
           id?: string
           is_remote?: boolean | null
+          is_template?: boolean | null
           location?: string | null
           pay_amount?: string | null
           rate_type?: string | null
@@ -1632,6 +1635,7 @@ export type Database = {
           show_id?: string | null
           sort_order?: number | null
           status?: string | null
+          template_position_id?: string | null
           terms_conditions?: string | null
           title: string
           updated_at?: string | null
@@ -1644,6 +1648,7 @@ export type Database = {
           gear_required?: string | null
           id?: string
           is_remote?: boolean | null
+          is_template?: boolean | null
           location?: string | null
           pay_amount?: string | null
           rate_type?: string | null
@@ -1653,6 +1658,7 @@ export type Database = {
           show_id?: string | null
           sort_order?: number | null
           status?: string | null
+          template_position_id?: string | null
           terms_conditions?: string | null
           title?: string
           updated_at?: string | null
@@ -1670,6 +1676,13 @@ export type Database = {
             columns: ["show_id"]
             isOneToOne: false
             referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_positions_template_position_id_fkey"
+            columns: ["template_position_id"]
+            isOneToOne: false
+            referencedRelation: "crew_positions"
             referencedColumns: ["id"]
           },
         ]
@@ -1779,6 +1792,7 @@ export type Database = {
         Row: {
           contact_email: string | null
           created_at: string | null
+          default_description: string | null
           description: string | null
           id: string
           is_hiring: boolean | null
@@ -1790,6 +1804,7 @@ export type Database = {
         Insert: {
           contact_email?: string | null
           created_at?: string | null
+          default_description?: string | null
           description?: string | null
           id?: string
           is_hiring?: boolean | null
@@ -1801,6 +1816,7 @@ export type Database = {
         Update: {
           contact_email?: string | null
           created_at?: string | null
+          default_description?: string | null
           description?: string | null
           id?: string
           is_hiring?: boolean | null
