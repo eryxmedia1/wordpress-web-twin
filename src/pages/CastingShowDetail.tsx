@@ -400,9 +400,9 @@ export default function CastingShowDetail() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="pt-20">
-        {/* Hero Section */}
-        <div className="relative h-[50vh] min-h-[400px]">
+      <div className="pt-16">
+        {/* Full-width Hero Section */}
+        <div className="relative w-full aspect-video md:aspect-[21/9] max-h-[70vh]">
           {show.trailer_url ? (
             <div className="absolute inset-0">
               <ReactPlayer
@@ -412,7 +412,14 @@ export default function CastingShowDetail() {
                 loop
                 width="100%"
                 height="100%"
-                style={{ objectFit: 'cover' }}
+                style={{ position: 'absolute', top: 0, left: 0 }}
+                config={{
+                  file: {
+                    attributes: {
+                      style: { objectFit: 'cover', width: '100%', height: '100%' }
+                    }
+                  }
+                }}
               />
             </div>
           ) : show.poster_url ? (
@@ -426,7 +433,7 @@ export default function CastingShowDetail() {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
           
-          <div className="absolute bottom-0 left-0 right-0 p-8">
+          <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8">
             <div className="container mx-auto">
               <Button 
                 variant="ghost" 
@@ -437,9 +444,9 @@ export default function CastingShowDetail() {
                 Back to Shows
               </Button>
               
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3">{show.title}</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-2 md:mb-3">{show.title}</h1>
               {show.logline && (
-                <p className="text-xl text-muted-foreground max-w-3xl">{show.logline}</p>
+                <p className="text-sm sm:text-base md:text-xl text-muted-foreground max-w-3xl line-clamp-2 md:line-clamp-none">{show.logline}</p>
               )}
             </div>
           </div>
@@ -605,12 +612,24 @@ export default function CastingShowDetail() {
 
               {user && !talentProfile && (
                 <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-center text-muted-foreground mb-4">
-                      Create a talent profile to apply
+                  <CardContent className="pt-6 space-y-3">
+                    <p className="text-center text-muted-foreground mb-2">
+                      Create a profile to apply
                     </p>
-                    <Button className="w-full" onClick={() => navigate('/talent/edit')}>
-                      Create Profile
+                    <Button 
+                      className="w-full" 
+                      onClick={() => navigate('/talent/signup?type=talent')}
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Apply as Talent
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="w-full" 
+                      onClick={() => navigate('/talent/signup?type=crew')}
+                    >
+                      <Clapperboard className="w-4 h-4 mr-2" />
+                      Apply as Crew
                     </Button>
                   </CardContent>
                 </Card>
