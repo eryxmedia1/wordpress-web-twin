@@ -253,8 +253,8 @@ export default function AdminCrewApplications() {
                               <Building2 className="h-4 w-4" />
                               {app.crew_positions?.departments?.name}
                             </span>
-                            {app.casting_shows && (
-                              <span className="text-primary">{app.casting_shows.title}</span>
+                            {app.crew_positions?.casting_shows && (
+                              <span className="text-primary">{app.crew_positions.casting_shows.title}</span>
                             )}
                           </div>
 

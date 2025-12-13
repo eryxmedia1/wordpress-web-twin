@@ -64,6 +64,12 @@ import TalentDashboard from "./pages/TalentDashboard";
 import AdminCastingShows from "./pages/AdminCastingShows";
 import AdminCastingRoles from "./pages/AdminCastingRoles";
 import AdminCastingApplications from "./pages/AdminCastingApplications";
+import AdminCastingDashboard from "./pages/AdminCastingDashboard";
+import AdminDepartments from "./pages/AdminDepartments";
+import AdminCrewPositions from "./pages/AdminCrewPositions";
+import AdminCrewApplications from "./pages/AdminCrewApplications";
+import DepartmentPage from "./pages/DepartmentPage";
+import CrewPositionDetail from "./pages/CrewPositionDetail";
 
 const queryClient = new QueryClient();
 
@@ -194,6 +200,8 @@ const App = () => (
                   <Route path="/casting/shows" element={<CastingShows />} />
                   <Route path="/casting/shows/:slug" element={<CastingShowDetail />} />
                   <Route path="/casting/crew" element={<CrewHiring />} />
+                  <Route path="/casting/crew/:id" element={<CrewPositionDetail />} />
+                  <Route path="/casting/departments/:slug" element={<DepartmentPage />} />
                   <Route path="/talent/:id" element={<TalentProfile />} />
                   <Route path="/talent/edit" element={<TalentEdit />} />
                   <Route path="/talent/signup" element={<TalentSignup />} />
@@ -229,6 +237,10 @@ const App = () => (
                 <Route path="/admin/casting-shows" element={<AdminCastingShows />} />
                 <Route path="/admin/casting-roles" element={<AdminCastingRoles />} />
                 <Route path="/admin/casting-applications" element={<AdminCastingApplications />} />
+                <Route path="/admin/casting-dashboard" element={<AdminCastingDashboard />} />
+                <Route path="/admin/departments" element={<AdminDepartments />} />
+                <Route path="/admin/crew-positions" element={<AdminCrewPositions />} />
+                <Route path="/admin/crew-applications" element={<AdminCrewApplications />} />
               </Route>
               
               {/* Catch-all */}
