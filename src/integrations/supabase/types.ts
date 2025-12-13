@@ -693,28 +693,52 @@ export type Database = {
       }
       casting_applications: {
         Row: {
+          admin_notes: string | null
+          admin_rating: number | null
+          answers: Json | null
           applied_at: string | null
           casting_call_id: string
           cover_letter: string | null
           id: string
+          pay_acceptance_timestamp: string | null
+          profile_snapshot: Json | null
+          role_ids: string[] | null
+          show_id: string | null
           status: string | null
           talent_id: string
+          terms_acceptance_timestamp: string | null
         }
         Insert: {
+          admin_notes?: string | null
+          admin_rating?: number | null
+          answers?: Json | null
           applied_at?: string | null
           casting_call_id: string
           cover_letter?: string | null
           id?: string
+          pay_acceptance_timestamp?: string | null
+          profile_snapshot?: Json | null
+          role_ids?: string[] | null
+          show_id?: string | null
           status?: string | null
           talent_id: string
+          terms_acceptance_timestamp?: string | null
         }
         Update: {
+          admin_notes?: string | null
+          admin_rating?: number | null
+          answers?: Json | null
           applied_at?: string | null
           casting_call_id?: string
           cover_letter?: string | null
           id?: string
+          pay_acceptance_timestamp?: string | null
+          profile_snapshot?: Json | null
+          role_ids?: string[] | null
+          show_id?: string | null
           status?: string | null
           talent_id?: string
+          terms_acceptance_timestamp?: string | null
         }
         Relationships: [
           {
@@ -722,6 +746,13 @@ export type Database = {
             columns: ["casting_call_id"]
             isOneToOne: false
             referencedRelation: "casting_calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casting_applications_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
             referencedColumns: ["id"]
           },
           {
@@ -793,6 +824,51 @@ export type Database = {
         }
         Relationships: []
       }
+      casting_email_config: {
+        Row: {
+          created_at: string | null
+          email_type: string
+          emails: string[]
+          id: string
+          is_active: boolean | null
+          role_id: string | null
+          show_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_type: string
+          emails?: string[]
+          id?: string
+          is_active?: boolean | null
+          role_id?: string | null
+          show_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_type?: string
+          emails?: string[]
+          id?: string
+          is_active?: boolean | null
+          role_id?: string | null
+          show_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_email_config_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "casting_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casting_email_config_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       casting_hero_banners: {
         Row: {
           button_text: string | null
@@ -826,6 +902,149 @@ export type Database = {
           sort_order?: number | null
           subtitle?: string | null
           title?: string
+        }
+        Relationships: []
+      }
+      casting_roles: {
+        Row: {
+          casting_email: string | null
+          created_at: string | null
+          custom_questions: Json | null
+          deadline: string | null
+          description: string | null
+          id: string
+          is_remote: boolean | null
+          location_notes: string | null
+          pay_amount: string | null
+          pay_type: string | null
+          payment_terms: string | null
+          requirements: string | null
+          role_type: string
+          shoot_dates: string | null
+          show_id: string
+          sort_order: number | null
+          status: string
+          terms_conditions: string | null
+          time_commitment: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          casting_email?: string | null
+          created_at?: string | null
+          custom_questions?: Json | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          is_remote?: boolean | null
+          location_notes?: string | null
+          pay_amount?: string | null
+          pay_type?: string | null
+          payment_terms?: string | null
+          requirements?: string | null
+          role_type?: string
+          shoot_dates?: string | null
+          show_id: string
+          sort_order?: number | null
+          status?: string
+          terms_conditions?: string | null
+          time_commitment?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          casting_email?: string | null
+          created_at?: string | null
+          custom_questions?: Json | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          is_remote?: boolean | null
+          location_notes?: string | null
+          pay_amount?: string | null
+          pay_type?: string | null
+          payment_terms?: string | null
+          requirements?: string | null
+          role_type?: string
+          shoot_dates?: string | null
+          show_id?: string
+          sort_order?: number | null
+          status?: string
+          terms_conditions?: string | null
+          time_commitment?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_roles_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      casting_shows: {
+        Row: {
+          casting_email: string | null
+          created_at: string | null
+          deadline: string | null
+          description: string | null
+          filming_dates: string | null
+          filming_location: string | null
+          id: string
+          is_featured: boolean | null
+          logline: string | null
+          pay_range_max: number | null
+          pay_range_min: number | null
+          poster_url: string | null
+          production_notes: string | null
+          slug: string
+          status: string
+          title: string
+          trailer_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          casting_email?: string | null
+          created_at?: string | null
+          deadline?: string | null
+          description?: string | null
+          filming_dates?: string | null
+          filming_location?: string | null
+          id?: string
+          is_featured?: boolean | null
+          logline?: string | null
+          pay_range_max?: number | null
+          pay_range_min?: number | null
+          poster_url?: string | null
+          production_notes?: string | null
+          slug: string
+          status?: string
+          title: string
+          trailer_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          casting_email?: string | null
+          created_at?: string | null
+          deadline?: string | null
+          description?: string | null
+          filming_dates?: string | null
+          filming_location?: string | null
+          id?: string
+          is_featured?: boolean | null
+          logline?: string | null
+          pay_range_max?: number | null
+          pay_range_min?: number | null
+          poster_url?: string | null
+          production_notes?: string | null
+          slug?: string
+          status?: string
+          title?: string
+          trailer_url?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2204,95 +2423,218 @@ export type Database = {
       talents: {
         Row: {
           age_range: string | null
+          applicant_type: string | null
+          availability_dates: string | null
+          availability_notes: string | null
+          best_platform: string | null
           bio: string | null
           bust: string | null
           category: Database["public"]["Enums"]["talent_category"]
           city: string | null
+          clothing_size_bottom: string | null
+          clothing_size_top: string | null
+          comfort_improv: boolean | null
+          comfort_romance_level: string | null
+          comfort_speaking: boolean | null
+          comfort_stunts: boolean | null
+          comfort_swimwear: boolean | null
           country: string | null
           created_at: string | null
+          crew_certifications: string | null
+          crew_gear_owned: string | null
+          crew_primary_role: string | null
+          crew_secondary_roles: string[] | null
+          crew_software: string[] | null
+          crew_work_preferences: string[] | null
+          crew_years_experience: number | null
+          distinguishing_features: string | null
+          email: string | null
           ethnicity: string | null
           eye_color: string | null
+          facebook_url: string | null
+          follower_count: string | null
+          gender: string | null
           hair_color: string | null
+          has_drivers_license: boolean | null
+          has_passport: boolean | null
+          has_piercings: boolean | null
+          has_tattoos: boolean | null
           height: string | null
           hips: string | null
           id: string
+          imdb_url: string | null
           instagram_url: string | null
           is_active: boolean | null
           is_approved: boolean | null
           is_featured: boolean | null
+          languages: string[] | null
           name: string
+          phone: string | null
+          piercing_notes: string | null
+          portfolio_url: string | null
           primary_photo_url: string | null
+          profile_completeness: number | null
+          pronouns: string | null
+          resume_url: string | null
           shoe_size: string | null
+          skills_tags: string[] | null
+          skin_tone: string | null
           state: string | null
+          tattoo_notes: string | null
           tiktok_url: string | null
+          union_status: string | null
           updated_at: string | null
           user_id: string
           video_reel_url: string | null
           waist: string | null
           website_url: string | null
           weight: string | null
+          willing_to_travel: boolean | null
+          x_twitter_url: string | null
           youtube_url: string | null
         }
         Insert: {
           age_range?: string | null
+          applicant_type?: string | null
+          availability_dates?: string | null
+          availability_notes?: string | null
+          best_platform?: string | null
           bio?: string | null
           bust?: string | null
           category?: Database["public"]["Enums"]["talent_category"]
           city?: string | null
+          clothing_size_bottom?: string | null
+          clothing_size_top?: string | null
+          comfort_improv?: boolean | null
+          comfort_romance_level?: string | null
+          comfort_speaking?: boolean | null
+          comfort_stunts?: boolean | null
+          comfort_swimwear?: boolean | null
           country?: string | null
           created_at?: string | null
+          crew_certifications?: string | null
+          crew_gear_owned?: string | null
+          crew_primary_role?: string | null
+          crew_secondary_roles?: string[] | null
+          crew_software?: string[] | null
+          crew_work_preferences?: string[] | null
+          crew_years_experience?: number | null
+          distinguishing_features?: string | null
+          email?: string | null
           ethnicity?: string | null
           eye_color?: string | null
+          facebook_url?: string | null
+          follower_count?: string | null
+          gender?: string | null
           hair_color?: string | null
+          has_drivers_license?: boolean | null
+          has_passport?: boolean | null
+          has_piercings?: boolean | null
+          has_tattoos?: boolean | null
           height?: string | null
           hips?: string | null
           id?: string
+          imdb_url?: string | null
           instagram_url?: string | null
           is_active?: boolean | null
           is_approved?: boolean | null
           is_featured?: boolean | null
+          languages?: string[] | null
           name: string
+          phone?: string | null
+          piercing_notes?: string | null
+          portfolio_url?: string | null
           primary_photo_url?: string | null
+          profile_completeness?: number | null
+          pronouns?: string | null
+          resume_url?: string | null
           shoe_size?: string | null
+          skills_tags?: string[] | null
+          skin_tone?: string | null
           state?: string | null
+          tattoo_notes?: string | null
           tiktok_url?: string | null
+          union_status?: string | null
           updated_at?: string | null
           user_id: string
           video_reel_url?: string | null
           waist?: string | null
           website_url?: string | null
           weight?: string | null
+          willing_to_travel?: boolean | null
+          x_twitter_url?: string | null
           youtube_url?: string | null
         }
         Update: {
           age_range?: string | null
+          applicant_type?: string | null
+          availability_dates?: string | null
+          availability_notes?: string | null
+          best_platform?: string | null
           bio?: string | null
           bust?: string | null
           category?: Database["public"]["Enums"]["talent_category"]
           city?: string | null
+          clothing_size_bottom?: string | null
+          clothing_size_top?: string | null
+          comfort_improv?: boolean | null
+          comfort_romance_level?: string | null
+          comfort_speaking?: boolean | null
+          comfort_stunts?: boolean | null
+          comfort_swimwear?: boolean | null
           country?: string | null
           created_at?: string | null
+          crew_certifications?: string | null
+          crew_gear_owned?: string | null
+          crew_primary_role?: string | null
+          crew_secondary_roles?: string[] | null
+          crew_software?: string[] | null
+          crew_work_preferences?: string[] | null
+          crew_years_experience?: number | null
+          distinguishing_features?: string | null
+          email?: string | null
           ethnicity?: string | null
           eye_color?: string | null
+          facebook_url?: string | null
+          follower_count?: string | null
+          gender?: string | null
           hair_color?: string | null
+          has_drivers_license?: boolean | null
+          has_passport?: boolean | null
+          has_piercings?: boolean | null
+          has_tattoos?: boolean | null
           height?: string | null
           hips?: string | null
           id?: string
+          imdb_url?: string | null
           instagram_url?: string | null
           is_active?: boolean | null
           is_approved?: boolean | null
           is_featured?: boolean | null
+          languages?: string[] | null
           name?: string
+          phone?: string | null
+          piercing_notes?: string | null
+          portfolio_url?: string | null
           primary_photo_url?: string | null
+          profile_completeness?: number | null
+          pronouns?: string | null
+          resume_url?: string | null
           shoe_size?: string | null
+          skills_tags?: string[] | null
+          skin_tone?: string | null
           state?: string | null
+          tattoo_notes?: string | null
           tiktok_url?: string | null
+          union_status?: string | null
           updated_at?: string | null
           user_id?: string
           video_reel_url?: string | null
           waist?: string | null
           website_url?: string | null
           weight?: string | null
+          willing_to_travel?: boolean | null
+          x_twitter_url?: string | null
           youtube_url?: string | null
         }
         Relationships: []
