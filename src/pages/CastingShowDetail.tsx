@@ -397,11 +397,11 @@ export default function CastingShowDetail() {
   if (!show) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       
-      {/* Full-width Cinematic Hero Section - 120% width */}
-      <div className="relative w-[120vw] h-[60vh] md:h-[70vh] lg:h-[80vh] -ml-[10vw] left-0">
+      {/* Full-width Cinematic Hero Section - True Edge to Edge */}
+      <div className="relative w-[100vw] h-[60vh] md:h-[70vh] lg:h-[80vh] left-[50%] -ml-[50vw]">
         {show.trailer_url ? (
           <div className="absolute inset-0 w-full h-full">
             <ReactPlayer
