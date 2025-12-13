@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings, Shield, Crown, Store } from "lucide-react";
+import { Search, ChevronDown, User, Pencil, HelpCircle, ArrowRightLeft, LayoutGrid, List, Settings, Shield, Crown, Store, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -120,6 +120,16 @@ const Navbar = () => {
       
       {/* Main Navigation - Paramount+ Style */}
       <nav className="hidden md:flex items-center gap-1">
+        <Link 
+          to="/casting" 
+          className={`flex items-center gap-1 px-4 py-2 text-sm font-semibold transition-colors hover:text-primary ${
+            location.pathname.startsWith('/casting') ? 'text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Megaphone className="w-4 h-4" />
+          CASTING
+        </Link>
+
         <Link 
           to="/browse" 
           className={`px-4 py-2 text-sm font-semibold transition-colors hover:text-primary ${
