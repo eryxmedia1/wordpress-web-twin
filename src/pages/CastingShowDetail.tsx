@@ -435,9 +435,9 @@ export default function CastingShowDetail() {
       
       {/* Full-width Trailer Section */}
       <div className="relative w-full">
-        <div className="w-[1920px] max-w-none h-[50vh] md:h-[60vh] lg:h-[70vh] left-1/2 -ml-[960px] relative">
+        <div className="w-full aspect-[21/9]">
           {show.trailer_url ? (
-            <div className="absolute inset-0 w-full h-full">
+            <div className="w-full h-full">
               <ReactPlayer
                 url={show.trailer_url}
                 playing
@@ -445,7 +445,7 @@ export default function CastingShowDetail() {
                 loop
                 width="100%"
                 height="100%"
-                style={{ position: 'absolute', top: 0, left: 0 }}
+                style={{ objectFit: 'cover' }}
                 config={{
                   file: {
                     attributes: {
@@ -459,10 +459,10 @@ export default function CastingShowDetail() {
             <img 
               src={show.poster_url} 
               alt={show.title}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="w-full h-full object-cover"
             />
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-background" />
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-background" />
           )}
           
           {/* Bottom gradient for smooth transition */}
