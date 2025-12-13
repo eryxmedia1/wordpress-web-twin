@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Users, Clapperboard, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Clapperboard, DollarSign, Minus } from 'lucide-react';
 
 interface CastingShow {
   id: string;
@@ -39,6 +39,7 @@ interface CastingRole {
   deadline: string | null;
   status: string;
   sort_order: number;
+  spots_available: number;
 }
 
 const initialFormState = {
@@ -57,6 +58,7 @@ const initialFormState = {
   is_remote: false,
   deadline: '',
   status: 'open',
+  spots_available: 1,
 };
 
 export default function AdminCastingRoles() {
@@ -139,6 +141,7 @@ export default function AdminCastingRoles() {
         is_remote: form.is_remote,
         deadline: form.deadline || null,
         status: form.status,
+        spots_available: form.spots_available,
       };
 
       if (editingRole) {
@@ -186,8 +189,32 @@ export default function AdminCastingRoles() {
       is_remote: role.is_remote || false,
       deadline: role.deadline || '',
       status: role.status,
+      spots_available: role.spots_available || 1,
     });
     setDialogOpen(true);
+  };
+
+  const updateSpots = async (roleId: string, delta: number) => {
+    const role = roles.find(r => r.id === roleId);
+    if (!role) return;
+    
+    const newSpots = Math.max(1, role.spots_available + delta);
+    
+    try {
+      const { error } = await supabase
+        .from('casting_roles')
+        .update({ spots_available: newSpots })
+        .eq('id', roleId);
+      
+      if (error) throw error;
+      
+      setRoles(prev => prev.map(r => 
+        r.id === roleId ? { ...r, spots_available: newSpots } : r
+      ));
+    } catch (error) {
+      console.error('Error updating spots:', error);
+      toast.error('Failed to update spots');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -215,7 +242,7 @@ export default function AdminCastingRoles() {
     <Card>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
-          <div>
+          <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="font-semibold text-foreground">{role.title}</h4>
               <Badge variant={role.status === 'open' ? 'default' : 'secondary'}>
@@ -237,13 +264,38 @@ export default function AdminCastingRoles() {
               {role.time_commitment && <span>{role.time_commitment}</span>}
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleEdit(role)}>
-              <Edit className="w-4 h-4" />
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => handleDelete(role.id)}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
+          <div className="flex items-center gap-3">
+            {/* Spots Available Counter */}
+            <div className="flex items-center gap-1 bg-muted rounded-lg px-2 py-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={() => updateSpots(role.id, -1)}
+                disabled={role.spots_available <= 1}
+              >
+                <Minus className="w-3 h-3" />
+              </Button>
+              <span className="text-sm font-medium min-w-[24px] text-center">
+                {role.spots_available}
+              </span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={() => updateSpots(role.id, 1)}
+              >
+                <Plus className="w-3 h-3" />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => handleEdit(role)}>
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => handleDelete(role.id)}>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
@@ -441,13 +493,22 @@ export default function AdminCastingRoles() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label>Application Deadline</Label>
                       <Input
                         type="date"
                         value={form.deadline}
                         onChange={(e) => setForm(prev => ({ ...prev, deadline: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Spots Available</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={form.spots_available}
+                        onChange={(e) => setForm(prev => ({ ...prev, spots_available: Math.max(1, parseInt(e.target.value) || 1) }))}
                       />
                     </div>
                     <div className="flex items-center gap-2 pt-6">

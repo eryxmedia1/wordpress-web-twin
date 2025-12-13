@@ -923,6 +923,7 @@ export type Database = {
           shoot_dates: string | null
           show_id: string
           sort_order: number | null
+          spots_available: number
           status: string
           terms_conditions: string | null
           time_commitment: string | null
@@ -946,6 +947,7 @@ export type Database = {
           shoot_dates?: string | null
           show_id: string
           sort_order?: number | null
+          spots_available?: number
           status?: string
           terms_conditions?: string | null
           time_commitment?: string | null
@@ -969,6 +971,7 @@ export type Database = {
           shoot_dates?: string | null
           show_id?: string
           sort_order?: number | null
+          spots_available?: number
           status?: string
           terms_conditions?: string | null
           time_commitment?: string | null
