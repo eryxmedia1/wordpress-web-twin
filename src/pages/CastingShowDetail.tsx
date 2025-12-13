@@ -327,14 +327,20 @@ export default function CastingShowDetail() {
             {role.description && (
               <div>
                 <h4 className="font-medium text-sm text-foreground mb-1">Role Description</h4>
-                <p className="text-sm text-muted-foreground">{role.description}</p>
+                <div 
+                  className="text-sm text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:ml-2 [&_p]:mb-2"
+                  dangerouslySetInnerHTML={{ __html: role.description }}
+                />
               </div>
             )}
 
             {role.requirements && (
               <div>
                 <h4 className="font-medium text-sm text-foreground mb-1">Requirements</h4>
-                <p className="text-sm text-muted-foreground whitespace-pre-line">{role.requirements}</p>
+                <div 
+                  className="text-sm text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:ml-2 [&_p]:mb-2"
+                  dangerouslySetInnerHTML={{ __html: role.requirements }}
+                />
               </div>
             )}
 
