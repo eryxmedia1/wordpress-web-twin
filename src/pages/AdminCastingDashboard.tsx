@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNavbar from "@/components/AdminNavbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,9 +93,9 @@ export default function AdminCastingDashboard() {
       <div className="container mx-auto px-4 pt-24 pb-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link to="/admin">
-              <Button variant="outline" size="sm">← Back</Button>
-            </Link>
+            <Button variant="outline" size="sm" onClick={() => window.history.back()}>
+              ← Back
+            </Button>
             <div>
               <h1 className="text-3xl font-bold">Casting Command Center</h1>
               <p className="text-muted-foreground">Manage talent, crew, shows, and applications</p>
