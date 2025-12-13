@@ -1,17 +1,15 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useProfile } from "@/context/ProfileContext";
+import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
 
-const PROFILE_STORAGE_KEY = 'zoe_current_profile';
-
 const RequireProfile = () => {
-  const { currentProfile, isLoading, profiles } = useProfile();
+  const { currentProfile, isLoading } = useProfile();
+  const { isLoading: authLoading } = useAuth();
   const location = useLocation();
 
-  // Check if there's a pending profile in localStorage waiting to be restored
-  const hasPendingProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
-
-  if (isLoading) {
+  // Wait for both auth and profile loading to complete
+  if (isLoading || authLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
@@ -20,19 +18,8 @@ const RequireProfile = () => {
     );
   }
 
-  // If no profile selected but we have a pending one and profiles are loaded,
-  // wait briefly for restoration instead of redirecting
-  if (!currentProfile && hasPendingProfile && profiles.length > 0) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-        <p className="text-foreground">Restoring profile...</p>
-      </div>
-    );
-  }
-
+  // If no profile selected, redirect to profile selection
   if (!currentProfile) {
-    // Redirect to profile selection but remember where they were trying to go
     return <Navigate to="/profiles" state={{ from: location }} replace />;
   }
 
