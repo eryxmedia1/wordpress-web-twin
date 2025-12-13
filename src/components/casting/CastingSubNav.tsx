@@ -4,7 +4,6 @@ import { Users, Megaphone, Film, UserPlus, Clapperboard, UserCog, Building2 } fr
 
 const castingNavItems = [
   { label: "Talents", path: "/casting", icon: Users },
-  { label: "Casting Calls", path: "/casting/calls", icon: Megaphone },
   { label: "Shows Being Cast", path: "/casting/shows", icon: Film },
   { label: "Crew Hiring", path: "/casting/crew", icon: Clapperboard },
   { label: "Departments", path: "/casting/crew", icon: Building2, isDepartments: true },
