@@ -46,8 +46,8 @@ export interface CrewPosition {
   sort_order: number;
   created_at: string;
   updated_at: string;
-  departments?: { name: string; slug: string };
-  casting_shows?: { title: string; slug: string };
+  departments?: { name: string; slug?: string };
+  casting_shows?: { title: string; slug?: string };
 }
 
 export interface CrewApplication {
@@ -65,6 +65,7 @@ export interface CrewApplication {
   pay_acceptance_timestamp: string | null;
   applied_at: string;
   crew_positions?: CrewPosition;
+  casting_shows?: { title: string };
   talents?: {
     id: string;
     name: string;

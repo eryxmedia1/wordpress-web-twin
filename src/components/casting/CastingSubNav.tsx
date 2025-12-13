@@ -1,12 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Users, Megaphone, Film, UserPlus, Clapperboard, UserCog } from "lucide-react";
+import { Users, Megaphone, Film, UserPlus, Clapperboard, UserCog, Building2 } from "lucide-react";
 
 const castingNavItems = [
   { label: "Talents", path: "/casting", icon: Users },
   { label: "Casting Calls", path: "/casting/calls", icon: Megaphone },
   { label: "Shows Being Cast", path: "/casting/shows", icon: Film },
   { label: "Crew Hiring", path: "/casting/crew", icon: Clapperboard },
+  { label: "Departments", path: "/casting/crew", icon: Building2, isDepartments: true },
   { label: "Join as Talent", path: "/talent/signup", icon: UserPlus },
   { label: "Join as Crew", path: "/talent/signup?type=crew", icon: UserCog },
 ];

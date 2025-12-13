@@ -24,7 +24,23 @@ export default function AdminCrewPositions() {
   const [editing, setEditing] = useState<CrewPosition | null>(null);
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
   
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    department_id: string;
+    show_id: string;
+    title: string;
+    description: string;
+    responsibilities: string;
+    required_experience: string;
+    gear_required: string;
+    rate_type: string;
+    pay_amount: string;
+    schedule_expectations: string;
+    location: string;
+    is_remote: boolean;
+    terms_conditions: string;
+    deadline: string;
+    status: string;
+  }>({
     department_id: "",
     show_id: "",
     title: "",
@@ -32,14 +48,14 @@ export default function AdminCrewPositions() {
     responsibilities: "",
     required_experience: "",
     gear_required: "",
-    rate_type: "daily" as const,
+    rate_type: "daily",
     pay_amount: "",
     schedule_expectations: "",
     location: "",
     is_remote: false,
     terms_conditions: "",
     deadline: "",
-    status: "open" as const
+    status: "open"
   });
 
   useEffect(() => {

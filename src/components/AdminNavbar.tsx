@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, User, Film, Tv, Search, LogOut, Home, Tag, Crown, Trophy, ImageIcon, Users, Radio, BarChart3, Store, Target } from "lucide-react";
+import { ChevronDown, User, Film, Tv, Search, LogOut, Home, Tag, Crown, Trophy, ImageIcon, Users, Radio, BarChart3, Store, Target, Clapperboard, Building2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const AdminNavbar = () => {
@@ -145,6 +145,49 @@ const AdminNavbar = () => {
             <BarChart3 className="h-4 w-4" />
             Analytics
           </Link>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-1.5 px-3 py-2 h-auto text-sm font-medium bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 rounded-lg transition-all duration-200">
+                <Clapperboard className="h-4 w-4" />
+                Casting
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-52 bg-gray-900/95 backdrop-blur-xl text-white border-white/10 rounded-xl shadow-2xl">
+              <DropdownMenuLabel className="text-xs text-gray-400">Casting Admin</DropdownMenuLabel>
+              <DropdownMenuItem className="hover:bg-white/10 rounded-lg cursor-pointer">
+                <Link to="/admin/casting-dashboard" className="w-full">Dashboard</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-white/10 rounded-lg cursor-pointer">
+                <Link to="/admin/casting-shows" className="w-full">Shows</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-white/10 rounded-lg cursor-pointer">
+                <Link to="/admin/casting-roles" className="w-full">Talent Roles</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-white/10 rounded-lg cursor-pointer">
+                <Link to="/admin/casting-applications" className="w-full">Talent Applications</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-white/10 rounded-lg cursor-pointer">
+                <Link to="/admin/talents" className="w-full">Talent Roster</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuLabel className="text-xs text-gray-400">Crew Admin</DropdownMenuLabel>
+              <DropdownMenuItem className="hover:bg-white/10 rounded-lg cursor-pointer">
+                <Link to="/admin/departments" className="w-full">Departments</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-white/10 rounded-lg cursor-pointer">
+                <Link to="/admin/crew-positions" className="w-full">Crew Positions</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-white/10 rounded-lg cursor-pointer">
+                <Link to="/admin/crew-applications" className="w-full">Crew Applications</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem className="hover:bg-white/10 rounded-lg cursor-pointer">
+                <Link to="/admin/casting-banners" className="w-full">Hero Banners</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
       </div>
       
