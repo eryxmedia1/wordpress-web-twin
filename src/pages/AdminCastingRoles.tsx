@@ -250,7 +250,7 @@ export default function AdminCastingRoles() {
     return (
       <div className="min-h-screen bg-background">
         <AdminNavbar />
-        <div className="flex items-center justify-center py-40">
+        <div className="flex items-center justify-center pt-24 pb-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
       </div>
@@ -261,7 +261,7 @@ export default function AdminCastingRoles() {
     <div className="min-h-screen bg-background">
       <AdminNavbar />
       
-      <div className="container mx-auto px-6 py-8 pt-24">
+      <div className="container mx-auto px-6 pt-32 pb-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Casting Roles</h1>

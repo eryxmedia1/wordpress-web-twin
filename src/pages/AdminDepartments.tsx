@@ -116,7 +116,7 @@ export default function AdminDepartments() {
     return (
       <div className="min-h-screen bg-background">
         <AdminNavbar />
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 pt-24 pb-8">
           <Skeleton className="h-12 w-64 mb-8" />
           <div className="grid gap-4">
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
@@ -130,7 +130,7 @@ export default function AdminDepartments() {
     <div className="min-h-screen bg-background">
       <AdminNavbar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 pt-24 pb-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Departments</h1>
