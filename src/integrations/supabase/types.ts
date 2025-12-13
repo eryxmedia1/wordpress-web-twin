@@ -1411,6 +1411,61 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          created_at: string | null
+          department_id: string
+          id: string
+          last_message_at: string | null
+          show_id: string | null
+          subject: string | null
+          talent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          department_id: string
+          id?: string
+          last_message_at?: string | null
+          show_id?: string | null
+          subject?: string | null
+          talent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string
+          id?: string
+          last_message_at?: string | null
+          show_id?: string | null
+          subject?: string | null
+          talent_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creator_plans: {
         Row: {
           allow_ads: boolean | null
@@ -1467,6 +1522,360 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: []
+      }
+      crew_applications: {
+        Row: {
+          admin_notes: string | null
+          admin_rating: number | null
+          answers: Json | null
+          applied_at: string | null
+          cover_letter: string | null
+          id: string
+          pay_acceptance_timestamp: string | null
+          position_id: string
+          profile_snapshot: Json | null
+          show_id: string | null
+          status: string | null
+          talent_id: string
+          terms_acceptance_timestamp: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          admin_rating?: number | null
+          answers?: Json | null
+          applied_at?: string | null
+          cover_letter?: string | null
+          id?: string
+          pay_acceptance_timestamp?: string | null
+          position_id: string
+          profile_snapshot?: Json | null
+          show_id?: string | null
+          status?: string | null
+          talent_id: string
+          terms_acceptance_timestamp?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          admin_rating?: number | null
+          answers?: Json | null
+          applied_at?: string | null
+          cover_letter?: string | null
+          id?: string
+          pay_acceptance_timestamp?: string | null
+          position_id?: string
+          profile_snapshot?: Json | null
+          show_id?: string | null
+          status?: string | null
+          talent_id?: string
+          terms_acceptance_timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_applications_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "crew_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_applications_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_applications_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crew_positions: {
+        Row: {
+          created_at: string | null
+          deadline: string | null
+          department_id: string
+          description: string | null
+          gear_required: string | null
+          id: string
+          is_remote: boolean | null
+          location: string | null
+          pay_amount: string | null
+          rate_type: string | null
+          required_experience: string | null
+          responsibilities: string | null
+          schedule_expectations: string | null
+          show_id: string | null
+          sort_order: number | null
+          status: string | null
+          terms_conditions: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deadline?: string | null
+          department_id: string
+          description?: string | null
+          gear_required?: string | null
+          id?: string
+          is_remote?: boolean | null
+          location?: string | null
+          pay_amount?: string | null
+          rate_type?: string | null
+          required_experience?: string | null
+          responsibilities?: string | null
+          schedule_expectations?: string | null
+          show_id?: string | null
+          sort_order?: number | null
+          status?: string | null
+          terms_conditions?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deadline?: string | null
+          department_id?: string
+          description?: string | null
+          gear_required?: string | null
+          id?: string
+          is_remote?: boolean | null
+          location?: string | null
+          pay_amount?: string | null
+          rate_type?: string | null
+          required_experience?: string | null
+          responsibilities?: string | null
+          schedule_expectations?: string | null
+          show_id?: string | null
+          sort_order?: number | null
+          status?: string | null
+          terms_conditions?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_positions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_positions_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      department_messages: {
+        Row: {
+          attachments: Json | null
+          content: string
+          conversation_id: string
+          created_at: string | null
+          department_id: string
+          id: string
+          is_read: boolean | null
+          sender_id: string
+          sender_type: string
+          show_id: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          department_id: string
+          id?: string
+          is_read?: boolean | null
+          sender_id: string
+          sender_type: string
+          show_id?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          department_id?: string
+          id?: string
+          is_read?: boolean | null
+          sender_id?: string
+          sender_type?: string
+          show_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_messages_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_messages_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      department_staff: {
+        Row: {
+          created_at: string | null
+          department_id: string
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          permissions: Json | null
+          phone: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_id: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          permissions?: Json | null
+          phone?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          permissions?: Json | null
+          phone?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_staff_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          contact_email: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_hiring: boolean | null
+          name: string
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_hiring?: boolean | null
+          name: string
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_hiring?: boolean | null
+          name?: string
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      email_notification_triggers: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          trigger_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          trigger_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          trigger_type?: string
+        }
+        Relationships: []
+      }
+      email_routing_settings: {
+        Row: {
+          created_at: string | null
+          department_id: string | null
+          emails: string[]
+          id: string
+          is_active: boolean | null
+          setting_type: string
+          show_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_id?: string | null
+          emails?: string[]
+          id?: string
+          is_active?: boolean | null
+          setting_type: string
+          show_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string | null
+          emails?: string[]
+          id?: string
+          is_active?: boolean | null
+          setting_type?: string
+          show_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_routing_settings_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_routing_settings_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       episodes: {
         Row: {
@@ -2639,6 +3048,231 @@ export type Database = {
         }
         Relationships: []
       }
+      user_bookings: {
+        Row: {
+          booking_type: string
+          created_at: string | null
+          hired_at: string | null
+          id: string
+          notes: string | null
+          position_id: string | null
+          role_id: string | null
+          show_id: string
+          status: string | null
+          talent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          booking_type: string
+          created_at?: string | null
+          hired_at?: string | null
+          id?: string
+          notes?: string | null
+          position_id?: string | null
+          role_id?: string | null
+          show_id: string
+          status?: string | null
+          talent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          booking_type?: string
+          created_at?: string | null
+          hired_at?: string | null
+          id?: string
+          notes?: string | null
+          position_id?: string | null
+          role_id?: string | null
+          show_id?: string
+          status?: string | null
+          talent_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_bookings_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "crew_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_bookings_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "casting_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_bookings_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_bookings_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_calendar_events: {
+        Row: {
+          created_at: string | null
+          department_id: string | null
+          description: string | null
+          end_time: string | null
+          event_type: string | null
+          id: string
+          is_all_day: boolean | null
+          location: string | null
+          show_id: string | null
+          start_time: string
+          talent_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_type?: string | null
+          id?: string
+          is_all_day?: boolean | null
+          location?: string | null
+          show_id?: string | null
+          start_time: string
+          talent_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_type?: string | null
+          id?: string
+          is_all_day?: boolean | null
+          location?: string | null
+          show_id?: string | null
+          start_time?: string
+          talent_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_calendar_events_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_calendar_events_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_calendar_events_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_documents: {
+        Row: {
+          created_at: string | null
+          document_type: string | null
+          file_url: string
+          id: string
+          show_id: string | null
+          talent_id: string | null
+          title: string
+          uploaded_by: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_type?: string | null
+          file_url: string
+          id?: string
+          show_id?: string | null
+          talent_id?: string | null
+          title: string
+          uploaded_by?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: string | null
+          file_url?: string
+          id?: string
+          show_id?: string | null
+          talent_id?: string | null
+          title?: string
+          uploaded_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_documents_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_documents_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          link: string | null
+          message: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          message?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          message?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_playlist_items: {
         Row: {
           added_at: string | null
@@ -2775,6 +3409,82 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_tasks: {
+        Row: {
+          assigned_by: string | null
+          completed_at: string | null
+          completion_file_url: string | null
+          completion_note: string | null
+          created_at: string | null
+          department_id: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          show_id: string | null
+          status: string | null
+          talent_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          completed_at?: string | null
+          completion_file_url?: string | null
+          completion_note?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          show_id?: string | null
+          status?: string | null
+          talent_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          completed_at?: string | null
+          completion_file_url?: string | null
+          completion_note?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          show_id?: string | null
+          status?: string | null
+          talent_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tasks_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_tasks_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "casting_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_tasks_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       watch_history: {
         Row: {
