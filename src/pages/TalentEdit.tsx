@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Loader2, Save, User, Camera, Briefcase, Globe, Plus, Trash2, Wrench, Shield } from "lucide-react";
+import { Loader2, Save, User, Camera, Briefcase, Globe, Plus, Trash2, Wrench, Shield, Upload, Star, FileText } from "lucide-react";
 
 // Match the database enum - 'crew' is handled via applicant_type field
 type TalentCategory = 'actor' | 'model' | 'singer' | 'dancer' | 'extra' | 'voice_artist' | 'host' | 'influencer' | 'other';
@@ -104,6 +104,7 @@ interface TalentPhoto {
   id?: string;
   photo_url: string;
   caption: string;
+  is_primary?: boolean;
 }
 
 const TALENT_CATEGORIES: { value: TalentCategory; label: string }[] = [
@@ -208,6 +209,8 @@ export default function TalentEdit() {
   const [photos, setPhotos] = useState<TalentPhoto[]>([]);
   const [skillsInput, setSkillsInput] = useState("");
   const [languagesInput, setLanguagesInput] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingResume, setUploadingResume] = useState(false);
 
   const calculateCompleteness = (): number => {
     let filled = 0;
@@ -349,9 +352,10 @@ export default function TalentEdit() {
         .from('talent_photos')
         .select('*')
         .eq('talent_id', talent.id)
+        .order('is_primary', { ascending: false })
         .order('sort_order', { ascending: true });
 
-      if (photosData) setPhotos(photosData);
+      if (photosData) setPhotos(photosData as TalentPhoto[]);
     }
     
     setLoading(false);
@@ -464,7 +468,90 @@ export default function TalentEdit() {
   };
 
   const addPhoto = () => {
-    setPhotos([...photos, { photo_url: "", caption: "" }]);
+    setPhotos([...photos, { photo_url: "", caption: "", is_primary: photos.length === 0 }]);
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0 || !user) return;
+    
+    const file = event.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `${user.id}/photos/${fileName}`;
+
+    setUploadingPhoto(true);
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('talent-media')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrl } = supabase.storage
+        .from('talent-media')
+        .getPublicUrl(filePath);
+
+      // Add to photos array
+      const newPhoto: TalentPhoto = {
+        photo_url: publicUrl.publicUrl,
+        caption: "",
+        is_primary: photos.length === 0, // First photo is primary by default
+      };
+      
+      setPhotos([...photos, newPhoto]);
+      toast.success("Photo uploaded successfully");
+    } catch (error: any) {
+      toast.error("Failed to upload photo: " + error.message);
+    } finally {
+      setUploadingPhoto(false);
+      event.target.value = ''; // Reset file input
+    }
+  };
+
+  const handleResumeUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0 || !user) return;
+    
+    const file = event.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `resume_${Date.now()}.${fileExt}`;
+    const filePath = `${user.id}/resume/${fileName}`;
+
+    setUploadingResume(true);
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('talent-media')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrl } = supabase.storage
+        .from('talent-media')
+        .getPublicUrl(filePath);
+
+      setForm({ ...form, resume_url: publicUrl.publicUrl });
+      toast.success("Resume uploaded successfully");
+    } catch (error: any) {
+      toast.error("Failed to upload resume: " + error.message);
+    } finally {
+      setUploadingResume(false);
+      event.target.value = ''; // Reset file input
+    }
+  };
+
+  const setPhotoAsPrimary = async (index: number) => {
+    const updatedPhotos = photos.map((photo, i) => ({
+      ...photo,
+      is_primary: i === index,
+    }));
+    setPhotos(updatedPhotos);
+
+    // Update the primary_photo_url on the form as well
+    const primaryPhoto = updatedPhotos[index];
+    if (primaryPhoto.photo_url) {
+      setForm({ ...form, primary_photo_url: primaryPhoto.photo_url });
+    }
+
+    toast.success("Main photo updated");
   };
 
   const removePhoto = async (index: number) => {
@@ -485,10 +572,22 @@ export default function TalentEdit() {
     if (!photo.photo_url) return;
 
     try {
+      // If setting as primary, first unset any existing primary
+      if (photo.is_primary) {
+        await supabase
+          .from('talent_photos')
+          .update({ is_primary: false })
+          .eq('talent_id', talentId);
+      }
+
       if (photo.id) {
         await supabase
           .from('talent_photos')
-          .update({ photo_url: photo.photo_url, caption: photo.caption })
+          .update({ 
+            photo_url: photo.photo_url, 
+            caption: photo.caption,
+            is_primary: photo.is_primary || false
+          })
           .eq('id', photo.id);
       } else {
         const { data } = await supabase
@@ -498,6 +597,7 @@ export default function TalentEdit() {
             photo_url: photo.photo_url,
             caption: photo.caption,
             sort_order: index,
+            is_primary: photo.is_primary || false,
           })
           .select()
           .single();
@@ -1224,38 +1324,79 @@ export default function TalentEdit() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Photo Gallery</CardTitle>
-                  <CardDescription>Add headshots, full body shots, and portfolio images</CardDescription>
+                  <CardDescription>Add headshots, full body shots, and portfolio images. Click the star to set your main profile photo.</CardDescription>
                 </div>
-                <Button onClick={addPhoto} variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Photo
-                </Button>
+                <div className="flex gap-2">
+                  <label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                      disabled={uploadingPhoto}
+                    />
+                    <Button variant="default" asChild disabled={uploadingPhoto}>
+                      <span className="cursor-pointer">
+                        {uploadingPhoto ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4 mr-2" />
+                        )}
+                        Upload Photo
+                      </span>
+                    </Button>
+                  </label>
+                  <Button onClick={addPhoto} variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add URL
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {photos.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Camera className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No photos added yet</p>
+                    <p className="text-sm mt-2">Upload images to build your portfolio</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {photos.map((photo, index) => (
-                      <div key={index} className="flex gap-4 items-start p-4 border border-border/50 rounded-lg">
-                        {photo.photo_url && (
-                          <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                            <img src={photo.photo_url} alt="" className="w-full h-full object-cover" />
+                      <div 
+                        key={index} 
+                        className={`relative group rounded-lg overflow-hidden border-2 transition-all ${
+                          photo.is_primary ? 'border-primary ring-2 ring-primary/30' : 'border-border/50'
+                        }`}
+                      >
+                        {photo.photo_url ? (
+                          <img 
+                            src={photo.photo_url} 
+                            alt={photo.caption || 'Profile photo'} 
+                            className="w-full aspect-[3/4] object-cover"
+                          />
+                        ) : (
+                          <div className="w-full aspect-[3/4] bg-muted flex items-center justify-center">
+                            <Camera className="h-8 w-8 text-muted-foreground" />
                           </div>
                         )}
-                        <div className="flex-1 space-y-3">
-                          <Input 
-                            value={photo.photo_url}
-                            onChange={(e) => {
-                              const updated = [...photos];
-                              updated[index] = { ...updated[index], photo_url: e.target.value };
-                              setPhotos(updated);
-                            }}
-                            placeholder="Photo URL"
-                          />
+                        
+                        {/* Primary badge */}
+                        {photo.is_primary && (
+                          <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-md font-medium flex items-center gap-1">
+                            <Star className="h-3 w-3 fill-current" />
+                            Main Photo
+                          </div>
+                        )}
+
+                        {/* Photo caption */}
+                        {photo.caption && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                            <p className="text-white text-xs truncate">{photo.caption}</p>
+                          </div>
+                        )}
+
+                        {/* Hover overlay with actions */}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
                           <Input 
                             value={photo.caption}
                             onChange={(e) => {
@@ -1263,16 +1404,39 @@ export default function TalentEdit() {
                               updated[index] = { ...updated[index], caption: e.target.value };
                               setPhotos(updated);
                             }}
-                            placeholder="Caption (e.g., Headshot, Full Body, On Set)"
+                            placeholder="Caption"
+                            className="text-xs h-8"
+                            onClick={(e) => e.stopPropagation()}
                           />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => savePhoto(index)}>
-                            <Save className="h-4 w-4" />
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => removePhoto(index)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1 flex-wrap justify-center">
+                            {!photo.is_primary && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setPhotoAsPrimary(index)}
+                                className="h-7 text-xs"
+                              >
+                                <Star className="h-3 w-3 mr-1" />
+                                Set Main
+                              </Button>
+                            )}
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => savePhoto(index)}
+                              className="h-7 text-xs"
+                            >
+                              <Save className="h-3 w-3" />
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              onClick={() => removePhoto(index)}
+                              className="h-7 text-xs"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1370,12 +1534,43 @@ export default function TalentEdit() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Resume PDF URL</Label>
-                  <Input 
-                    value={form.resume_url}
-                    onChange={(e) => setForm({ ...form, resume_url: e.target.value })}
-                    placeholder="https://..."
-                  />
+                  <Label>Resume (PDF)</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={form.resume_url}
+                      onChange={(e) => setForm({ ...form, resume_url: e.target.value })}
+                      placeholder="https://... or upload a file"
+                      className="flex-1"
+                    />
+                    <label>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={handleResumeUpload}
+                        disabled={uploadingResume}
+                      />
+                      <Button variant="outline" asChild disabled={uploadingResume}>
+                        <span className="cursor-pointer">
+                          {uploadingResume ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <FileText className="h-4 w-4" />
+                          )}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                  {form.resume_url && (
+                    <a 
+                      href={form.resume_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      View uploaded resume
+                    </a>
+                  )}
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">

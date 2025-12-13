@@ -2774,6 +2774,7 @@ export type Database = {
           caption: string | null
           created_at: string | null
           id: string
+          is_primary: boolean | null
           photo_url: string
           sort_order: number | null
           talent_id: string
@@ -2782,6 +2783,7 @@ export type Database = {
           caption?: string | null
           created_at?: string | null
           id?: string
+          is_primary?: boolean | null
           photo_url: string
           sort_order?: number | null
           talent_id: string
@@ -2790,6 +2792,7 @@ export type Database = {
           caption?: string | null
           created_at?: string | null
           id?: string
+          is_primary?: boolean | null
           photo_url?: string
           sort_order?: number | null
           talent_id?: string
