@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
+import { CastingSubNav } from "@/components/casting/CastingSubNav";
 import BrowseFooter from "@/components/BrowseFooter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -131,8 +132,9 @@ export default function CastingCalls() {
   const regularCalls = castingCalls.filter(c => !c.is_featured);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <Navbar />
+      <CastingSubNav />
       
       {/* Hero */}
       <div className="bg-gradient-to-r from-primary/20 via-background to-background py-16">
