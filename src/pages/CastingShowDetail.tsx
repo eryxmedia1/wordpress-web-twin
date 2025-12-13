@@ -400,8 +400,8 @@ export default function CastingShowDetail() {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       
-      {/* Full-width Cinematic Hero Section - True Edge to Edge */}
-      <div className="relative w-[100vw] h-[60vh] md:h-[70vh] lg:h-[80vh] left-[50%] -ml-[50vw]">
+      {/* Full-width Cinematic Hero Section - Dedicated edge-to-edge container */}
+      <div className="relative w-[1920px] max-w-none h-[60vh] md:h-[70vh] lg:h-[80vh] left-1/2 -ml-[960px]">
         {show.trailer_url ? (
           <div className="absolute inset-0 w-full h-full">
             <ReactPlayer
