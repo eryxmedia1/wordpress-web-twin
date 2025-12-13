@@ -59,6 +59,7 @@ import AdminCastingCalls from "./pages/AdminCastingCalls";
 import AdminCastingBanners from "./pages/AdminCastingBanners";
 import CastingShows from "./pages/CastingShows";
 import CastingShowDetail from "./pages/CastingShowDetail";
+import CrewHiring from "./pages/CrewHiring";
 import TalentDashboard from "./pages/TalentDashboard";
 import AdminCastingShows from "./pages/AdminCastingShows";
 import AdminCastingRoles from "./pages/AdminCastingRoles";
@@ -192,6 +193,7 @@ const App = () => (
                   <Route path="/casting/calls" element={<CastingCalls />} />
                   <Route path="/casting/shows" element={<CastingShows />} />
                   <Route path="/casting/shows/:slug" element={<CastingShowDetail />} />
+                  <Route path="/casting/crew" element={<CrewHiring />} />
                   <Route path="/talent/:id" element={<TalentProfile />} />
                   <Route path="/talent/edit" element={<TalentEdit />} />
                   <Route path="/talent/signup" element={<TalentSignup />} />
