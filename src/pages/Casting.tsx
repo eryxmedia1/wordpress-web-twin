@@ -104,7 +104,7 @@ export default function Casting() {
   };
 
   return (
-    <div className="min-h-screen bg-background pt-16">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <CastingSubNav />
       

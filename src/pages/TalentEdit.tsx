@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
+import { CastingSubNav } from "@/components/casting/CastingSubNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -554,8 +555,9 @@ export default function TalentEdit() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <CastingSubNav />
       
-      <div className="container mx-auto px-6 py-8 pt-24 max-w-5xl">
+      <div className="container mx-auto px-6 py-8 pt-8 max-w-5xl">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
