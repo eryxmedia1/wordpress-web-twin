@@ -57,6 +57,12 @@ import TalentSignup from "./pages/TalentSignup";
 import AdminTalents from "./pages/AdminTalents";
 import AdminCastingCalls from "./pages/AdminCastingCalls";
 import AdminCastingBanners from "./pages/AdminCastingBanners";
+import CastingShows from "./pages/CastingShows";
+import CastingShowDetail from "./pages/CastingShowDetail";
+import TalentDashboard from "./pages/TalentDashboard";
+import AdminCastingShows from "./pages/AdminCastingShows";
+import AdminCastingRoles from "./pages/AdminCastingRoles";
+import AdminCastingApplications from "./pages/AdminCastingApplications";
 
 const queryClient = new QueryClient();
 
@@ -184,9 +190,12 @@ const App = () => (
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/casting" element={<Casting />} />
                   <Route path="/casting/calls" element={<CastingCalls />} />
+                  <Route path="/casting/shows" element={<CastingShows />} />
+                  <Route path="/casting/shows/:slug" element={<CastingShowDetail />} />
                   <Route path="/talent/:id" element={<TalentProfile />} />
                   <Route path="/talent/edit" element={<TalentEdit />} />
                   <Route path="/talent/signup" element={<TalentSignup />} />
+                  <Route path="/talent/dashboard" element={<TalentDashboard />} />
                 </Route>
               </Route>
               
@@ -215,6 +224,9 @@ const App = () => (
                 <Route path="/admin/talents" element={<AdminTalents />} />
                 <Route path="/admin/casting-calls" element={<AdminCastingCalls />} />
                 <Route path="/admin/casting-banners" element={<AdminCastingBanners />} />
+                <Route path="/admin/casting-shows" element={<AdminCastingShows />} />
+                <Route path="/admin/casting-roles" element={<AdminCastingRoles />} />
+                <Route path="/admin/casting-applications" element={<AdminCastingApplications />} />
               </Route>
               
               {/* Catch-all */}
