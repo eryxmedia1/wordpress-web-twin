@@ -434,7 +434,7 @@ export default function CastingShowDetail() {
       <Navbar />
       
       {/* Full-width Trailer Section */}
-      <div className="relative w-full">
+      <div className="relative w-full pt-16">
         <div className="w-full aspect-[21/9]">
           {show.trailer_url ? (
             <div className="w-full h-full">
