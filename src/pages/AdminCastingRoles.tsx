@@ -223,7 +223,10 @@ export default function AdminCastingRoles() {
               </Badge>
               {role.is_remote && <Badge variant="outline">Remote</Badge>}
             </div>
-            <p className="text-sm text-muted-foreground line-clamp-2">{role.description}</p>
+            <div 
+              className="text-sm text-muted-foreground line-clamp-2 [&_p]:inline [&_strong]:font-semibold"
+              dangerouslySetInnerHTML={{ __html: role.description || '' }}
+            />
             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
               {role.pay_type && (
                 <span className="flex items-center gap-1">
