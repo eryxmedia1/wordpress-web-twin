@@ -37,8 +37,21 @@ export default function AdminDepartments() {
     title: "",
     description: "",
     responsibilities: "",
-    status: "open"
+    status: "open",
+    rate_type: "",
+    pay_amount: ""
   });
+
+  const rateTypeOptions = [
+    { value: "", label: "Select Rate Type" },
+    { value: "hourly", label: "Hourly" },
+    { value: "half_day", label: "Half Day" },
+    { value: "full_day", label: "Full Day (Daily)" },
+    { value: "weekly", label: "Weekly" },
+    { value: "flat_rate", label: "Flat Rate" },
+    { value: "per_project", label: "Per Project" },
+    { value: "negotiable", label: "Negotiable/TBD" }
+  ];
 
   useEffect(() => {
     fetchData();
@@ -114,7 +127,9 @@ export default function AdminDepartments() {
       title: pos.title,
       description: pos.description || "",
       responsibilities: pos.responsibilities || "",
-      status: pos.status
+      status: pos.status,
+      rate_type: pos.rate_type || "",
+      pay_amount: pos.pay_amount || ""
     });
     setShowPositionDialog(true);
   };
@@ -140,7 +155,7 @@ export default function AdminDepartments() {
 
   const handleAddPosition = (deptId: string) => {
     setEditingPosition({ department_id: deptId, is_template: true, id: "", title: "" } as unknown as CrewPosition);
-    setPositionForm({ title: "", description: "", responsibilities: "", status: "open" });
+    setPositionForm({ title: "", description: "", responsibilities: "", status: "open", rate_type: "", pay_amount: "" });
     setShowPositionDialog(true);
   };
 
@@ -258,6 +273,11 @@ export default function AdminDepartments() {
                                   <Badge variant={pos.status === "open" ? "default" : "secondary"} className="text-xs">
                                     {pos.status}
                                   </Badge>
+                                  {pos.pay_amount && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {pos.pay_amount}{pos.rate_type && ` (${rateTypeOptions.find(r => r.value === pos.rate_type)?.label || pos.rate_type})`}
+                                    </Badge>
+                                  )}
                                 </div>
                                 {pos.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{pos.description}</p>}
                               </div>
@@ -286,6 +306,31 @@ export default function AdminDepartments() {
             <div><Label>Position Title *</Label><Input value={positionForm.title} onChange={(e) => setPositionForm({ ...positionForm, title: e.target.value })} className="mt-1" /></div>
             <div><Label>Description</Label><Textarea value={positionForm.description} onChange={(e) => setPositionForm({ ...positionForm, description: e.target.value })} className="mt-1" rows={3} /></div>
             <div><Label>Responsibilities</Label><Textarea value={positionForm.responsibilities} onChange={(e) => setPositionForm({ ...positionForm, responsibilities: e.target.value })} className="mt-1" rows={4} placeholder="• Bullet point responsibilities..." /></div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Rate Type</Label>
+                <select 
+                  value={positionForm.rate_type} 
+                  onChange={(e) => setPositionForm({ ...positionForm, rate_type: e.target.value })}
+                  className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                >
+                  {rateTypeOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label>Pay Amount</Label>
+                <Input 
+                  value={positionForm.pay_amount} 
+                  onChange={(e) => setPositionForm({ ...positionForm, pay_amount: e.target.value })} 
+                  className="mt-1" 
+                  placeholder="e.g., $25/hr, $500/day"
+                />
+              </div>
+            </div>
+            
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setShowPositionDialog(false)}>Cancel</Button>
               <Button onClick={editingPosition?.id ? handleSavePosition : handleCreatePosition}>
