@@ -58,7 +58,8 @@ export default function DepartmentPage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <CastingSubNav />
-        <div className="container mx-auto px-4 py-8 pt-8">
+        <div className="pt-32" />
+        <div className="container mx-auto px-4 py-8">
           <Skeleton className="h-12 w-64 mb-4" />
           <Skeleton className="h-6 w-96 mb-8" />
           <div className="grid gap-4">
@@ -74,7 +75,8 @@ export default function DepartmentPage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <CastingSubNav />
-        <div className="container mx-auto px-4 py-8 pt-8 text-center">
+        <div className="pt-32" />
+        <div className="container mx-auto px-4 py-8 text-center">
           <h1 className="text-2xl font-bold">Department not found</h1>
         </div>
       </div>
@@ -86,7 +88,10 @@ export default function DepartmentPage() {
       <Navbar />
       <CastingSubNav />
       
-      <div className="container mx-auto px-4 py-8 pt-8">
+      {/* Spacer for fixed navbars */}
+      <div className="pt-32" />
+      
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">

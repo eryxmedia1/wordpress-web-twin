@@ -49,6 +49,9 @@ export default function CrewHiring() {
       <Navbar />
       <CastingSubNav />
       
+      {/* Spacer for fixed navbars */}
+      <div className="pt-32" />
+      
       {/* Hero */}
       <div className="bg-gradient-to-r from-primary/20 via-background to-background py-16">
         <div className="container mx-auto px-6">
