@@ -326,7 +326,7 @@ export default function TalentEdit() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
+      <div className="container mx-auto px-6 py-8 pt-24 max-w-4xl">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Talent Profile</h1>
