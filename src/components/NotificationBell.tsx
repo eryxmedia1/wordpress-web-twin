@@ -120,9 +120,14 @@ const NotificationBell = () => {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative text-foreground">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="relative text-foreground hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
@@ -131,7 +136,7 @@ const NotificationBell = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 bg-background/95 backdrop-blur-sm border-border">
+      <DropdownMenuContent align="end" className="w-80 bg-background/95 backdrop-blur-sm border-border z-[100]" sideOffset={8}>
         <div className="flex items-center justify-between px-4 py-2">
           <span className="font-semibold text-foreground">Notifications</span>
           {unreadCount > 0 && (
