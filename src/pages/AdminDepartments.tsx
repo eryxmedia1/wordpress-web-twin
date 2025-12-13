@@ -139,7 +139,7 @@ export default function AdminDepartments() {
   };
 
   const handleAddPosition = (deptId: string) => {
-    setEditingPosition({ department_id: deptId, is_template: true } as CrewPosition);
+    setEditingPosition({ department_id: deptId, is_template: true, id: "", title: "" } as unknown as CrewPosition);
     setPositionForm({ title: "", description: "", responsibilities: "", status: "open" });
     setShowPositionDialog(true);
   };
