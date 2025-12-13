@@ -938,12 +938,51 @@ export default function TalentEdit() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Primary Photo URL</Label>
-                  <Input 
-                    value={form.primary_photo_url}
-                    onChange={(e) => setForm({ ...form, primary_photo_url: e.target.value })}
-                    placeholder="https://..."
-                  />
+                  <Label>Primary Photo</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={form.primary_photo_url}
+                      onChange={(e) => setForm({ ...form, primary_photo_url: e.target.value })}
+                      placeholder="https://... or upload a photo"
+                      className="flex-1"
+                    />
+                    <label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          if (!e.target.files || e.target.files.length === 0 || !user) return;
+                          const file = e.target.files[0];
+                          const fileExt = file.name.split('.').pop();
+                          const fileName = `primary_${Date.now()}.${fileExt}`;
+                          const filePath = `${user.id}/photos/${fileName}`;
+                          
+                          try {
+                            const { error: uploadError } = await supabase.storage
+                              .from('talent-media')
+                              .upload(filePath, file);
+                            if (uploadError) throw uploadError;
+                            
+                            const { data: publicUrl } = supabase.storage
+                              .from('talent-media')
+                              .getPublicUrl(filePath);
+                            
+                            setForm({ ...form, primary_photo_url: publicUrl.publicUrl });
+                            toast.success("Photo uploaded successfully");
+                          } catch (error: any) {
+                            toast.error("Failed to upload: " + error.message);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                      <Button variant="outline" asChild>
+                        <span className="cursor-pointer">
+                          <Upload className="h-4 w-4" />
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
                   {form.primary_photo_url && (
                     <div className="mt-2 w-32 h-40 rounded-lg overflow-hidden bg-muted">
                       <img src={form.primary_photo_url} alt="Primary" className="w-full h-full object-cover" />
@@ -1173,20 +1212,70 @@ export default function TalentEdit() {
                     </div>
                     <div className="space-y-4">
                       <h4 className="font-medium">Romance Scene Comfort</h4>
-                      <Select 
-                        value={form.comfort_romance_level} 
-                        onValueChange={(v) => setForm({ ...form, comfort_romance_level: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None - Not comfortable</SelectItem>
-                          <SelectItem value="pg">PG - Light (hand holding, hugging)</SelectItem>
-                          <SelectItem value="pg13">PG-13 - Moderate (kissing)</SelectItem>
-                          <SelectItem value="mature">Mature - Open to intimate scenes</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <p className="text-xs text-muted-foreground">Select all that apply</p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            checked={form.comfort_romance_level.includes('none')}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setForm({ ...form, comfort_romance_level: 'none' });
+                              } else {
+                                setForm({ ...form, comfort_romance_level: form.comfort_romance_level.replace('none,', '').replace(',none', '').replace('none', '') });
+                              }
+                            }}
+                          />
+                          <Label>None - Not comfortable with romance scenes</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            checked={form.comfort_romance_level.includes('pg')}
+                            onCheckedChange={(checked) => {
+                              const levels = form.comfort_romance_level.split(',').filter(l => l && l !== 'none');
+                              if (checked) {
+                                levels.push('pg');
+                              } else {
+                                const idx = levels.indexOf('pg');
+                                if (idx > -1) levels.splice(idx, 1);
+                              }
+                              setForm({ ...form, comfort_romance_level: levels.length ? levels.join(',') : 'none' });
+                            }}
+                          />
+                          <Label>PG - Light (hand holding, hugging)</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            checked={form.comfort_romance_level.includes('pg13')}
+                            onCheckedChange={(checked) => {
+                              const levels = form.comfort_romance_level.split(',').filter(l => l && l !== 'none');
+                              if (checked) {
+                                levels.push('pg13');
+                              } else {
+                                const idx = levels.indexOf('pg13');
+                                if (idx > -1) levels.splice(idx, 1);
+                              }
+                              setForm({ ...form, comfort_romance_level: levels.length ? levels.join(',') : 'none' });
+                            }}
+                          />
+                          <Label>PG-13 - Moderate (kissing)</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            checked={form.comfort_romance_level.includes('mature')}
+                            onCheckedChange={(checked) => {
+                              const levels = form.comfort_romance_level.split(',').filter(l => l && l !== 'none');
+                              if (checked) {
+                                levels.push('mature');
+                              } else {
+                                const idx = levels.indexOf('mature');
+                                if (idx > -1) levels.splice(idx, 1);
+                              }
+                              setForm({ ...form, comfort_romance_level: levels.length ? levels.join(',') : 'none' });
+                            }}
+                          />
+                          <Label>Mature - Open to intimate scenes</Label>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
