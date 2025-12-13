@@ -5,6 +5,7 @@ import AdminNavbar from '@/components/AdminNavbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -333,21 +334,17 @@ export default function AdminCastingRoles() {
 
                   <div>
                     <Label>Description</Label>
-                    <Textarea
+                    <RichTextEditor
                       value={form.description}
-                      onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-                      rows={3}
-                      placeholder="Role responsibilities and overview"
+                      onChange={(value) => setForm(prev => ({ ...prev, description: value }))}
                     />
                   </div>
 
                   <div>
                     <Label>Requirements</Label>
-                    <Textarea
+                    <RichTextEditor
                       value={form.requirements}
-                      onChange={(e) => setForm(prev => ({ ...prev, requirements: e.target.value }))}
-                      rows={3}
-                      placeholder="Experience, skills, physical requirements, etc."
+                      onChange={(value) => setForm(prev => ({ ...prev, requirements: value }))}
                     />
                   </div>
 
@@ -435,11 +432,9 @@ export default function AdminCastingRoles() {
 
                   <div>
                     <Label>Terms & Conditions</Label>
-                    <Textarea
+                    <RichTextEditor
                       value={form.terms_conditions}
-                      onChange={(e) => setForm(prev => ({ ...prev, terms_conditions: e.target.value }))}
-                      rows={4}
-                      placeholder="Applicants must agree to these terms before applying"
+                      onChange={(value) => setForm(prev => ({ ...prev, terms_conditions: value }))}
                     />
                   </div>
 

@@ -5,6 +5,7 @@ import AdminNavbar from '@/components/AdminNavbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -284,10 +285,9 @@ export default function AdminCastingShows() {
 
                 <div>
                   <Label>Full Description</Label>
-                  <Textarea
+                  <RichTextEditor
                     value={form.description}
-                    onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-                    rows={4}
+                    onChange={(value) => setForm(prev => ({ ...prev, description: value }))}
                   />
                 </div>
 
@@ -331,10 +331,9 @@ export default function AdminCastingShows() {
 
                 <div>
                   <Label>Production Notes</Label>
-                  <Textarea
+                  <RichTextEditor
                     value={form.production_notes}
-                    onChange={(e) => setForm(prev => ({ ...prev, production_notes: e.target.value }))}
-                    rows={2}
+                    onChange={(value) => setForm(prev => ({ ...prev, production_notes: value }))}
                   />
                 </div>
 
