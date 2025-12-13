@@ -184,11 +184,24 @@ export default function CastingShowDetail() {
 
     try {
       // Get talent profile snapshot
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('talents')
         .select('*')
         .eq('id', talentProfile.id)
         .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        toast.error('Failed to load your talent profile. Please try again.');
+        return;
+      }
+
+      // Validate profile has required fields
+      if (!profileData?.name) {
+        toast.error('Your talent profile is incomplete. Please add your name before applying.');
+        navigate('/talent/edit');
+        return;
+      }
 
       // Get selected role names for the notification
       const selectedRoleNames = roles
@@ -211,7 +224,21 @@ export default function CastingShowDetail() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Application insert error:', error);
+        
+        // Provide specific error messages based on error type
+        if (error.code === '23505') {
+          toast.error('You have already applied to one or more of these roles.');
+        } else if (error.code === '42501') {
+          toast.error('Permission denied. Please make sure you are logged in.');
+        } else if (error.code === '23503') {
+          toast.error('Invalid reference. Please refresh the page and try again.');
+        } else {
+          toast.error(`Application failed: ${error.message || 'Unknown error occurred'}`);
+        }
+        return;
+      }
 
       // Send email notifications via edge function
       try {
@@ -235,9 +262,9 @@ export default function CastingShowDetail() {
       setSelectedRoles(new Set());
       setAcceptedTerms(new Set());
       fetchShowData(); // Refresh to update existing applications
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting application:', error);
-      toast.error('Failed to submit application');
+      toast.error(`Failed to submit application: ${error?.message || 'Please check your connection and try again.'}`);
     }
   };
 
