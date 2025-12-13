@@ -400,60 +400,67 @@ export default function CastingShowDetail() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="pt-16">
-        {/* Full-width Hero Section */}
-        <div className="relative w-full aspect-video md:aspect-[21/9] max-h-[70vh]">
-          {show.trailer_url ? (
-            <div className="absolute inset-0">
-              <ReactPlayer
-                url={show.trailer_url}
-                playing
-                muted
-                loop
-                width="100%"
-                height="100%"
-                style={{ position: 'absolute', top: 0, left: 0 }}
-                config={{
-                  file: {
-                    attributes: {
-                      style: { objectFit: 'cover', width: '100%', height: '100%' }
-                    }
+      {/* Full-width Cinematic Hero Section - Edge to Edge */}
+      <div className="relative w-screen h-[60vh] md:h-[70vh] lg:h-[80vh] -ml-[calc((100vw-100%)/2)] left-0">
+        {show.trailer_url ? (
+          <div className="absolute inset-0 w-full h-full">
+            <ReactPlayer
+              url={show.trailer_url}
+              playing
+              muted
+              loop
+              width="100%"
+              height="100%"
+              style={{ position: 'absolute', top: 0, left: 0 }}
+              config={{
+                file: {
+                  attributes: {
+                    style: { objectFit: 'cover', width: '100%', height: '100%' }
                   }
-                }}
-              />
-            </div>
-          ) : show.poster_url ? (
-            <img 
-              src={show.poster_url} 
-              alt={show.title}
-              className="absolute inset-0 w-full h-full object-cover"
+                }
+              }}
             />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-background" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-          
-          <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8">
-            <div className="container mx-auto">
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/casting/shows')}
-                className="mb-4"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Shows
-              </Button>
-              
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-2 md:mb-3">{show.title}</h1>
-              {show.logline && (
-                <p className="text-sm sm:text-base md:text-xl text-muted-foreground max-w-3xl line-clamp-2 md:line-clamp-none">{show.logline}</p>
-              )}
-            </div>
+          </div>
+        ) : show.poster_url ? (
+          <img 
+            src={show.poster_url} 
+            alt={show.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-background" />
+        )}
+        
+        {/* Gradient overlays for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent" />
+        
+        {/* Content overlay positioned at bottom-left */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 lg:p-16">
+          <div className="max-w-7xl mx-auto">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/casting/shows')}
+              className="mb-4 text-foreground/80 hover:text-foreground"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Shows
+            </Button>
+            
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-3 md:mb-4 drop-shadow-lg">
+              {show.title}
+            </h1>
+            {show.logline && (
+              <p className="text-base sm:text-lg md:text-xl text-foreground/90 max-w-3xl line-clamp-3 md:line-clamp-none drop-shadow-md">
+                {show.logline}
+              </p>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="container mx-auto px-6 py-8">
+      {/* Content */}
+      <div className="container mx-auto px-6 py-8">
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
@@ -637,7 +644,6 @@ export default function CastingShowDetail() {
             </div>
           </div>
         </div>
-      </div>
 
       <BrowseFooter />
     </div>
