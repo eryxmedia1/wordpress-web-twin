@@ -16,7 +16,7 @@ export function CastingSubNav() {
   const location = useLocation();
 
   return (
-    <nav className="mt-16 bg-card/95 backdrop-blur-sm border-b border-border sticky top-[64px] z-40">
+    <nav className="bg-card/95 backdrop-blur-sm border-b border-border sticky top-16 z-40 mt-16">
       <div className="container mx-auto px-6">
         <div className="flex items-center gap-1 overflow-x-auto py-2 scrollbar-hide">
           {castingNavItems.map((item) => {
