@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TalentCard } from "@/components/casting/TalentCard";
 import { TalentHoverPreview } from "@/components/casting/TalentHoverPreview";
 import Navbar from "@/components/Navbar";
+import { CastingSubNav } from "@/components/casting/CastingSubNav";
 import BrowseFooter from "@/components/BrowseFooter";
 import { Loader2, Star, Users, Film, Music, Mic, Camera } from "lucide-react";
 
@@ -103,8 +104,9 @@ export default function Casting() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <Navbar />
+      <CastingSubNav />
       
       {/* Hero Banner */}
       <div 

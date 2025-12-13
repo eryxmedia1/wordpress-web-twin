@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
+import { CastingSubNav } from "@/components/casting/CastingSubNav";
 import BrowseFooter from "@/components/BrowseFooter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -164,8 +165,9 @@ export default function TalentProfile() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <CastingSubNav />
       
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-6 pt-24 pb-8">
         {/* Back Button */}
         <Link to="/casting" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-6 transition-colors">
           <ArrowLeft className="h-4 w-4" />
