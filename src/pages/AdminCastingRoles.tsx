@@ -263,9 +263,14 @@ export default function AdminCastingRoles() {
       
       <div className="container mx-auto px-6 pt-32 pb-8">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Casting Roles</h1>
-            <p className="text-muted-foreground">Manage roles for each show</p>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="sm" onClick={() => window.history.back()}>
+              ← Back
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Casting Roles</h1>
+              <p className="text-muted-foreground">Manage roles for each show</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
