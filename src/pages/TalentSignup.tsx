@@ -108,9 +108,12 @@ export default function TalentSignup() {
   }
 
   return (
-    <div className="min-h-screen bg-background pt-16">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <CastingSubNav />
+      
+      {/* Spacer for fixed navbars */}
+      <div className="pt-32" />
       
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-5xl mx-auto">

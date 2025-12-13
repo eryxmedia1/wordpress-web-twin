@@ -557,7 +557,10 @@ export default function TalentEdit() {
       <Navbar />
       <CastingSubNav />
       
-      <div className="container mx-auto px-6 py-8 pt-8 max-w-5xl">
+      {/* Spacer for fixed navbars */}
+      <div className="pt-32" />
+      
+      <div className="container mx-auto px-6 py-8 max-w-5xl">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground">

@@ -108,6 +108,9 @@ export default function Casting() {
       <Navbar />
       <CastingSubNav />
       
+      {/* Spacer for fixed navbars */}
+      <div className="pt-32" />
+      
       {/* Hero Banner */}
       <div 
         className="relative h-[500px] w-full bg-cover bg-center"

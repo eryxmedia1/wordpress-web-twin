@@ -187,11 +187,14 @@ export default function CastingShows() {
   );
 
   return (
-    <div className="min-h-screen bg-background pt-16">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <CastingSubNav />
       
-      <div className="container mx-auto px-6 py-8 pt-8">
+      {/* Spacer for fixed navbars */}
+      <div className="pt-32" />
+      
+      <div className="container mx-auto px-6 py-8">
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-foreground mb-3">Shows We're Casting</h1>

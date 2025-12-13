@@ -132,9 +132,12 @@ export default function CastingCalls() {
   const regularCalls = castingCalls.filter(c => !c.is_featured);
 
   return (
-    <div className="min-h-screen bg-background pt-16">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <CastingSubNav />
+      
+      {/* Spacer for fixed navbars */}
+      <div className="pt-32" />
       
       {/* Hero */}
       <div className="bg-gradient-to-r from-primary/20 via-background to-background py-16">
