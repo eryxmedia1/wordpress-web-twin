@@ -48,10 +48,17 @@ const BrowseFooter = () => {
           <div>
             <h4 className="text-white font-semibold mb-4">Community</h4>
             <ul className="space-y-2">
-              <li><Link to="/casting" className="text-gray-400 hover:text-white text-sm transition-colors">Casting Calls</Link></li>
               <li><Link to="/producers" className="text-gray-400 hover:text-white text-sm transition-colors">Producers</Link></li>
               <li><Link to="/news" className="text-gray-400 hover:text-white text-sm transition-colors">News</Link></li>
               <li><Link to="/shop" className="text-gray-400 hover:text-white text-sm transition-colors">Shop</Link></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="text-white font-semibold mb-4">Employment</h4>
+            <ul className="space-y-2">
+              <li><Link to="/casting" className="text-gray-400 hover:text-white text-sm transition-colors">Casting Calls</Link></li>
+              <li><Link to="/casting/crew" className="text-gray-400 hover:text-white text-sm transition-colors">Crew</Link></li>
             </ul>
           </div>
           

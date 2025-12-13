@@ -120,17 +120,7 @@ const Navbar = () => {
       
       {/* Main Navigation - Paramount+ Style */}
       <nav className="hidden md:flex items-center gap-1">
-        <Link 
-          to="/casting" 
-          className={`flex items-center gap-1 px-4 py-2 text-sm font-semibold transition-colors hover:text-primary ${
-            location.pathname.startsWith('/casting') ? 'text-foreground' : 'text-muted-foreground'
-          }`}
-        >
-          <Megaphone className="w-4 h-4" />
-          CASTING
-        </Link>
-
-        <Link 
+        <Link
           to="/browse" 
           className={`px-4 py-2 text-sm font-semibold transition-colors hover:text-primary ${
             location.pathname === '/browse' ? 'text-foreground' : 'text-muted-foreground'
