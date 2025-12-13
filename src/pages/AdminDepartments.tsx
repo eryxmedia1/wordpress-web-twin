@@ -45,11 +45,9 @@ export default function AdminDepartments() {
   const rateTypeOptions = [
     { value: "", label: "Select Rate Type" },
     { value: "hourly", label: "Hourly" },
-    { value: "half_day", label: "Half Day" },
-    { value: "full_day", label: "Full Day (Daily)" },
+    { value: "daily", label: "Daily (Full Day)" },
     { value: "weekly", label: "Weekly" },
-    { value: "flat_rate", label: "Flat Rate" },
-    { value: "per_project", label: "Per Project" },
+    { value: "flat", label: "Flat Rate" },
     { value: "negotiable", label: "Negotiable/TBD" }
   ];
 
