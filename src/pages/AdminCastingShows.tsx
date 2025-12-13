@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import AdminNavbar from '@/components/AdminNavbar';
 import { Button } from '@/components/ui/button';
@@ -224,9 +225,16 @@ export default function AdminCastingShows() {
       
       <div className="container mx-auto px-6 py-8 pt-24">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Casting Shows</h1>
-            <p className="text-muted-foreground">Manage shows you're casting for</p>
+          <div className="flex items-center gap-4">
+            <Link to="/admin">
+              <Button variant="outline" size="sm">
+                ← Back
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Casting Shows</h1>
+              <p className="text-muted-foreground">Manage shows you're casting for</p>
+            </div>
           </div>
 
           <Dialog open={dialogOpen} onOpenChange={(open) => {
