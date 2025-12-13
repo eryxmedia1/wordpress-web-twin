@@ -501,7 +501,10 @@ export default function CastingShowDetail() {
               {show.production_notes && (
                 <div>
                   <h3 className="text-lg font-semibold text-foreground mb-2">Production Notes</h3>
-                  <p className="text-muted-foreground">{show.production_notes}</p>
+                  <div 
+                    className="text-muted-foreground prose prose-invert max-w-none [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:ml-2"
+                    dangerouslySetInnerHTML={{ __html: show.production_notes }}
+                  />
                 </div>
               )}
 
