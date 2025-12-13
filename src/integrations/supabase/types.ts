@@ -691,6 +691,144 @@ export type Database = {
           },
         ]
       }
+      casting_applications: {
+        Row: {
+          applied_at: string | null
+          casting_call_id: string
+          cover_letter: string | null
+          id: string
+          status: string | null
+          talent_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          casting_call_id: string
+          cover_letter?: string | null
+          id?: string
+          status?: string | null
+          talent_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          casting_call_id?: string
+          cover_letter?: string | null
+          id?: string
+          status?: string | null
+          talent_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_applications_casting_call_id_fkey"
+            columns: ["casting_call_id"]
+            isOneToOne: false
+            referencedRelation: "casting_calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casting_applications_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      casting_calls: {
+        Row: {
+          age_range: string | null
+          category: Database["public"]["Enums"]["talent_category"]
+          compensation: string | null
+          created_at: string | null
+          created_by: string | null
+          deadline: string | null
+          description: string | null
+          gender: string | null
+          id: string
+          is_active: boolean | null
+          is_featured: boolean | null
+          location: string | null
+          poster_url: string | null
+          project_name: string | null
+          requirements: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          age_range?: string | null
+          category?: Database["public"]["Enums"]["talent_category"]
+          compensation?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          location?: string | null
+          poster_url?: string | null
+          project_name?: string | null
+          requirements?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          age_range?: string | null
+          category?: Database["public"]["Enums"]["talent_category"]
+          compensation?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          location?: string | null
+          poster_url?: string | null
+          project_name?: string | null
+          requirements?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      casting_hero_banners: {
+        Row: {
+          button_text: string | null
+          button_url: string | null
+          created_at: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          sort_order: number | null
+          subtitle: string | null
+          title: string
+        }
+        Insert: {
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          subtitle?: string | null
+          title: string
+        }
+        Update: {
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           content_type: string
@@ -1984,6 +2122,181 @@ export type Database = {
         }
         Relationships: []
       }
+      talent_photos: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          id: string
+          photo_url: string
+          sort_order: number | null
+          talent_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          id?: string
+          photo_url: string
+          sort_order?: number | null
+          talent_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          id?: string
+          photo_url?: string
+          sort_order?: number | null
+          talent_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_photos_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_work_history: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          director: string | null
+          id: string
+          project_title: string
+          project_type: string | null
+          role: string | null
+          talent_id: string
+          year: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          director?: string | null
+          id?: string
+          project_title: string
+          project_type?: string | null
+          role?: string | null
+          talent_id: string
+          year?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          director?: string | null
+          id?: string
+          project_title?: string
+          project_type?: string | null
+          role?: string | null
+          talent_id?: string
+          year?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_work_history_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talents: {
+        Row: {
+          age_range: string | null
+          bio: string | null
+          bust: string | null
+          category: Database["public"]["Enums"]["talent_category"]
+          city: string | null
+          country: string | null
+          created_at: string | null
+          ethnicity: string | null
+          eye_color: string | null
+          hair_color: string | null
+          height: string | null
+          hips: string | null
+          id: string
+          instagram_url: string | null
+          is_active: boolean | null
+          is_approved: boolean | null
+          is_featured: boolean | null
+          name: string
+          primary_photo_url: string | null
+          shoe_size: string | null
+          state: string | null
+          tiktok_url: string | null
+          updated_at: string | null
+          user_id: string
+          video_reel_url: string | null
+          waist: string | null
+          website_url: string | null
+          weight: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          age_range?: string | null
+          bio?: string | null
+          bust?: string | null
+          category?: Database["public"]["Enums"]["talent_category"]
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          ethnicity?: string | null
+          eye_color?: string | null
+          hair_color?: string | null
+          height?: string | null
+          hips?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean | null
+          is_approved?: boolean | null
+          is_featured?: boolean | null
+          name: string
+          primary_photo_url?: string | null
+          shoe_size?: string | null
+          state?: string | null
+          tiktok_url?: string | null
+          updated_at?: string | null
+          user_id: string
+          video_reel_url?: string | null
+          waist?: string | null
+          website_url?: string | null
+          weight?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          age_range?: string | null
+          bio?: string | null
+          bust?: string | null
+          category?: Database["public"]["Enums"]["talent_category"]
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          ethnicity?: string | null
+          eye_color?: string | null
+          hair_color?: string | null
+          height?: string | null
+          hips?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean | null
+          is_approved?: boolean | null
+          is_featured?: boolean | null
+          name?: string
+          primary_photo_url?: string | null
+          shoe_size?: string | null
+          state?: string | null
+          tiktok_url?: string | null
+          updated_at?: string | null
+          user_id?: string
+          video_reel_url?: string | null
+          waist?: string | null
+          website_url?: string | null
+          weight?: string | null
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
       user_playlist_items: {
         Row: {
           added_at: string | null
@@ -2232,6 +2545,16 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      talent_category:
+        | "actor"
+        | "model"
+        | "singer"
+        | "dancer"
+        | "extra"
+        | "voice_artist"
+        | "host"
+        | "influencer"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2360,6 +2683,17 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      talent_category: [
+        "actor",
+        "model",
+        "singer",
+        "dancer",
+        "extra",
+        "voice_artist",
+        "host",
+        "influencer",
+        "other",
+      ],
     },
   },
 } as const
