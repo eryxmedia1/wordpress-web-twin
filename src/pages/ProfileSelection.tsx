@@ -34,7 +34,10 @@ const ProfileSelection = () => {
       setEditingProfile(profile);
     } else {
       selectProfile(profile);
-      navigate('/browse');
+      // Use requestAnimationFrame to ensure state is updated before navigation
+      requestAnimationFrame(() => {
+        navigate('/browse');
+      });
     }
   };
 
