@@ -233,7 +233,9 @@ export default function CastingShowDetail() {
         } else if (error.code === '42501') {
           toast.error('Permission denied. Please make sure you are logged in.');
         } else if (error.code === '23503') {
-          toast.error('Invalid reference. Please refresh the page and try again.');
+          toast.error('You must have a completed casting profile to submit an application. Please create your profile first.');
+          navigate('/talent/signup');
+          return;
         } else {
           toast.error(`Application failed: ${error.message || 'Unknown error occurred'}`);
         }
