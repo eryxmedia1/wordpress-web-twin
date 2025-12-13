@@ -136,7 +136,7 @@ export default function Casting() {
                 {heroBanner?.button_text || "Become a Talent"}
               </Button>
             </Link>
-            <Link to="/casting-calls">
+            <Link to="/casting/calls">
               <Button size="lg" variant="outline" className="border-primary/50 hover:bg-primary/10">
                 View Casting Calls
               </Button>
