@@ -92,9 +92,21 @@ export default function AdminCastingDashboard() {
       
       <div className="container mx-auto px-4 pt-24 pb-8">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Casting Command Center</h1>
-            <p className="text-muted-foreground">Manage talent, crew, shows, and applications</p>
+          <div className="flex items-center gap-4">
+            <Link to="/admin">
+              <Button variant="outline" size="sm">← Back</Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold">Casting Command Center</h1>
+              <p className="text-muted-foreground">Manage talent, crew, shows, and applications</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Link to="/admin/casting-shows">
+              <Button className="bg-primary hover:bg-primary/90">
+                + Add Casting Call / Show
+              </Button>
+            </Link>
           </div>
         </div>
 
