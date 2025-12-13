@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, MapPin, Calendar, DollarSign, Users, Clapperboard } from 'lucide-react';
 import { format } from 'date-fns';
+import ReactPlayer from 'react-player';
 
 interface CastingShow {
   id: string;
@@ -18,6 +19,7 @@ interface CastingShow {
   description: string | null;
   logline: string | null;
   poster_url: string | null;
+  trailer_url: string | null;
   filming_location: string | null;
   pay_range_min: number | null;
   pay_range_max: number | null;
@@ -110,37 +112,88 @@ export default function CastingShows() {
     return 'TBD';
   };
 
-  const ShowCard = ({ show, featured = false }: { show: CastingShow; featured?: boolean }) => (
-    <div 
-      className={`group relative bg-card border border-border rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${featured ? 'md:col-span-2' : ''}`}
-      onClick={() => navigate(`/casting/shows/${show.slug}`)}
-    >
-      <div className={`relative ${featured ? 'h-64' : 'h-48'} overflow-hidden`}>
-        {show.poster_url ? (
-          <img 
-            src={show.poster_url} 
-            alt={show.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-            <Clapperboard className="w-16 h-16 text-primary/40" />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        
-        {/* Pay badge */}
-        <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
-          <DollarSign className="w-3 h-3 mr-1" />
-          {formatPayRange(show.pay_range_min, show.pay_range_max)}
-        </Badge>
+  const ShowCard = ({ show, featured = false }: { show: CastingShow; featured?: boolean }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-        {featured && (
-          <Badge className="absolute top-3 left-3 bg-amber-500 text-black">
-            Featured
+    const handleMouseEnter = () => {
+      hoverTimeoutRef.current = setTimeout(() => setIsHovered(true), 500);
+    };
+
+    const handleMouseLeave = () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+      setIsHovered(false);
+    };
+
+    const hasMedia = show.trailer_url || show.poster_url;
+
+    return (
+      <div 
+        className={`group relative bg-card border border-border rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${featured ? 'md:col-span-2' : ''}`}
+        onClick={() => navigate(`/casting/shows/${show.slug}`)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <div className={`relative ${featured ? 'h-64' : 'h-48'} overflow-hidden`}>
+          {isHovered && show.trailer_url ? (
+            <ReactPlayer
+              url={show.trailer_url}
+              playing
+              muted
+              loop
+              width="100%"
+              height="100%"
+              style={{ position: 'absolute', top: 0, left: 0, objectFit: 'cover' }}
+              config={{
+                file: {
+                  attributes: {
+                    style: { objectFit: 'cover', width: '100%', height: '100%' }
+                  }
+                }
+              }}
+            />
+          ) : show.poster_url ? (
+            <img 
+              src={show.poster_url} 
+              alt={show.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : show.trailer_url ? (
+            <ReactPlayer
+              url={show.trailer_url}
+              playing={false}
+              muted
+              width="100%"
+              height="100%"
+              style={{ position: 'absolute', top: 0, left: 0 }}
+              light
+              config={{
+                file: {
+                  attributes: {
+                    style: { objectFit: 'cover', width: '100%', height: '100%' }
+                  }
+                }
+              }}
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Clapperboard className="w-16 h-16 text-primary/40" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+          
+          {/* Pay badge */}
+          <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground z-10">
+            <DollarSign className="w-3 h-3 mr-1" />
+            {formatPayRange(show.pay_range_min, show.pay_range_max)}
           </Badge>
-        )}
-      </div>
+
+          {featured && (
+            <Badge className="absolute top-3 left-3 bg-amber-500 text-black z-10">
+              Featured
+            </Badge>
+          )}
+        </div>
 
       <div className="p-5">
         <h3 className={`font-bold text-foreground mb-2 ${featured ? 'text-2xl' : 'text-lg'}`}>
@@ -185,6 +238,7 @@ export default function CastingShows() {
       </div>
     </div>
   );
+  };
 
   return (
     <div className="min-h-screen bg-background">
