@@ -28,6 +28,8 @@ export default function CrewPositionDetail() {
   const [showApplication, setShowApplication] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [talentId, setTalentId] = useState<string | null>(null);
+  const [hasCrewProfile, setHasCrewProfile] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   
   // Application form state
   const [coverLetter, setCoverLetter] = useState("");
@@ -55,26 +57,38 @@ export default function CrewPositionDetail() {
   };
 
   const checkExistingApplication = async () => {
-    // Get user's talent profile
+    setProfileLoading(true);
+    
+    // Get user's crew profile (must be applicant_type = 'crew')
     const { data: talent } = await supabase
       .from("talents")
-      .select("id")
+      .select("id, applicant_type, name, email, crew_primary_role")
       .eq("user_id", user!.id)
       .single();
 
     if (talent) {
-      setTalentId(talent.id);
+      // Check if this is a crew profile with required fields
+      const isCrewProfile = talent.applicant_type === 'crew' && !!talent.name && !!talent.email;
+      setHasCrewProfile(isCrewProfile);
       
-      // Check if already applied
-      const { data: app } = await supabase
-        .from("crew_applications")
-        .select("id")
-        .eq("position_id", id)
-        .eq("talent_id", talent.id)
-        .single();
+      if (isCrewProfile) {
+        setTalentId(talent.id);
+        
+        // Check if already applied
+        const { data: app } = await supabase
+          .from("crew_applications")
+          .select("id")
+          .eq("position_id", id)
+          .eq("talent_id", talent.id)
+          .single();
 
-      setHasApplied(!!app);
+        setHasApplied(!!app);
+      }
+    } else {
+      setHasCrewProfile(false);
     }
+    
+    setProfileLoading(false);
   };
 
   const handleApply = async () => {
@@ -283,7 +297,41 @@ export default function CrewPositionDetail() {
                 <CardTitle>Apply for This Position</CardTitle>
               </CardHeader>
               <CardContent>
-                {hasApplied ? (
+                {!user ? (
+                  <div className="space-y-4 text-center py-4">
+                    <p className="text-muted-foreground">
+                      You need to create a crew profile to apply for this position.
+                    </p>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => navigate("/talent/signup?type=crew")}
+                    >
+                      Create Crew Profile
+                    </Button>
+                  </div>
+                ) : profileLoading ? (
+                  <div className="py-4 text-center">
+                    <Skeleton className="h-8 w-32 mx-auto mb-2" />
+                    <Skeleton className="h-4 w-48 mx-auto" />
+                  </div>
+                ) : !hasCrewProfile ? (
+                  <div className="space-y-4">
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-center">
+                      <p className="text-sm font-medium text-destructive mb-2">
+                        Crew Profile Required
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        You need to complete a crew profile before applying for crew positions. Your profile will be sent to production for review.
+                      </p>
+                      <Button 
+                        className="w-full" 
+                        onClick={() => navigate("/talent/signup?type=crew")}
+                      >
+                        Create Crew Profile
+                      </Button>
+                    </div>
+                  </div>
+                ) : hasApplied ? (
                   <div className="text-center py-4">
                     <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
                     <p className="font-medium">Application Submitted</p>
@@ -373,17 +421,15 @@ export default function CrewPositionDetail() {
                     <Button 
                       className="w-full" 
                       size="lg"
-                      onClick={() => user ? setShowApplication(true) : navigate("/talent/signup?type=crew")}
+                      onClick={() => setShowApplication(true)}
                       disabled={position.status !== "open"}
                     >
                       {position.status === "open" ? "Apply Now" : "Position Closed"}
                     </Button>
-
-                    {!user && (
-                      <p className="text-xs text-center text-muted-foreground">
-                        You'll need to create a crew profile to apply
-                      </p>
-                    )}
+                    
+                    <p className="text-xs text-center text-muted-foreground">
+                      Your crew profile will be submitted with your application
+                    </p>
                   </div>
                 )}
               </CardContent>
