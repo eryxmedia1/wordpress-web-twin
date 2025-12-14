@@ -73,76 +73,38 @@ import CrewPositionDetail from "./pages/CrewPositionDetail";
 
 const queryClient = new QueryClient();
 
-// Auto-refresh component that handles visibility changes and service worker updates
+// Auto-refresh component that handles visibility changes gracefully without forced reloads
 function AppRefreshHandler() {
   const lastVisibleRef = useRef<number>(Date.now());
-  const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+  const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes - increased to reduce disruptions
 
   useEffect(() => {
-    // Check for service worker updates
-    const checkForUpdates = async () => {
-      if ('serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.getRegistration();
-          if (registration) {
-            // Check for waiting service worker (new version available)
-            if (registration.waiting) {
-              console.log('[App] New version available, reloading...');
-              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-              window.location.reload();
-              return;
-            }
-            // Check for updates
-            await registration.update();
-          }
-        } catch (error) {
-          console.error('[App] Service worker check failed:', error);
-        }
-      }
-    };
-
-    // Handle visibility change - refresh data when returning to app after being away
+    // Handle visibility change - only refresh data, never force reload
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         const now = Date.now();
         const timeAway = now - lastVisibleRef.current;
         
-        console.log(`[App] Tab became visible after ${Math.round(timeAway / 1000)}s`);
-        
         if (timeAway > STALE_THRESHOLD_MS) {
-          console.log('[App] Data may be stale, invalidating queries and checking for updates...');
-          // Invalidate all queries to force refresh
+          console.log(`[App] Tab visible after ${Math.round(timeAway / 60000)} min, refreshing data...`);
+          // Only invalidate queries - no page reload
           queryClient.invalidateQueries();
-          // Check for app updates
-          checkForUpdates();
         }
         
         lastVisibleRef.current = now;
       } else {
-        // Record when user left
         lastVisibleRef.current = Date.now();
       }
     };
 
-    // Handle online/offline
+    // Handle online/offline - gentle refresh only
     const handleOnline = () => {
-      console.log('[App] Network restored, invalidating queries...');
+      console.log('[App] Network restored, refreshing data...');
       queryClient.invalidateQueries();
     };
 
-    // Initial check on mount
-    checkForUpdates();
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
-
-    // Listen for service worker updates
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('[App] Service worker updated, reloading...');
-        window.location.reload();
-      });
-    }
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
