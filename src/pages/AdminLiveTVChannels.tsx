@@ -67,6 +67,7 @@ export default function AdminLiveTVChannels() {
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [generatingStream, setGeneratingStream] = useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState<string | null>(null);
   const [selectedChannelForRTMP, setSelectedChannelForRTMP] = useState<Channel | null>(null);
 
   const [formData, setFormData] = useState({
@@ -310,6 +311,26 @@ export default function AdminLiveTVChannels() {
       fetchChannels();
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete stream');
+    }
+  };
+
+  const checkStreamStatus = async (channel: Channel) => {
+    setCheckingStatus(channel.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('mux-live-stream', {
+        body: { action: 'status', channelId: channel.id }
+      });
+
+      if (error) throw error;
+      
+      const isLive = data.status === 'active' || data.is_live === true;
+      toast.success(isLive ? 'Stream is LIVE!' : 'Stream is not active');
+      fetchChannels(); // Refresh to get updated is_live_streaming value
+    } catch (error: any) {
+      console.error('Error checking stream status:', error);
+      toast.error(error.message || 'Failed to check stream status');
+    } finally {
+      setCheckingStatus(null);
     }
   };
 
@@ -671,6 +692,14 @@ export default function AdminLiveTVChannels() {
             </DialogHeader>
             {selectedChannelForRTMP && (
               <div className="space-y-4 mt-4">
+                {/* Live Status Indicator */}
+                <div className={`flex items-center gap-2 p-3 rounded-lg ${selectedChannelForRTMP.is_live_streaming ? 'bg-green-500/10 border border-green-500/30' : 'bg-muted'}`}>
+                  <div className={`w-3 h-3 rounded-full ${selectedChannelForRTMP.is_live_streaming ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground'}`} />
+                  <span className={`text-sm font-medium ${selectedChannelForRTMP.is_live_streaming ? 'text-green-500' : 'text-muted-foreground'}`}>
+                    {selectedChannelForRTMP.is_live_streaming ? 'LIVE - Broadcasting' : 'Offline - Not streaming'}
+                  </span>
+                </div>
+
                 <p className="text-sm text-muted-foreground">
                   Copy these credentials into <strong>Switcher Studio</strong> to broadcast to your channel.
                 </p>
@@ -734,17 +763,32 @@ export default function AdminLiveTVChannels() {
                 </div>
 
                 <div className="flex justify-between pt-4 border-t border-border">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      deleteMuxStream(selectedChannelForRTMP);
-                      setSelectedChannelForRTMP(null);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete Stream
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        deleteMuxStream(selectedChannelForRTMP);
+                        setSelectedChannelForRTMP(null);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete Stream
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => checkStreamStatus(selectedChannelForRTMP)}
+                      disabled={checkingStatus === selectedChannelForRTMP.id}
+                    >
+                      {checkingStatus === selectedChannelForRTMP.id ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Radio className="h-4 w-4 mr-1" />
+                      )}
+                      Check Status
+                    </Button>
+                  </div>
                   <Button onClick={() => setSelectedChannelForRTMP(null)}>
                     Done
                   </Button>

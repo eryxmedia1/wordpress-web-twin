@@ -342,36 +342,13 @@ export default function LiveTV() {
     }
   };
 
-  // Check Mux stream status for a channel
-  const checkMuxStreamStatus = useCallback(async (channel: Channel) => {
-    if (!channel.playback_url || !channel.id) return false;
-    
-    try {
-      const funcUrl = `https://hbddjtvslojxkkcrpcoo.supabase.co/functions/v1/mux-live-stream`;
-      const session = await supabase.auth.getSession();
-      
-      const res = await fetch(funcUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.data.session?.access_token || ''}`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRqdHZzbG9qeGtrY3JwY29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjUxNjcsImV4cCI6MjA2MjYwMTE2N30.TC4eACBOJsfggnuB3OyOK7x4O9yp7bjzOP5Tr9_jHds',
-        },
-        body: JSON.stringify({ action: 'status', channelId: channel.id }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        console.log('Mux stream status:', data);
-        // Check if stream is active
-        const isActive = data.status === 'active' || data.isLive === true;
-        setIsLiveStreaming(isActive);
-        return isActive;
-      }
-    } catch (error) {
-      console.error('Error checking Mux stream status:', error);
-    }
-    return false;
+  // Check if channel has active Mux stream using database value (no API polling to avoid rate limits)
+  const checkMuxStreamStatus = useCallback((channel: Channel): boolean => {
+    if (!channel.playback_url) return false;
+    // Use the is_live_streaming value from database - no API call needed
+    const isActive = channel.is_live_streaming === true;
+    setIsLiveStreaming(isActive);
+    return isActive;
   }, []);
 
   // Fetch all channels
@@ -550,32 +527,38 @@ export default function LiveTV() {
       targetOffsetRef.current = 0;
       currentVideoUrlRef.current = null; // Reset video URL tracking
       
-      // First check if this channel has an active Mux stream
-      const initChannel = async () => {
-        if (selectedChannel.playback_url) {
-          const isLive = await checkMuxStreamStatus(selectedChannel);
-          if (isLive) {
-            // Channel is live streaming via Mux - play immediately
-            console.log('Mux stream is LIVE, playing HLS:', selectedChannel.playback_url);
-            setIsPlaying(true);
-          } else {
-            // Not live streaming, fall back to playlist
-            fetchLiveSegment(true);
-          }
+      // Check if this channel has an active Mux stream using database value
+      const initChannel = () => {
+        if (selectedChannel.playback_url && selectedChannel.is_live_streaming) {
+          // Channel is live streaming via Mux - play immediately
+          console.log('Mux stream is LIVE, playing HLS:', selectedChannel.playback_url);
+          setIsLiveStreaming(true);
+          setIsPlaying(true);
         } else {
-          // No Mux URL, use playlist
+          // Not live streaming, fall back to playlist
           fetchLiveSegment(true);
         }
       };
       
       initChannel();
       
-      // Poll Mux status every 10 seconds to detect when streaming starts/stops
-      if (selectedChannel.playback_url) {
-        muxPollRef.current = setInterval(() => {
-          checkMuxStreamStatus(selectedChannel);
-        }, 10000);
-      }
+      // Subscribe to realtime updates for this channel's live status
+      const channelSubscription = supabase
+        .channel(`live-channel-${selectedChannel.id}`)
+        .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'live_channels', filter: `id=eq.${selectedChannel.id}` },
+          (payload) => {
+            const newData = payload.new as any;
+            if (newData.is_live_streaming !== undefined) {
+              setIsLiveStreaming(newData.is_live_streaming);
+              if (newData.is_live_streaming && newData.playback_url) {
+                console.log('Stream went LIVE, switching to HLS');
+                setIsPlaying(true);
+              }
+            }
+          }
+        )
+        .subscribe();
       
       // Poll playlist every 15 seconds for smoother transitions with short videos
       // The fetchLiveSegment function now handles same-video detection to prevent freezing
@@ -596,8 +579,10 @@ export default function LiveTV() {
       if (seekTimeoutRef.current) {
         clearTimeout(seekTimeoutRef.current);
       }
+      // Cleanup realtime subscription
+      supabase.channel(`live-channel-${selectedChannel?.id}`).unsubscribe();
     };
-  }, [selectedChannel, fetchLiveSegment, checkMuxStreamStatus, isLiveStreaming]);
+  }, [selectedChannel, fetchLiveSegment, isLiveStreaming]);
 
   const handleChannelSelect = async (channel: Channel) => {
     setSelectedChannel(channel);
