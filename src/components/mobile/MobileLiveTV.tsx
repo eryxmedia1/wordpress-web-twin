@@ -512,21 +512,15 @@ export default function MobileLiveTV() {
     setLiveSegment(null);
     setIsPlaying(false);
     setIsSeeking(false);
-    setPreRollPlayed(false); // Reset pre-roll for new channel
+    setPreRollPlayed(true); // Pre-roll disabled for live TV
     setWatchTimeSeconds(0); // Reset watch time
     setIsUserInitiatedChannel(true); // Mark as user-initiated selection
     targetOffsetRef.current = 0;
     currentVideoUrlRef.current = null; // Reset video URL tracking
     navigate(`/live/${channel.slug}`, { replace: true });
     
-    // Request pre-roll ad when user selects a channel
-    const hasPreRoll = await requestPreRoll();
-    if (!hasPreRoll) {
-      // No pre-roll ads, start playing immediately
-      setIsPlaying(true);
-    }
-    // If pre-roll exists, playback will start after ad completes via onAdEnd callback
-    setPreRollPlayed(true);
+    // Pre-roll ads disabled for live TV - start playing immediately
+    setIsPlaying(true);
   };
 
   const handleVideoEnd = () => {
