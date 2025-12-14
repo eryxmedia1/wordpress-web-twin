@@ -305,6 +305,25 @@ export default function CrewPositionDetail() {
                       />
                     </div>
 
+                    {/* Payment Terms Section */}
+                    <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-3">
+                      <h4 className="font-semibold text-sm">Payment Terms & Conditions</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        By applying for a position with Zoe RatedTV / Leger Film Studio, you acknowledge and agree to the following payment terms: All roles are offered on a net 30 payment basis, meaning compensation will be issued within thirty (30) days from the final production date in which services were rendered. Acceptance of a role constitutes full agreement to these terms. No payments will be released prior to the completion of services, submission of required documentation, and final production wrap. Failure to agree to these terms will result in ineligibility for hire.
+                      </p>
+                      
+                      <div className="flex items-start gap-2 pt-2 border-t border-border">
+                        <Checkbox
+                          id="termsAccepted"
+                          checked={termsAccepted}
+                          onCheckedChange={(checked) => setTermsAccepted(!!checked)}
+                        />
+                        <Label htmlFor="termsAccepted" className="text-sm leading-relaxed cursor-pointer">
+                          I acknowledge and agree that Zoe RatedTV / Leger Film Studio operates on a net 30 payment policy, with payment issued within 30 days of the final production date.
+                        </Label>
+                      </div>
+                    </div>
+
                     {position.pay_amount && (
                       <div className="flex items-start gap-2">
                         <Checkbox
@@ -312,22 +331,11 @@ export default function CrewPositionDetail() {
                           checked={payAccepted}
                           onCheckedChange={(checked) => setPayAccepted(!!checked)}
                         />
-                        <Label htmlFor="payAccepted" className="text-sm">
+                        <Label htmlFor="payAccepted" className="text-sm cursor-pointer">
                           I accept the pay rate of {position.pay_amount} ({position.rate_type})
                         </Label>
                       </div>
                     )}
-
-                    <div className="flex items-start gap-2">
-                      <Checkbox
-                        id="termsAccepted"
-                        checked={termsAccepted}
-                        onCheckedChange={(checked) => setTermsAccepted(!!checked)}
-                      />
-                      <Label htmlFor="termsAccepted" className="text-sm">
-                        {position.terms_conditions || "I agree to the terms and conditions for this position"}
-                      </Label>
-                    </div>
 
                     <div className="flex gap-2">
                       <Button
