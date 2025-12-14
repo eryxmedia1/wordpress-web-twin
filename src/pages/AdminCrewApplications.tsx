@@ -13,7 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Search, ExternalLink, Star, User, Building2 } from "lucide-react";
+import { Search, ExternalLink, Star, User, Building2, Mail, Phone, MapPin, Briefcase, Wrench, Award, Link as LinkIcon } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, ApplicationStatus } from "@/types/casting";
 import type { CrewApplication } from "@/types/casting";
 
@@ -300,57 +302,205 @@ export default function AdminCrewApplications() {
           </TabsContent>
         </Tabs>
 
-        {/* Review Dialog */}
+        {/* Review Dialog with Full Profile */}
         <Dialog open={!!selectedApp} onOpenChange={() => setSelectedApp(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl max-h-[90vh]">
             <DialogHeader>
               <DialogTitle>Review Application: {selectedApp?.talents?.name}</DialogTitle>
             </DialogHeader>
             {selectedApp && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Position</Label>
-                  <p className="font-medium">{selectedApp.crew_positions?.title}</p>
-                </div>
+              <ScrollArea className="max-h-[70vh] pr-4">
+                <div className="space-y-6">
+                  {/* Position Applied For */}
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <Label className="text-xs text-muted-foreground">Position Applied For</Label>
+                    <p className="font-semibold text-lg">{selectedApp.crew_positions?.title}</p>
+                    <p className="text-sm text-muted-foreground">{selectedApp.crew_positions?.departments?.name}</p>
+                  </div>
 
-                {selectedApp.cover_letter && (
+                  {/* Full Profile Snapshot */}
+                  {selectedApp.profile_snapshot && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Applicant Profile
+                        </h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {/* Contact Info */}
+                          <Card>
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">Contact Information</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2 text-sm">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span>{selectedApp.profile_snapshot.name || 'N/A'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                <span>{selectedApp.profile_snapshot.email || 'N/A'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                <span>{selectedApp.profile_snapshot.phone || 'N/A'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                <span>
+                                  {[selectedApp.profile_snapshot.city, selectedApp.profile_snapshot.state, selectedApp.profile_snapshot.country]
+                                    .filter(Boolean).join(', ') || 'N/A'}
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Experience & Skills */}
+                          <Card>
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">Experience & Skills</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2 text-sm">
+                              <div className="flex items-center gap-2">
+                                <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                <span>Primary: {selectedApp.profile_snapshot.crew_primary_role || 'N/A'}</span>
+                              </div>
+                              {selectedApp.profile_snapshot.crew_secondary_roles?.length > 0 && (
+                                <div className="flex items-start gap-2">
+                                  <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                  <span>Secondary: {selectedApp.profile_snapshot.crew_secondary_roles.join(', ')}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <Award className="h-4 w-4 text-muted-foreground" />
+                                <span>{selectedApp.profile_snapshot.crew_years_experience || 0} years experience</span>
+                              </div>
+                              {selectedApp.profile_snapshot.crew_software?.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {selectedApp.profile_snapshot.crew_software.map((sw: string, i: number) => (
+                                    <Badge key={i} variant="secondary" className="text-xs">{sw}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {/* Gear & Certifications */}
+                        <div className="grid md:grid-cols-2 gap-4 mt-4">
+                          {selectedApp.profile_snapshot.crew_gear_owned && (
+                            <Card>
+                              <CardHeader className="py-3">
+                                <CardTitle className="text-sm flex items-center gap-2">
+                                  <Wrench className="h-4 w-4" />
+                                  Gear/Equipment Owned
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-sm text-muted-foreground">{selectedApp.profile_snapshot.crew_gear_owned}</p>
+                              </CardContent>
+                            </Card>
+                          )}
+                          {selectedApp.profile_snapshot.crew_certifications && (
+                            <Card>
+                              <CardHeader className="py-3">
+                                <CardTitle className="text-sm flex items-center gap-2">
+                                  <Award className="h-4 w-4" />
+                                  Certifications
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-sm text-muted-foreground">{selectedApp.profile_snapshot.crew_certifications}</p>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+
+                        {/* Links */}
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {selectedApp.profile_snapshot.portfolio_url && (
+                            <a href={selectedApp.profile_snapshot.portfolio_url} target="_blank" rel="noopener noreferrer">
+                              <Button variant="outline" size="sm">
+                                <LinkIcon className="h-3 w-3 mr-1" />
+                                Portfolio
+                              </Button>
+                            </a>
+                          )}
+                          {selectedApp.profile_snapshot.resume_url && (
+                            <a href={selectedApp.profile_snapshot.resume_url} target="_blank" rel="noopener noreferrer">
+                              <Button variant="outline" size="sm">
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Resume
+                              </Button>
+                            </a>
+                          )}
+                          {selectedApp.profile_snapshot.imdb_url && (
+                            <a href={selectedApp.profile_snapshot.imdb_url} target="_blank" rel="noopener noreferrer">
+                              <Button variant="outline" size="sm">IMDb</Button>
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Bio */}
+                        {selectedApp.profile_snapshot.bio && (
+                          <Card className="mt-4">
+                            <CardHeader className="py-3">
+                              <CardTitle className="text-sm">Bio</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-sm text-muted-foreground">{selectedApp.profile_snapshot.bio}</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
+
+                  {/* Cover Letter */}
+                  {selectedApp.cover_letter && (
+                    <div>
+                      <Label>Cover Letter / Message</Label>
+                      <p className="text-sm mt-1 p-3 bg-muted rounded-lg whitespace-pre-wrap">{selectedApp.cover_letter}</p>
+                    </div>
+                  )}
+
+                  {/* Rating */}
                   <div>
-                    <Label>Cover Letter</Label>
-                    <p className="text-sm mt-1 p-3 bg-muted rounded-lg">{selectedApp.cover_letter}</p>
+                    <Label>Your Rating</Label>
+                    <div className="flex items-center gap-1 mt-1">
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <button
+                          key={i}
+                          onClick={() => setAdminRating(i)}
+                          className="p-1"
+                        >
+                          <Star className={`h-6 w-6 ${i <= adminRating ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`} />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                )}
 
-                <div>
-                  <Label>Your Rating</Label>
-                  <div className="flex items-center gap-1 mt-1">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <button
-                        key={i}
-                        onClick={() => setAdminRating(i)}
-                        className="p-1"
-                      >
-                        <Star className={`h-6 w-6 ${i <= adminRating ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`} />
-                      </button>
-                    ))}
+                  {/* Admin Notes */}
+                  <div>
+                    <Label>Admin Notes</Label>
+                    <Textarea
+                      value={adminNotes}
+                      onChange={(e) => setAdminNotes(e.target.value)}
+                      placeholder="Internal notes about this applicant..."
+                      className="mt-1"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setSelectedApp(null)}>Cancel</Button>
+                    <Button onClick={handleSaveNotes}>Save Notes</Button>
                   </div>
                 </div>
-
-                <div>
-                  <Label>Admin Notes</Label>
-                  <Textarea
-                    value={adminNotes}
-                    onChange={(e) => setAdminNotes(e.target.value)}
-                    placeholder="Internal notes about this applicant..."
-                    className="mt-1"
-                    rows={4}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setSelectedApp(null)}>Cancel</Button>
-                  <Button onClick={handleSaveNotes}>Save Notes</Button>
-                </div>
-              </div>
+              </ScrollArea>
             )}
           </DialogContent>
         </Dialog>
