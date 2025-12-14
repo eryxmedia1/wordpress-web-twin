@@ -627,12 +627,29 @@ export default function LiveTV() {
         setIsSeeking(false);
         setIsPlaying(true);
       }, 500); // Give more time for seek to complete
-    } else if (!isSeeking && liveSegment?.videoUrl) {
-      // No seeking needed, start playing from beginning
+    } else {
+      // No seeking needed, start playing immediately
       console.log('[LiveTV] No seek needed, starting playback');
+      setIsSeeking(false);
       setIsPlaying(true);
     }
   };
+
+  // Fallback: If player takes too long to be ready, force start after 5 seconds
+  useEffect(() => {
+    if (isSeeking && liveSegment?.videoUrl && !isLiveStreaming) {
+      const fallbackTimeout = setTimeout(() => {
+        console.log('[LiveTV] Fallback: Player not ready after 5s, forcing playback');
+        if (playerRef.current && targetOffsetRef.current > 0) {
+          playerRef.current.seekTo(targetOffsetRef.current, 'seconds');
+        }
+        setIsSeeking(false);
+        setIsPlaying(true);
+      }, 5000);
+      
+      return () => clearTimeout(fallbackTimeout);
+    }
+  }, [isSeeking, liveSegment?.videoUrl, isLiveStreaming]);
 
   // Get the video URL - prioritize Mux HLS playback URL if live streaming
   const getVideoUrl = () => {
