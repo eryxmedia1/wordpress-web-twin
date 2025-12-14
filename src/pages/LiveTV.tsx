@@ -407,6 +407,9 @@ export default function LiveTV() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Track current video URL to prevent unnecessary re-renders
+  const currentVideoUrlRef = useRef<string | null>(null);
+
   // Fetch current segment for selected channel (playlist-based fallback)
   const fetchLiveSegment = useCallback(async (isInitialLoad = false) => {
     if (!selectedChannel) return;
@@ -442,8 +445,24 @@ export default function LiveTV() {
         console.log('[LiveTV] Segment data:', { 
           videoUrl: data.videoUrl?.substring(0, 50),
           offsetSeconds: data.offsetSeconds,
-          title: data.nowPlaying?.title 
+          title: data.nowPlaying?.title,
+          isInitialLoad 
         });
+        
+        // For polling (non-initial loads), only update if video URL changed
+        // This prevents freezing when polling finds the same video still playing
+        if (!isInitialLoad && currentVideoUrlRef.current === data.videoUrl) {
+          // Same video still playing, just update metadata (upNext, etc) without triggering seek
+          setLiveSegment(prev => prev ? {
+            ...prev,
+            upNext: data.upNext,
+            nowPlaying: data.nowPlaying,
+          } : data);
+          return;
+        }
+        
+        // Track the new video URL
+        currentVideoUrlRef.current = data.videoUrl;
         setLiveSegment(data);
         
         if (isInitialLoad && data.videoUrl && data.offsetSeconds > 0) {
@@ -459,6 +478,15 @@ export default function LiveTV() {
           targetOffsetRef.current = 0;
           setIsSeeking(false);
           setIsPlaying(true);
+        } else if (!isInitialLoad && data.videoUrl) {
+          // Video changed during polling - smooth transition
+          console.log('[LiveTV] Video changed, transitioning to:', data.nowPlaying?.title);
+          targetOffsetRef.current = data.offsetSeconds || 0;
+          // For short videos, seek immediately without stopping playback
+          if (playerRef.current && data.offsetSeconds > 0) {
+            playerRef.current.seekTo(data.offsetSeconds, 'seconds');
+          }
+          // Keep playing - don't reset isPlaying state
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -466,6 +494,7 @@ export default function LiveTV() {
         
         if (errorData.type === 'idle') {
           setLiveSegment(errorData);
+          currentVideoUrlRef.current = null;
         }
       }
     } catch (error: any) {
@@ -519,6 +548,7 @@ export default function LiveTV() {
       setCountdown(null);
       setIsLiveStreaming(false);
       targetOffsetRef.current = 0;
+      currentVideoUrlRef.current = null; // Reset video URL tracking
       
       // First check if this channel has an active Mux stream
       const initChannel = async () => {
@@ -547,12 +577,13 @@ export default function LiveTV() {
         }, 10000);
       }
       
-      // Poll playlist every 30 seconds (only if not live streaming)
+      // Poll playlist every 15 seconds for smoother transitions with short videos
+      // The fetchLiveSegment function now handles same-video detection to prevent freezing
       pollIntervalRef.current = setInterval(() => {
         if (!isLiveStreaming) {
           fetchLiveSegment(false);
         }
-      }, 30000);
+      }, 15000);
     }
 
     return () => {
@@ -578,6 +609,7 @@ export default function LiveTV() {
     setIsUserInitiatedChannel(true); // Mark as user-initiated selection
     setWatchTimeSeconds(0); // Reset watch time for new channel
     targetOffsetRef.current = 0;
+    currentVideoUrlRef.current = null; // Reset video URL tracking
     navigate(`/live/${channel.slug}`, { replace: true });
     
     // Request pre-roll ad when user selects a channel

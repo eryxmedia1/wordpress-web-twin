@@ -64,6 +64,7 @@ export default function MobileLiveTV() {
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const muxPollRef = useRef<NodeJS.Timeout | null>(null);
   const targetOffsetRef = useRef<number>(0);
+  const currentVideoUrlRef = useRef<string | null>(null);
 
   // Mid-roll ad timer state
   const [watchTimeSeconds, setWatchTimeSeconds] = useState(0);
@@ -377,8 +378,24 @@ export default function MobileLiveTV() {
         console.log('[MobileLiveTV] Segment data:', { 
           videoUrl: data.videoUrl?.substring(0, 50),
           offsetSeconds: data.offsetSeconds,
-          title: data.nowPlaying?.title 
+          title: data.nowPlaying?.title,
+          isInitialLoad 
         });
+        
+        // For polling (non-initial loads), only update if video URL changed
+        // This prevents freezing when polling finds the same video still playing
+        if (!isInitialLoad && currentVideoUrlRef.current === data.videoUrl) {
+          // Same video still playing, just update metadata without triggering seek
+          setLiveSegment(prev => prev ? {
+            ...prev,
+            upNext: data.upNext,
+            nowPlaying: data.nowPlaying,
+          } : data);
+          return;
+        }
+        
+        // Track the new video URL
+        currentVideoUrlRef.current = data.videoUrl;
         setLiveSegment(data);
         
         if (isInitialLoad && data.videoUrl && data.offsetSeconds > 0) {
@@ -393,11 +410,21 @@ export default function MobileLiveTV() {
           targetOffsetRef.current = 0;
           setIsSeeking(false);
           setIsPlaying(true);
+        } else if (!isInitialLoad && data.videoUrl) {
+          // Video changed during polling - smooth transition
+          console.log('[MobileLiveTV] Video changed, transitioning to:', data.nowPlaying?.title);
+          targetOffsetRef.current = data.offsetSeconds || 0;
+          // For short videos, seek immediately without stopping playback
+          if (playerRef.current && data.offsetSeconds > 0) {
+            playerRef.current.seekTo(data.offsetSeconds, 'seconds');
+          }
+          // Keep playing - don't reset isPlaying state
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
         if (errorData.type === 'idle') {
           setLiveSegment(errorData);
+          currentVideoUrlRef.current = null;
         }
       }
     } catch (error: any) {
@@ -438,6 +465,7 @@ export default function MobileLiveTV() {
       setIsSeeking(false);
       setIsLiveStreaming(false);
       targetOffsetRef.current = 0;
+      currentVideoUrlRef.current = null; // Reset video URL tracking
       
       const initChannel = async () => {
         if (selectedChannel.playback_url) {
@@ -461,11 +489,12 @@ export default function MobileLiveTV() {
         }, 10000);
       }
       
+      // Poll playlist every 15 seconds for smoother transitions with short videos
       pollIntervalRef.current = setInterval(() => {
         if (!isLiveStreaming) {
           fetchLiveSegment(false);
         }
-      }, 30000);
+      }, 15000);
     }
 
     return () => {
@@ -487,6 +516,7 @@ export default function MobileLiveTV() {
     setWatchTimeSeconds(0); // Reset watch time
     setIsUserInitiatedChannel(true); // Mark as user-initiated selection
     targetOffsetRef.current = 0;
+    currentVideoUrlRef.current = null; // Reset video URL tracking
     navigate(`/live/${channel.slug}`, { replace: true });
     
     // Request pre-roll ad when user selects a channel
