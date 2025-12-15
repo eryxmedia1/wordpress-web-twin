@@ -121,6 +121,12 @@ const Watch = () => {
   const totalWatchedSeconds = useRef(0);
   const preAdPosition = useRef<number | null>(null); // Store position before ad break
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
+  
+  // Ad-skip prevention state
+  const [playedAdBreakpoints, setPlayedAdBreakpoints] = useState<Set<number>>(new Set());
+  const pendingSeekPosition = useRef<number | null>(null);
+  const lastKnownPosition = useRef<number>(0);
+  const isProcessingSeek = useRef(false);
 
   // Parse subtitles from JSON
   const parsedSubtitles = useMemo((): Subtitle[] => {
@@ -165,6 +171,7 @@ const Watch = () => {
     requestPreRoll,
     requestMidRoll,
     requestPostRoll,
+    requestSkippedMidRolls,
     onAdComplete,
     skipAd,
   } = useAds({
@@ -181,11 +188,72 @@ const Watch = () => {
       hasInitialSeek.current = false; // Reset so seek happens after ad
       setIsPlaying(false);
     },
-    onAdEnd: () => setIsPlaying(true),
+    onAdEnd: () => {
+      // Resume to pending seek position if there was a seek-triggered ad break
+      if (pendingSeekPosition.current !== null && playerRef.current) {
+        console.log('[Watch] Resuming to pending seek position:', pendingSeekPosition.current);
+        playerRef.current.seekTo(pendingSeekPosition.current, 'seconds');
+        pendingSeekPosition.current = null;
+        isProcessingSeek.current = false;
+      }
+      setIsPlaying(true);
+    },
   });
 
   // Get ad configuration based on user's plan
   const adConfig = getAdConfig();
+  
+  // Calculate ad breakpoints based on midroll config
+  const adBreakpointInterval = useMemo(() => {
+    return (effectiveMidrollConfig?.intervalMinutes || 10) * 60; // in seconds
+  }, [effectiveMidrollConfig]);
+
+  // Detect seek and intercept if skipping ad breakpoints
+  const handleSeekIntercept = useCallback(async (targetSeconds: number) => {
+    if (!adConfig.showMidroll || isProcessingSeek.current || isAdPlaying) return false;
+    
+    const currentSeconds = lastKnownPosition.current;
+    
+    // Only intercept forward seeks (fast-forward)
+    if (targetSeconds <= currentSeconds) return false;
+    
+    // Find all breakpoints between current position and target
+    const skippedBreakpoints: number[] = [];
+    const startAfter = (effectiveMidrollConfig?.startAfterMinutes || 5) * 60;
+    
+    for (let bp = adBreakpointInterval; bp < targetSeconds; bp += adBreakpointInterval) {
+      if (bp >= startAfter && bp > currentSeconds && !playedAdBreakpoints.has(bp)) {
+        skippedBreakpoints.push(bp);
+      }
+    }
+    
+    if (skippedBreakpoints.length > 0) {
+      console.log('[Watch] Seek intercepted! Skipped breakpoints:', skippedBreakpoints);
+      isProcessingSeek.current = true;
+      pendingSeekPosition.current = targetSeconds;
+      
+      // Mark these breakpoints as played
+      setPlayedAdBreakpoints(prev => {
+        const newSet = new Set(prev);
+        skippedBreakpoints.forEach(bp => newSet.add(bp));
+        return newSet;
+      });
+      
+      // Request ads for all skipped breakpoints
+      const hasAds = await requestSkippedMidRolls(skippedBreakpoints.length);
+      
+      if (!hasAds) {
+        // No ads available, allow seek to proceed
+        isProcessingSeek.current = false;
+        pendingSeekPosition.current = null;
+        return false;
+      }
+      
+      return true; // Ads will play, seek is blocked
+    }
+    
+    return false;
+  }, [adConfig.showMidroll, isAdPlaying, effectiveMidrollConfig, adBreakpointInterval, playedAdBreakpoints, requestSkippedMidRolls]);
 
   // Reset seek flag when navigating to new content or episode
   useEffect(() => {
@@ -195,6 +263,9 @@ const Watch = () => {
     viewRecordId.current = null;
     watchStartTime.current = null;
     totalWatchedSeconds.current = 0;
+    pendingSeekPosition.current = null;
+    isProcessingSeek.current = false;
+    setPlayedAdBreakpoints(new Set());
     setPlayerReady(false);
     setShowVideo(false);
     setIsPlaying(false);
@@ -625,14 +696,34 @@ const Watch = () => {
     }
   }, [nextEpisode, progress, saveProgress, setSearchParams]);
 
-  // Handle video progress updates
-  const handleProgress = useCallback((state: { played: number; playedSeconds: number }) => {
+  // Handle video progress updates and detect seeks
+  const handleProgress = useCallback(async (state: { played: number; playedSeconds: number }) => {
     const progressPercent = state.played * 100;
+    const currentSeconds = state.playedSeconds;
+    
+    // Detect if user seeked forward (jumped more than 5 seconds)
+    const timeDelta = currentSeconds - lastKnownPosition.current;
+    
+    if (timeDelta > 5 && !isProcessingSeek.current && !isAdPlaying) {
+      // User fast-forwarded - check if they skipped ad breakpoints
+      const wasIntercepted = await handleSeekIntercept(currentSeconds);
+      
+      if (wasIntercepted && playerRef.current) {
+        // Seek back to where they were before the fast-forward
+        // Ads will play and then resume to their intended position
+        playerRef.current.seekTo(lastKnownPosition.current, 'seconds');
+        return; // Don't update progress while processing ads
+      }
+    }
+    
+    // Update last known position for next comparison
+    lastKnownPosition.current = currentSeconds;
+    
     setProgress(progressPercent);
     
     // Save progress every 5 seconds worth of progress or significant jumps
     saveProgress(progressPercent);
-  }, [saveProgress]);
+  }, [saveProgress, handleSeekIntercept, isAdPlaying]);
 
   const handleDuration = useCallback((dur: number) => {
     setDuration(dur);
@@ -693,11 +784,21 @@ const Watch = () => {
     const midrollInterval = (effectiveMidrollConfig?.intervalMinutes || 10) * 60;
     const startAfter = (effectiveMidrollConfig?.startAfterMinutes || 5) * 60;
     
-    if (currentSeconds >= startAfter && currentSeconds - lastMidrollTime >= midrollInterval) {
+    // Calculate the current breakpoint
+    const currentBreakpoint = Math.floor((currentSeconds - startAfter) / midrollInterval) * midrollInterval + startAfter;
+    
+    // Check if we've crossed a new breakpoint that hasn't been played
+    if (currentSeconds >= startAfter && 
+        currentSeconds - lastMidrollTime >= midrollInterval && 
+        !playedAdBreakpoints.has(currentBreakpoint)) {
+      
+      // Mark this breakpoint as played
+      setPlayedAdBreakpoints(prev => new Set(prev).add(currentBreakpoint));
+      
       requestMidRoll(10);
       setLastMidrollTime(currentSeconds);
     }
-  }, [progress, duration, isPlaying, isAdPlaying, adConfig.showMidroll, lastMidrollTime, requestMidRoll, effectiveMidrollConfig, canRequestMidRoll]);
+  }, [progress, duration, isPlaying, isAdPlaying, adConfig.showMidroll, lastMidrollTime, requestMidRoll, effectiveMidrollConfig, canRequestMidRoll, playedAdBreakpoints]);
 
   // Handle post-roll ads when video ends
   const handleVideoEndedWithAds = useCallback(async () => {
@@ -950,10 +1051,15 @@ const Watch = () => {
                   }, 750); // Increased delay for Vimeo to be fully ready before seeking
                 }}
                 onEnded={handleVideoEnded}
+                onSeek={async (seconds: number) => {
+                  console.log('[Watch] onSeek triggered:', seconds);
+                  // Handle seek through the progress callback detection
+                  // This is a backup for players that support onSeek
+                }}
                 onError={(e) => console.error("Player error:", e)}
                 onBuffer={() => console.log("Buffering...")}
                 onBufferEnd={() => console.log("Buffering complete")}
-                progressInterval={1000}
+                progressInterval={500}
                 config={{
                   vimeo: {
                     playerOptions: {
