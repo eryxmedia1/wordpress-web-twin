@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Star, Info, Play, Plus, Check, ThumbsUp, ListVideo, ChevronDown, SkipForward, Zap, Subtitles } from "lucide-react";
+import { ArrowLeft, Star, Info, Play, Pause, Plus, Check, ThumbsUp, ListVideo, ChevronDown, SkipForward, SkipBack, Zap, Subtitles, RotateCcw, RotateCw } from "lucide-react";
 import { useSubtitles, Subtitle } from "@/hooks/useSubtitles";
 import { ClosedCaptionButton } from "@/components/ClosedCaptionButton";
 import { Button } from "@/components/ui/button";
@@ -1210,6 +1210,67 @@ const Watch = () => {
                 </div>
               </div>
             )}
+            
+            {/* Custom Video Controls */}
+            <div className="flex items-center justify-center gap-4 mb-4">
+              {/* Rewind 10s */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-foreground bg-background/50 hover:bg-background/70 h-12 w-12 rounded-full"
+                onClick={() => {
+                  if (playerRef.current && !isAdPlaying) {
+                    const current = playerRef.current.getCurrentTime();
+                    const newTime = Math.max(0, current - 10);
+                    playerRef.current.seekTo(newTime, 'seconds');
+                  }
+                }}
+                disabled={isAdPlaying}
+              >
+                <RotateCcw className="h-6 w-6" />
+                <span className="absolute text-[10px] font-bold">10</span>
+              </Button>
+              
+              {/* Play/Pause */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-foreground bg-primary/80 hover:bg-primary h-14 w-14 rounded-full"
+                onClick={() => setIsPlaying(!isPlaying)}
+                disabled={isAdPlaying}
+              >
+                {isPlaying ? (
+                  <Pause className="h-8 w-8 fill-current" />
+                ) : (
+                  <Play className="h-8 w-8 fill-current ml-1" />
+                )}
+              </Button>
+              
+              {/* Fast Forward 10s */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-foreground bg-background/50 hover:bg-background/70 h-12 w-12 rounded-full"
+                onClick={async () => {
+                  if (playerRef.current && !isAdPlaying && duration > 0) {
+                    const current = playerRef.current.getCurrentTime();
+                    const targetTime = Math.min(duration, current + 10);
+                    // Update lastKnownPosition so seek interception can detect the jump
+                    lastKnownPosition.current = current;
+                    // Use seek interception for ad-skip prevention
+                    const wasIntercepted = await handleSeekIntercept(targetTime);
+                    if (!wasIntercepted) {
+                      // No ads needed, just seek directly
+                      playerRef.current.seekTo(targetTime, 'seconds');
+                    }
+                  }
+                }}
+                disabled={isAdPlaying}
+              >
+                <RotateCw className="h-6 w-6" />
+                <span className="absolute text-[10px] font-bold">10</span>
+              </Button>
+            </div>
             
             {/* Binge Mode Toggle - Shows for episodic content */}
             {allEpisodes.length > 1 && (
