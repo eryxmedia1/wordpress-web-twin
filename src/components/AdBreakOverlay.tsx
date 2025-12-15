@@ -190,12 +190,23 @@ export function AdBreakOverlay({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Ad playing overlay - fullscreen
+  // Ad playing overlay - fullscreen with controls blocked except mute/skip
   return (
-    <div className="fixed inset-0 z-50 bg-black">
-      {/* Top bar with ad info */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
-        <div className="flex items-center gap-3">
+    <div className="fixed inset-0 z-50 bg-black select-none">
+      {/* Invisible overlay to block all video player interactions */}
+      <div 
+        className="absolute inset-0 z-30" 
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        style={{ cursor: 'default' }}
+      />
+      
+      {/* Top bar with ad info - allow button clicks */}
+      <div className="absolute top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="flex items-center gap-3 pointer-events-none">
           <span className="bg-primary/90 text-primary-foreground text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wider">
             AD
           </span>
@@ -209,7 +220,7 @@ export function AdBreakOverlay({
         
         <div className="flex items-center gap-2">
           {/* Countdown timer to resume */}
-          <div className="flex items-center gap-2 bg-black/50 px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 bg-black/50 px-3 py-1.5 rounded-full pointer-events-none">
             <span className="text-white/70 text-xs">Returns in</span>
             <span className="text-primary font-mono font-bold text-sm">
               {formatTime(currentAdRemaining)}
@@ -220,7 +231,7 @@ export function AdBreakOverlay({
             variant="ghost"
             size="icon"
             onClick={() => setIsMuted(!isMuted)}
-            className="text-white hover:bg-white/20"
+            className="text-white hover:bg-white/20 pointer-events-auto"
           >
             {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
           </Button>
@@ -232,7 +243,7 @@ export function AdBreakOverlay({
               onClick={handleSkip}
               disabled={!canSkipNow}
               className={cn(
-                "text-white border-white/50 hover:bg-white/20 transition-all",
+                "text-white border-white/50 hover:bg-white/20 transition-all pointer-events-auto",
                 !canSkipNow && "opacity-50 cursor-not-allowed"
               )}
             >
@@ -249,7 +260,7 @@ export function AdBreakOverlay({
       </div>
 
       {/* Ad progress indicators - show which ad in pod */}
-      <div className="absolute top-16 left-4 z-10 flex items-center gap-1.5">
+      <div className="absolute top-16 left-4 z-40 flex items-center gap-1.5 pointer-events-none">
         {Array.from({ length: adQueueLength }).map((_, i) => (
           <div 
             key={i} 
@@ -273,12 +284,13 @@ export function AdBreakOverlay({
         ))}
       </div>
 
-      {/* Video player */}
+      {/* Video player - controls disabled, no seeking allowed */}
       <ReactPlayer
         ref={playerRef}
         url={playableUrl}
         playing={true}
         muted={isMuted}
+        controls={false}
         width="100%"
         height="100%"
         onProgress={handleProgress}
@@ -292,18 +304,27 @@ export function AdBreakOverlay({
           file: {
             attributes: {
               style: { objectFit: 'contain' },
+              controlsList: 'nodownload nofullscreen noremoteplayback',
+              disablePictureInPicture: true,
             },
           },
+          vimeo: {
+            playerOptions: {
+              controls: false,
+              keyboard: false,
+            }
+          }
         }}
         style={{ 
           position: 'absolute', 
           top: 0, 
-          left: 0 
+          left: 0,
+          pointerEvents: 'none', // Disable all interactions with the video player
         }}
       />
 
-      {/* Bottom bar with progress */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent pb-4 pt-12 px-4">
+      {/* Bottom bar with progress - no pointer events */}
+      <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black/80 to-transparent pb-4 pt-12 px-4 pointer-events-none">
         {/* Ad name and countdown */}
         <div className="flex justify-between items-center mb-2">
           <p className="text-white/60 text-xs">{ad.name}</p>

@@ -548,6 +548,54 @@ export function useAds(options: UseAdsOptions = {}) {
     onAdComplete();
   }, [onAdComplete]);
 
+  // Request multiple mid-roll ad breaks (for skipped breakpoints during seek)
+  const requestSkippedMidRolls = useCallback(async (breakpointCount: number): Promise<boolean> => {
+    if (breakpointCount <= 0) return false;
+    
+    console.log(`[useAds] Requesting ${breakpointCount} skipped mid-roll break(s)`);
+    
+    // Calculate total ads needed for all skipped breaks
+    let totalAds: Ad[] = [];
+    let totalTrackingIds: string[] = [];
+    
+    for (let i = 0; i < breakpointCount; i++) {
+      const nextBreakNumber = midrollBreakCount + i + 1;
+      const podSize = getProgressivePodSize(nextBreakNumber);
+      
+      const response = await fetchAdPod('mid', podSize);
+      if (response?.ads && response.ads.length > 0) {
+        totalAds = [...totalAds, ...response.ads];
+        totalTrackingIds = [...totalTrackingIds, ...response.trackingIds];
+      }
+    }
+    
+    if (totalAds.length > 0) {
+      // Update midroll break count
+      setMidrollBreakCount(prev => prev + breakpointCount);
+      
+      console.log(`[useAds] Queued ${totalAds.length} ads for ${breakpointCount} skipped breaks`);
+      
+      // Start ad pod immediately (no countdown for seek-triggered ads)
+      setAdQueue(totalAds);
+      setTrackingIds(totalTrackingIds);
+      setCurrentAdIndex(0);
+      setCurrentAd(totalAds[0]);
+      setAdPosition('mid');
+      setIsAdPlaying(true);
+      setShowCountdown(false);
+      options.onAdStart?.();
+      
+      // Track first ad impression
+      if (totalTrackingIds[0]) {
+        trackImpression(totalAds[0].id, totalTrackingIds[0], 'mid');
+      }
+      
+      return true;
+    }
+    
+    return false;
+  }, [midrollBreakCount, getProgressivePodSize, fetchAdPod, options, trackImpression]);
+
   return {
     currentAd,
     isAdPlaying,
@@ -565,6 +613,7 @@ export function useAds(options: UseAdsOptions = {}) {
     requestPreRoll,
     requestMidRoll,
     requestPostRoll,
+    requestSkippedMidRolls,
     onAdComplete,
     skipAd,
     resetMidrollCount,
