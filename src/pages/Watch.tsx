@@ -134,6 +134,41 @@ const Watch = () => {
   const accumulatedSeek = useRef<number>(0);
   const [seekingDirection, setSeekingDirection] = useState<'forward' | 'backward' | null>(null);
   const [seekDisplayTime, setSeekDisplayTime] = useState<number>(0);
+  
+  // Controls visibility state (show on hover/touch)
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Auto-hide controls after 3 seconds of inactivity
+  const resetControlsTimeout = useCallback(() => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (isPlaying && !seekingDirection) {
+        setShowControls(false);
+      }
+    }, 3000);
+  }, [isPlaying, seekingDirection]);
+  
+  // Show controls when paused or seeking
+  useEffect(() => {
+    if (!isPlaying || seekingDirection) {
+      setShowControls(true);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    } else {
+      resetControlsTimeout();
+    }
+    
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, [isPlaying, seekingDirection, resetControlsTimeout]);
 
   // Parse subtitles from JSON
   const parsedSubtitles = useMemo((): Subtitle[] => {
@@ -1001,14 +1036,20 @@ const Watch = () => {
         />
       )}
       {showVideo && !isAdPlaying ? (
-        <div className="h-screen w-full bg-black relative overflow-hidden pt-16">
+        <div 
+          className="h-screen w-full bg-black relative overflow-hidden pt-16 cursor-none"
+          onMouseMove={resetControlsTimeout}
+          onTouchStart={resetControlsTimeout}
+          onClick={resetControlsTimeout}
+          style={{ cursor: showControls ? 'default' : 'none' }}
+        >
           <div className="absolute inset-0 bg-black z-0 flex items-center justify-center mt-16">
             <div className="w-full h-full max-h-[calc(100vh-64px)]">
               <ReactPlayer
                 ref={playerRef}
                 url={videoUrl || ""}
                 playing={isPlaying}
-                controls
+                controls={false}
                 width="100%"
                 height="100%"
                 playsinline
@@ -1106,7 +1147,7 @@ const Watch = () => {
           </div>
           
           {/* Top Controls - Back button, CC, and Episode Selector */}
-          <div className="absolute top-20 left-4 right-4 z-20 flex items-center justify-between">
+          <div className={`absolute top-20 left-4 right-4 z-20 flex items-center justify-between transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <div className="flex items-center gap-2">
               <Button 
                 variant="ghost" 
@@ -1180,7 +1221,7 @@ const Watch = () => {
           </div>
 
           {/* Progress Bar Overlay at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-4">
+          <div className={`absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             {/* Next Episode Preview - Shows when near end (only if not in binge mode) */}
             {nextEpisode && progress > 90 && autoPlayNext && !bingeMode && (
               <div className="mb-3 bg-card/90 backdrop-blur-sm rounded-lg p-3 flex items-center justify-between">
