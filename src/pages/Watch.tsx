@@ -127,6 +127,13 @@ const Watch = () => {
   const pendingSeekPosition = useRef<number | null>(null);
   const lastKnownPosition = useRef<number>(0);
   const isProcessingSeek = useRef(false);
+  
+  // Hold-to-seek state
+  const seekIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const seekStartPosition = useRef<number>(0);
+  const accumulatedSeek = useRef<number>(0);
+  const [seekingDirection, setSeekingDirection] = useState<'forward' | 'backward' | null>(null);
+  const [seekDisplayTime, setSeekDisplayTime] = useState<number>(0);
 
   // Parse subtitles from JSON
   const parsedSubtitles = useMemo((): Subtitle[] => {
@@ -1212,18 +1219,87 @@ const Watch = () => {
             )}
             
             {/* Custom Video Controls */}
-            <div className="flex items-center justify-center gap-4 mb-4">
-              {/* Rewind 10s */}
+            <div className="flex items-center justify-center gap-4 mb-4 relative">
+              {/* Seek time display overlay */}
+              {seekingDirection && (
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm px-4 py-2 rounded-lg text-foreground font-bold text-lg">
+                  {seekingDirection === 'backward' ? '-' : '+'}{Math.abs(accumulatedSeek.current)}s
+                </div>
+              )}
+              
+              {/* Rewind - Hold to seek backward */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-foreground bg-background/50 hover:bg-background/70 h-12 w-12 rounded-full"
-                onClick={() => {
+                className={`text-foreground bg-background/50 hover:bg-background/70 h-12 w-12 rounded-full transition-transform ${seekingDirection === 'backward' ? 'scale-110 bg-background/80' : ''}`}
+                onMouseDown={() => {
                   if (playerRef.current && !isAdPlaying) {
                     const current = playerRef.current.getCurrentTime();
+                    seekStartPosition.current = current;
+                    accumulatedSeek.current = 0;
+                    setSeekingDirection('backward');
+                    
+                    // Immediate first skip
                     const newTime = Math.max(0, current - 10);
+                    accumulatedSeek.current = -10;
+                    setSeekDisplayTime(-10);
                     playerRef.current.seekTo(newTime, 'seconds');
+                    
+                    // Start interval for continuous seeking
+                    seekIntervalRef.current = setInterval(() => {
+                      if (playerRef.current) {
+                        const currentPos = playerRef.current.getCurrentTime();
+                        const newPos = Math.max(0, currentPos - 10);
+                        accumulatedSeek.current -= 10;
+                        setSeekDisplayTime(accumulatedSeek.current);
+                        playerRef.current.seekTo(newPos, 'seconds');
+                      }
+                    }, 250);
                   }
+                }}
+                onMouseUp={() => {
+                  if (seekIntervalRef.current) {
+                    clearInterval(seekIntervalRef.current);
+                    seekIntervalRef.current = null;
+                  }
+                  setSeekingDirection(null);
+                }}
+                onMouseLeave={() => {
+                  if (seekIntervalRef.current) {
+                    clearInterval(seekIntervalRef.current);
+                    seekIntervalRef.current = null;
+                  }
+                  setSeekingDirection(null);
+                }}
+                onTouchStart={() => {
+                  if (playerRef.current && !isAdPlaying) {
+                    const current = playerRef.current.getCurrentTime();
+                    seekStartPosition.current = current;
+                    accumulatedSeek.current = 0;
+                    setSeekingDirection('backward');
+                    
+                    const newTime = Math.max(0, current - 10);
+                    accumulatedSeek.current = -10;
+                    setSeekDisplayTime(-10);
+                    playerRef.current.seekTo(newTime, 'seconds');
+                    
+                    seekIntervalRef.current = setInterval(() => {
+                      if (playerRef.current) {
+                        const currentPos = playerRef.current.getCurrentTime();
+                        const newPos = Math.max(0, currentPos - 10);
+                        accumulatedSeek.current -= 10;
+                        setSeekDisplayTime(accumulatedSeek.current);
+                        playerRef.current.seekTo(newPos, 'seconds');
+                      }
+                    }, 250);
+                  }
+                }}
+                onTouchEnd={() => {
+                  if (seekIntervalRef.current) {
+                    clearInterval(seekIntervalRef.current);
+                    seekIntervalRef.current = null;
+                  }
+                  setSeekingDirection(null);
                 }}
                 disabled={isAdPlaying}
               >
@@ -1246,24 +1322,98 @@ const Watch = () => {
                 )}
               </Button>
               
-              {/* Fast Forward 10s */}
+              {/* Fast Forward - Hold to seek forward with ad interception */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-foreground bg-background/50 hover:bg-background/70 h-12 w-12 rounded-full"
-                onClick={async () => {
+                className={`text-foreground bg-background/50 hover:bg-background/70 h-12 w-12 rounded-full transition-transform ${seekingDirection === 'forward' ? 'scale-110 bg-background/80' : ''}`}
+                onMouseDown={() => {
                   if (playerRef.current && !isAdPlaying && duration > 0) {
                     const current = playerRef.current.getCurrentTime();
-                    const targetTime = Math.min(duration, current + 10);
-                    // Update lastKnownPosition so seek interception can detect the jump
-                    lastKnownPosition.current = current;
-                    // Use seek interception for ad-skip prevention
+                    seekStartPosition.current = current;
+                    accumulatedSeek.current = 0;
+                    setSeekingDirection('forward');
+                    
+                    // Start accumulating seek time (don't actually seek yet)
+                    accumulatedSeek.current = 10;
+                    setSeekDisplayTime(10);
+                    
+                    // Start interval for continuous accumulation
+                    seekIntervalRef.current = setInterval(() => {
+                      accumulatedSeek.current += 10;
+                      setSeekDisplayTime(accumulatedSeek.current);
+                    }, 250);
+                  }
+                }}
+                onMouseUp={async () => {
+                  if (seekIntervalRef.current) {
+                    clearInterval(seekIntervalRef.current);
+                    seekIntervalRef.current = null;
+                  }
+                  setSeekingDirection(null);
+                  
+                  if (playerRef.current && accumulatedSeek.current > 0 && duration > 0) {
+                    const targetTime = Math.min(duration, seekStartPosition.current + accumulatedSeek.current);
+                    lastKnownPosition.current = seekStartPosition.current;
+                    
                     const wasIntercepted = await handleSeekIntercept(targetTime);
                     if (!wasIntercepted) {
-                      // No ads needed, just seek directly
                       playerRef.current.seekTo(targetTime, 'seconds');
                     }
                   }
+                  accumulatedSeek.current = 0;
+                }}
+                onMouseLeave={async () => {
+                  if (seekIntervalRef.current) {
+                    clearInterval(seekIntervalRef.current);
+                    seekIntervalRef.current = null;
+                  }
+                  setSeekingDirection(null);
+                  
+                  if (playerRef.current && accumulatedSeek.current > 0 && duration > 0) {
+                    const targetTime = Math.min(duration, seekStartPosition.current + accumulatedSeek.current);
+                    lastKnownPosition.current = seekStartPosition.current;
+                    
+                    const wasIntercepted = await handleSeekIntercept(targetTime);
+                    if (!wasIntercepted) {
+                      playerRef.current.seekTo(targetTime, 'seconds');
+                    }
+                  }
+                  accumulatedSeek.current = 0;
+                }}
+                onTouchStart={() => {
+                  if (playerRef.current && !isAdPlaying && duration > 0) {
+                    const current = playerRef.current.getCurrentTime();
+                    seekStartPosition.current = current;
+                    accumulatedSeek.current = 0;
+                    setSeekingDirection('forward');
+                    
+                    accumulatedSeek.current = 10;
+                    setSeekDisplayTime(10);
+                    
+                    seekIntervalRef.current = setInterval(() => {
+                      accumulatedSeek.current += 10;
+                      setSeekDisplayTime(accumulatedSeek.current);
+                    }, 250);
+                  }
+                }}
+                onTouchEnd={async () => {
+                  if (seekIntervalRef.current) {
+                    clearInterval(seekIntervalRef.current);
+                    seekIntervalRef.current = null;
+                  }
+                  setSeekingDirection(null);
+                  
+                  if (playerRef.current && accumulatedSeek.current > 0 && duration > 0) {
+                    const targetTime = Math.min(duration, seekStartPosition.current + accumulatedSeek.current);
+                    lastKnownPosition.current = seekStartPosition.current;
+                    
+                    const wasIntercepted = await handleSeekIntercept(targetTime);
+                    if (!wasIntercepted) {
+                      playerRef.current.seekTo(targetTime, 'seconds');
+                    }
+                  }
+                  accumulatedSeek.current = 0;
                 }}
                 disabled={isAdPlaying}
               >
