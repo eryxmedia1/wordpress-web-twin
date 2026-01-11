@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
 import Navbar from "@/components/Navbar";
 import ExpandingSidebar from "@/components/ExpandingSidebar";
 import MobileLayout from "@/components/mobile/MobileLayout";
@@ -22,11 +23,24 @@ import {
   ChevronLeft,
   Check,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Trash2,
+  UserX
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -41,7 +55,8 @@ const passwordSchema = z.object({
 });
 
 const SecuritySettings = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { currentProfile, profiles, deleteProfile, clearProfile } = useProfile();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -58,6 +73,11 @@ const SecuritySettings = () => {
   // 2FA state
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [isEnabling2FA, setIsEnabling2FA] = useState(false);
+
+  // Delete account state
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isDeletingProfile, setIsDeletingProfile] = useState(false);
 
   // Mock session data
   const [sessions] = useState([
@@ -147,6 +167,65 @@ const SecuritySettings = () => {
       toast.success("Signed out of all devices");
     } catch (error) {
       toast.error("Failed to sign out of all devices");
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!currentProfile) return;
+    
+    if (profiles.length <= 1) {
+      toast.error("Cannot delete your only profile. Delete your account instead.");
+      return;
+    }
+
+    setIsDeletingProfile(true);
+    try {
+      await deleteProfile(currentProfile.id);
+      toast.success("Profile deleted successfully");
+      navigate("/profiles");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete profile");
+    } finally {
+      setIsDeletingProfile(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE") {
+      toast.error("Please type DELETE to confirm");
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("You must be logged in to delete your account");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("delete-account", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to delete account");
+      }
+
+      // Clear local state and redirect
+      clearProfile();
+      await logout();
+      toast.success("Your account has been deleted");
+      navigate("/");
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      toast.error(error.message || "Failed to delete account");
+    } finally {
+      setIsDeletingAccount(false);
+      setDeleteConfirmText("");
     }
   };
 
@@ -427,6 +506,143 @@ const SecuritySettings = () => {
                   )}
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          {/* Danger Zone - Delete Profile & Account */}
+          <Card className="mb-6 bg-destructive/5 border-destructive/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-5 h-5" />
+                Danger Zone
+              </CardTitle>
+              <CardDescription>
+                Irreversible actions that affect your profile and account
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Delete Profile */}
+              {profiles.length > 1 && (
+                <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/20 bg-background">
+                  <div>
+                    <h4 className="font-semibold text-foreground flex items-center gap-2">
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                      Delete Current Profile
+                    </h4>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Delete "{currentProfile?.name}" profile and all its watch history, likes, and lists.
+                    </p>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={isDeletingProfile}>
+                        {isDeletingProfile ? "Deleting..." : "Delete Profile"}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-card border-border">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-foreground">Delete Profile?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete the profile "{currentProfile?.name}" and all associated data including:
+                          <ul className="list-disc list-inside mt-2 space-y-1">
+                            <li>Watch history</li>
+                            <li>My List (favorites)</li>
+                            <li>Liked content</li>
+                            <li>Playlists</li>
+                          </ul>
+                          <p className="mt-2 font-semibold">This action cannot be undone.</p>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-muted">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteProfile}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete Profile
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+
+              {/* Delete Account */}
+              <div className="flex flex-col p-4 rounded-lg border border-destructive/30 bg-background">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="font-semibold text-foreground flex items-center gap-2">
+                      <UserX className="w-4 h-4 text-destructive" />
+                      Delete Entire Account
+                    </h4>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Permanently delete your account and all data. This cannot be reversed.
+                    </p>
+                  </div>
+                </div>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full sm:w-auto self-end">
+                      Delete My Account
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-card border-border">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5" />
+                        Delete Your Account?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div>
+                          <p className="mb-4">
+                            This will permanently delete your account and all associated data including:
+                          </p>
+                          <ul className="list-disc list-inside space-y-1 mb-4">
+                            <li>All profiles and their data</li>
+                            <li>Watch history across all profiles</li>
+                            <li>All favorites and likes</li>
+                            <li>All playlists</li>
+                            <li>Your indie channel(s) if any</li>
+                            <li>Talent/casting profile if any</li>
+                            <li>Subscription and billing history</li>
+                          </ul>
+                          <p className="font-semibold text-destructive mb-4">
+                            This action is permanent and cannot be undone.
+                          </p>
+                          <div className="space-y-2">
+                            <Label htmlFor="delete-confirm">
+                              Type <span className="font-mono font-bold">DELETE</span> to confirm:
+                            </Label>
+                            <Input
+                              id="delete-confirm"
+                              value={deleteConfirmText}
+                              onChange={(e) => setDeleteConfirmText(e.target.value)}
+                              placeholder="Type DELETE"
+                              className="font-mono"
+                            />
+                          </div>
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel 
+                        className="bg-muted"
+                        onClick={() => setDeleteConfirmText("")}
+                      >
+                        Cancel
+                      </AlertDialogCancel>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDeleteAccount}
+                        disabled={deleteConfirmText !== "DELETE" || isDeletingAccount}
+                      >
+                        {isDeletingAccount ? "Deleting..." : "Permanently Delete Account"}
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </CardContent>
           </Card>
 
