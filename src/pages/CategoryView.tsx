@@ -72,10 +72,16 @@ const CategoryView = () => {
   // Determine page title based on category
   const getTitle = () => {
     switch (category) {
+      case "movie":
       case "movies":
         return "All Movies";
+      case "tv":
+      case "show":
       case "tv-shows":
         return "All TV Shows";
+      case "video":
+      case "videos":
+        return "All Videos";
       case "my-list":
         return "My List";
       case "continue-watching":
@@ -133,6 +139,7 @@ const CategoryView = () => {
 
     try {
       switch (category) {
+        case "movie":
         case "movies": {
           let query = supabase
             .from("contents")
@@ -150,11 +157,32 @@ const CategoryView = () => {
           break;
         }
 
+        case "tv":
+        case "show":
         case "tv-shows": {
           let query = supabase
             .from("contents")
             .select("*")
             .eq("type", "show")
+            .order(column, { ascending })
+            .range(offset, offset + ITEMS_PER_PAGE - 1);
+          
+          if (selectedGenre) query = query.ilike("genre", `%${selectedGenre}%`);
+          if (selectedYear) query = query.eq("release_year", parseInt(selectedYear));
+          if (selectedRating) query = query.eq("rating", selectedRating);
+          
+          const result = await query;
+          data = (result.data || []) as ContentItem[];
+          break;
+        }
+
+        case "video":
+        case "videos": {
+          // Videos = all content that is NOT a movie (shows, shorts, clips, etc.)
+          let query = supabase
+            .from("contents")
+            .select("*")
+            .neq("type", "movie")
             .order(column, { ascending })
             .range(offset, offset + ITEMS_PER_PAGE - 1);
           
