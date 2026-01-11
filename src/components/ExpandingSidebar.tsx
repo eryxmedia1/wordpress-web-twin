@@ -18,11 +18,11 @@ const menuItems = [
   { icon: Users, label: "Casting Calls", path: "/casting" },
   { icon: Search, label: "Search", path: "/search" },
   { icon: Home, label: "Home", path: "/browse" },
-  { icon: Film, label: "Movies", path: "/movies" },
-  { icon: Video, label: "Videos", path: "/videos" },
+  { icon: Film, label: "Movies", path: "/category/movie" },
+  { icon: Video, label: "Videos", path: "/indie-channels" },
   { icon: Radio, label: "Live Stream", path: "/live" },
-  { icon: Tv, label: "TV Shows", path: "/tv-shows" },
-  { icon: ShoppingBag, label: "Shop", path: "/shop" },
+  { icon: Tv, label: "TV Shows", path: "/category/tv" },
+  { icon: ShoppingBag, label: "Shop", path: "/browse" },
 ];
 
 const ExpandingSidebar = () => {
