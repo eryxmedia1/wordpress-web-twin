@@ -92,19 +92,19 @@ const Navbar = () => {
   ];
 
   const tvShowCategories = [
-    { label: "Drama", path: "/browse/tv?genre=drama" },
-    { label: "Comedy", path: "/browse/tv?genre=comedy" },
-    { label: "Reality", path: "/browse/tv?genre=reality" },
-    { label: "Talk Shows", path: "/browse/tv?genre=talk" },
-    { label: "Documentaries", path: "/browse/tv?genre=documentary" },
+    { label: "Drama", path: "/genre/drama?type=show" },
+    { label: "Comedy", path: "/genre/comedy?type=show" },
+    { label: "Reality", path: "/genre/reality?type=show" },
+    { label: "Talk Shows", path: "/genre/talk?type=show" },
+    { label: "Documentaries", path: "/genre/documentary?type=show" },
   ];
 
   const movieCategories = [
-    { label: "Action", path: "/browse/movies?genre=action" },
-    { label: "Comedy", path: "/browse/movies?genre=comedy" },
-    { label: "Drama", path: "/browse/movies?genre=drama" },
-    { label: "Horror", path: "/browse/movies?genre=horror" },
-    { label: "Romance", path: "/browse/movies?genre=romance" },
+    { label: "Action", path: "/genre/action?type=movie" },
+    { label: "Comedy", path: "/genre/comedy?type=movie" },
+    { label: "Drama", path: "/genre/drama?type=movie" },
+    { label: "Horror", path: "/genre/horror?type=movie" },
+    { label: "Romance", path: "/genre/romance?type=movie" },
   ];
 
   return (
@@ -131,12 +131,12 @@ const Navbar = () => {
 
         {/* Shows Dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors">
+          <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors outline-none">
             SHOWS <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-background/95 backdrop-blur-sm border-border min-w-[180px]">
+          <DropdownMenuContent className="bg-background border-border min-w-[180px] z-[60]">
             <DropdownMenuItem asChild>
-              <Link to="/browse/tv" className="cursor-pointer">All TV Shows</Link>
+              <Link to="/category/tv" className="cursor-pointer">All TV Shows</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {tvShowCategories.map((cat) => (
@@ -149,12 +149,12 @@ const Navbar = () => {
 
         {/* Movies Dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors">
+          <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors outline-none">
             MOVIES <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-background/95 backdrop-blur-sm border-border min-w-[180px]">
+          <DropdownMenuContent className="bg-background border-border min-w-[180px] z-[60]">
             <DropdownMenuItem asChild>
-              <Link to="/browse/movies" className="cursor-pointer">All Movies</Link>
+              <Link to="/category/movie" className="cursor-pointer">All Movies</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {movieCategories.map((cat) => (
@@ -167,21 +167,21 @@ const Navbar = () => {
 
         {/* Collections Dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors">
+          <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors outline-none">
             COLLECTIONS <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-background/95 backdrop-blur-sm border-border min-w-[180px]">
+          <DropdownMenuContent className="bg-background border-border min-w-[180px] z-[60]">
             <DropdownMenuItem asChild>
-              <Link to="/browse/new" className="cursor-pointer">New Releases</Link>
+              <Link to="/category/new" className="cursor-pointer">New Releases</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/browse/originals" className="cursor-pointer">Zoe Originals</Link>
+              <Link to="/category/originals" className="cursor-pointer">Zoe Originals</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/browse/trending" className="cursor-pointer">Trending Now</Link>
+              <Link to="/category/we-think-youll-love" className="cursor-pointer">Trending Now</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/browse/top10" className="cursor-pointer">Top 10</Link>
+              <Link to="/category/top-10" className="cursor-pointer">Top 10</Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -206,16 +206,16 @@ const Navbar = () => {
         </Link>
 
         <Link 
-          to="/browse/news" 
+          to="/category/new" 
           className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors"
         >
           NEWS
         </Link>
 
         <Link 
-          to="/browse/mylist" 
+          to="/category/my-list" 
           className={`px-4 py-2 text-sm font-semibold transition-colors hover:text-primary ${
-            location.pathname === '/browse/mylist' ? 'text-foreground' : 'text-muted-foreground'
+            location.pathname === '/category/my-list' ? 'text-foreground' : 'text-muted-foreground'
           }`}
         >
           MY LIST
