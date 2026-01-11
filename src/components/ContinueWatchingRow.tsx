@@ -113,11 +113,13 @@ const ContinueWatchingRow = ({ onMoreInfo, seeAllLink = "/category/continue-watc
       ]);
 
       if (!historyResult.error && historyResult.data) {
-        // Deduplicate by content_id + episode_id, keeping the most recent entry
+        // Deduplicate by content_id ONLY - show only ONE entry per show/movie
+        // For TV shows with multiple episodes watched, show only the most recently watched episode
         const deduplicatedMap = new Map<string, typeof historyResult.data[0]>();
         for (const item of historyResult.data) {
           if (!item.content) continue;
-          const key = item.episode_id ? `${item.content_id}-${item.episode_id}` : item.content_id;
+          // Use content_id as key - this ensures only one entry per show/movie
+          const key = item.content_id;
           // Since data is ordered by last_watched_at DESC, first occurrence is the most recent
           if (!deduplicatedMap.has(key)) {
             deduplicatedMap.set(key, item);
