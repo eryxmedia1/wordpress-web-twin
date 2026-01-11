@@ -70,6 +70,9 @@ import AdminCrewPositions from "./pages/AdminCrewPositions";
 import AdminCrewApplications from "./pages/AdminCrewApplications";
 import DepartmentPage from "./pages/DepartmentPage";
 import CrewPositionDetail from "./pages/CrewPositionDetail";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CookiePolicy from "./pages/CookiePolicy";
 
 const queryClient = new QueryClient();
 
@@ -128,6 +131,9 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/cookies" element={<CookiePolicy />} />
               <Route path="/verify-otp" element={<OtpVerification />} />
               
               {/* Protected Routes - Requires Auth */}

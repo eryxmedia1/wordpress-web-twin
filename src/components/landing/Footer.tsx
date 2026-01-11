@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
@@ -8,25 +9,25 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <ul className="space-y-3">
-              <li><a href="#" className="hover:underline">FAQ</a></li>
+              <li><Link to="/help" className="hover:underline">FAQ</Link></li>
               <li><a href="#" className="hover:underline">Investor Relations</a></li>
-              <li><a href="#" className="hover:underline">Privacy</a></li>
+              <li><Link to="/privacy" className="hover:underline">Privacy Policy</Link></li>
               <li><a href="#" className="hover:underline">Speed Test</a></li>
             </ul>
           </div>
           
           <div>
             <ul className="space-y-3">
-              <li><a href="#" className="hover:underline">Help Center</a></li>
+              <li><Link to="/help" className="hover:underline">Help Center</Link></li>
               <li><a href="#" className="hover:underline">Jobs</a></li>
-              <li><a href="#" className="hover:underline">Cookie Preferences</a></li>
+              <li><Link to="/cookies" className="hover:underline">Cookie Policy</Link></li>
               <li><a href="#" className="hover:underline">Legal Notices</a></li>
             </ul>
           </div>
           
           <div>
             <ul className="space-y-3">
-              <li><a href="#" className="hover:underline">Account</a></li>
+              <li><Link to="/account" className="hover:underline">Account</Link></li>
               <li><a href="#" className="hover:underline">Ways to Watch</a></li>
               <li><a href="#" className="hover:underline">Corporate Information</a></li>
               <li><a href="#" className="hover:underline">Only on ZOE</a></li>
@@ -36,7 +37,7 @@ const Footer = () => {
           <div>
             <ul className="space-y-3">
               <li><a href="#" className="hover:underline">Media Center</a></li>
-              <li><a href="#" className="hover:underline">Terms of Use</a></li>
+              <li><Link to="/terms" className="hover:underline">Terms of Service</Link></li>
               <li><a href="#" className="hover:underline">Contact Us</a></li>
             </ul>
           </div>
