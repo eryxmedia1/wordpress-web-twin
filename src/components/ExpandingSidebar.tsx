@@ -19,7 +19,7 @@ const menuItems = [
   { icon: Search, label: "Search", path: "/search" },
   { icon: Home, label: "Home", path: "/browse" },
   { icon: Film, label: "Movies", path: "/category/movie" },
-  { icon: Video, label: "Videos", path: "/indie-channels" },
+  { icon: Video, label: "Videos", path: "/category/video" },
   { icon: Radio, label: "Live Stream", path: "/live" },
   { icon: Tv, label: "TV Shows", path: "/category/tv" },
   { icon: ShoppingBag, label: "Shop", path: "/browse" },

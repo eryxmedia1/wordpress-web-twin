@@ -130,22 +130,22 @@ const MobileHeader = () => {
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-1 mt-1">
-                    <button onClick={() => handleNavigate("/browse?type=movie")} className={subMenuItemClass("/browse?type=movie")}>
+                    <button onClick={() => handleNavigate("/category/movie")} className={subMenuItemClass("/category/movie")}>
                       All Movies
                     </button>
-                    <button onClick={() => handleNavigate("/genre/action")} className={subMenuItemClass("/genre/action")}>
+                    <button onClick={() => handleNavigate("/genre/action?type=movie")} className={subMenuItemClass("/genre/action")}>
                       Action
                     </button>
-                    <button onClick={() => handleNavigate("/genre/comedy")} className={subMenuItemClass("/genre/comedy")}>
+                    <button onClick={() => handleNavigate("/genre/comedy?type=movie")} className={subMenuItemClass("/genre/comedy")}>
                       Comedy
                     </button>
-                    <button onClick={() => handleNavigate("/genre/drama")} className={subMenuItemClass("/genre/drama")}>
+                    <button onClick={() => handleNavigate("/genre/drama?type=movie")} className={subMenuItemClass("/genre/drama")}>
                       Drama
                     </button>
-                    <button onClick={() => handleNavigate("/genre/horror")} className={subMenuItemClass("/genre/horror")}>
+                    <button onClick={() => handleNavigate("/genre/horror?type=movie")} className={subMenuItemClass("/genre/horror")}>
                       Horror
                     </button>
-                    <button onClick={() => handleNavigate("/genre/romance")} className={subMenuItemClass("/genre/romance")}>
+                    <button onClick={() => handleNavigate("/genre/romance?type=movie")} className={subMenuItemClass("/genre/romance")}>
                       Romance
                     </button>
                   </CollapsibleContent>
@@ -163,19 +163,19 @@ const MobileHeader = () => {
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-1 mt-1">
-                    <button onClick={() => handleNavigate("/browse?type=tv")} className={subMenuItemClass("/browse?type=tv")}>
+                    <button onClick={() => handleNavigate("/category/tv")} className={subMenuItemClass("/category/tv")}>
                       All TV Shows
                     </button>
-                    <button onClick={() => handleNavigate("/genre/drama")} className={subMenuItemClass("/genre/drama")}>
+                    <button onClick={() => handleNavigate("/genre/drama?type=show")} className={subMenuItemClass("/genre/drama")}>
                       Drama
                     </button>
-                    <button onClick={() => handleNavigate("/genre/comedy")} className={subMenuItemClass("/genre/comedy")}>
+                    <button onClick={() => handleNavigate("/genre/comedy?type=show")} className={subMenuItemClass("/genre/comedy")}>
                       Comedy
                     </button>
-                    <button onClick={() => handleNavigate("/genre/reality")} className={subMenuItemClass("/genre/reality")}>
+                    <button onClick={() => handleNavigate("/genre/reality?type=show")} className={subMenuItemClass("/genre/reality")}>
                       Reality
                     </button>
-                    <button onClick={() => handleNavigate("/genre/documentary")} className={subMenuItemClass("/genre/documentary")}>
+                    <button onClick={() => handleNavigate("/genre/documentary?type=show")} className={subMenuItemClass("/genre/documentary")}>
                       Documentaries
                     </button>
                   </CollapsibleContent>
