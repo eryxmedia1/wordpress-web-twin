@@ -37,6 +37,7 @@ import MobileIndieChannelsRow from "@/components/mobile/MobileIndieChannelsRow";
 import MobileIndieChannelContentRow from "@/components/mobile/MobileIndieChannelContentRow";
 import MobileAfricanMoviesRow from "@/components/mobile/MobileAfricanMoviesRow";
 import MobileYardMonTVRow from "@/components/mobile/MobileYardMonTVRow";
+import MobileComingSoonRow from "@/components/mobile/MobileComingSoonRow";
 
 interface Content {
   id: string;
@@ -213,6 +214,9 @@ const Browse = () => {
         <div className="space-y-2 pb-4">
           {/* Continue Watching */}
           <MobileContinueWatchingRow onItemClick={handleMoreInfo} seeAllLink="/category/continue-watching" />
+
+          {/* Coming Soon */}
+          <MobileComingSoonRow onItemClick={handleMoreInfo} seeAllLink="/category/coming-soon" />
 
           {/* My List */}
           <MobileMyListRow onItemClick={handleMoreInfo} seeAllLink="/category/my-list" />
