@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
+import { useSSOAutoLogin } from "@/hooks/useSSOAutoLogin";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -118,6 +119,18 @@ function AppRefreshHandler() {
   return null;
 }
 
+function SSOGate({ children }: { children: React.ReactNode }) {
+  const { isProcessing } = useSSOAutoLogin();
+  if (isProcessing) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-black text-white">
+        Signing you in...
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AppRefreshHandler />
@@ -126,95 +139,97 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/cookies" element={<CookiePolicy />} />
-              <Route path="/verify-otp" element={<OtpVerification />} />
-              
-              {/* Protected Routes - Requires Auth */}
-              <Route element={<RequireAuth />}>
-                <Route path="/profiles" element={<ProfileSelection />} />
+          <SSOGate>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/cookies" element={<CookiePolicy />} />
+                <Route path="/verify-otp" element={<OtpVerification />} />
                 
-                {/* Routes requiring profile selection */}
-                <Route element={<RequireProfile />}>
-                  <Route path="/browse" element={<Browse />} />
-                  <Route path="/browse/:category" element={<Browse />} />
-                  <Route path="/browse/genres" element={<GenreView />} />
-                  <Route path="/browse/genres/:genreId" element={<GenreView />} />
-                  <Route path="/category/:category" element={<CategoryView />} />
-                  <Route path="/search" element={<Search />} />
-                  <Route path="/plans" element={<Plans />} />
-                  <Route path="/watch/:id" element={<Watch />} />
-                  <Route path="/profile" element={<UserProfile />} />
-                  <Route path="/profile/:id" element={<UserProfile />} />
-                  <Route path="/account" element={<Account />} />
-                  <Route path="/account/security" element={<SecuritySettings />} />
-                  <Route path="/help" element={<HelpCenter />} />
-                  <Route path="/producers" element={<Producers />} />
-                  <Route path="/producer-profile/:id" element={<ProducerProfile />} />
-                  <Route path="/live" element={<LiveTV />} />
-                  <Route path="/live/:channelSlug" element={<LiveTV />} />
-                  <Route path="/indie-channels" element={<IndieChannels />} />
-                  <Route path="/indie-channel/:slug" element={<IndieChannelPage />} />
-                  <Route path="/producer/:slug" element={<ProducerDashboard />} />
-                  <Route path="/notifications" element={<Notifications />} />
-                  <Route path="/casting" element={<Casting />} />
-                  <Route path="/casting/calls" element={<CastingCalls />} />
-                  <Route path="/casting/shows" element={<CastingShows />} />
-                  <Route path="/casting/shows/:slug" element={<CastingShowDetail />} />
-                  <Route path="/casting/crew" element={<CrewHiring />} />
-                  <Route path="/casting/crew/:id" element={<CrewPositionDetail />} />
-                  <Route path="/casting/departments/:slug" element={<DepartmentPage />} />
-                  <Route path="/talent/:id" element={<TalentProfile />} />
-                  <Route path="/talent/edit" element={<TalentEdit />} />
-                  <Route path="/talent/signup" element={<TalentSignup />} />
-                  <Route path="/talent/dashboard" element={<TalentDashboard />} />
+                {/* Protected Routes - Requires Auth */}
+                <Route element={<RequireAuth />}>
+                  <Route path="/profiles" element={<ProfileSelection />} />
+                  
+                  {/* Routes requiring profile selection */}
+                  <Route element={<RequireProfile />}>
+                    <Route path="/browse" element={<Browse />} />
+                    <Route path="/browse/:category" element={<Browse />} />
+                    <Route path="/browse/genres" element={<GenreView />} />
+                    <Route path="/browse/genres/:genreId" element={<GenreView />} />
+                    <Route path="/category/:category" element={<CategoryView />} />
+                    <Route path="/search" element={<Search />} />
+                    <Route path="/plans" element={<Plans />} />
+                    <Route path="/watch/:id" element={<Watch />} />
+                    <Route path="/profile" element={<UserProfile />} />
+                    <Route path="/profile/:id" element={<UserProfile />} />
+                    <Route path="/account" element={<Account />} />
+                    <Route path="/account/security" element={<SecuritySettings />} />
+                    <Route path="/help" element={<HelpCenter />} />
+                    <Route path="/producers" element={<Producers />} />
+                    <Route path="/producer-profile/:id" element={<ProducerProfile />} />
+                    <Route path="/live" element={<LiveTV />} />
+                    <Route path="/live/:channelSlug" element={<LiveTV />} />
+                    <Route path="/indie-channels" element={<IndieChannels />} />
+                    <Route path="/indie-channel/:slug" element={<IndieChannelPage />} />
+                    <Route path="/producer/:slug" element={<ProducerDashboard />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/casting" element={<Casting />} />
+                    <Route path="/casting/calls" element={<CastingCalls />} />
+                    <Route path="/casting/shows" element={<CastingShows />} />
+                    <Route path="/casting/shows/:slug" element={<CastingShowDetail />} />
+                    <Route path="/casting/crew" element={<CrewHiring />} />
+                    <Route path="/casting/crew/:id" element={<CrewPositionDetail />} />
+                    <Route path="/casting/departments/:slug" element={<DepartmentPage />} />
+                    <Route path="/talent/:id" element={<TalentProfile />} />
+                    <Route path="/talent/edit" element={<TalentEdit />} />
+                    <Route path="/talent/signup" element={<TalentSignup />} />
+                    <Route path="/talent/dashboard" element={<TalentDashboard />} />
+                  </Route>
                 </Route>
-              </Route>
-              
-              {/* Admin Routes */}
-              <Route element={<RequireAdmin />}>
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/admin/movies" element={<AdminMovies />} />
-                <Route path="/admin/movies/:section" element={<AdminMovies />} />
-                <Route path="/admin/tvshows" element={<AdminTvShows />} />
-                <Route path="/admin/tvshows/:section" element={<AdminTvShows />} />
-                <Route path="/admin/tags" element={<AdminTags />} />
-                <Route path="/admin/plans" element={<AdminMembershipPlans />} />
-                <Route path="/admin/top10" element={<AdminTop10 />} />
-                <Route path="/admin/auth-backgrounds" element={<AdminAuthBackgrounds />} />
-                <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/content/:id" element={<EditContent />} />
-                <Route path="/admin/content/new" element={<EditContent />} />
-                <Route path="/admin/livetv" element={<AdminLiveTV />} />
-                <Route path="/admin/livetv/channels" element={<AdminLiveTVChannels />} />
-                <Route path="/admin/livetv/playlists/:channelId" element={<AdminLiveTVPlaylists />} />
-                <Route path="/admin/livetv/ads" element={<AdminLiveTVAds />} />
-                <Route path="/admin/ad-reports" element={<AdminAdReports />} />
-                <Route path="/admin/indie-channels" element={<AdminIndieChannels />} />
-                <Route path="/admin/channel-analytics" element={<AdminChannelAnalytics />} />
-                <Route path="/admin/campaigns" element={<AdminCampaigns />} />
-                <Route path="/admin/talents" element={<AdminTalents />} />
-                <Route path="/admin/casting-calls" element={<AdminCastingCalls />} />
-                <Route path="/admin/casting-banners" element={<AdminCastingBanners />} />
-                <Route path="/admin/casting-shows" element={<AdminCastingShows />} />
-                <Route path="/admin/casting-roles" element={<AdminCastingRoles />} />
-                <Route path="/admin/casting-applications" element={<AdminCastingApplications />} />
-                <Route path="/admin/casting-dashboard" element={<AdminCastingDashboard />} />
-                <Route path="/admin/departments" element={<AdminDepartments />} />
-                <Route path="/admin/crew-positions" element={<AdminCrewPositions />} />
-                <Route path="/admin/crew-applications" element={<AdminCrewApplications />} />
-              </Route>
-              
-              {/* Catch-all */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+                
+                {/* Admin Routes */}
+                <Route element={<RequireAdmin />}>
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/admin/movies" element={<AdminMovies />} />
+                  <Route path="/admin/movies/:section" element={<AdminMovies />} />
+                  <Route path="/admin/tvshows" element={<AdminTvShows />} />
+                  <Route path="/admin/tvshows/:section" element={<AdminTvShows />} />
+                  <Route path="/admin/tags" element={<AdminTags />} />
+                  <Route path="/admin/plans" element={<AdminMembershipPlans />} />
+                  <Route path="/admin/top10" element={<AdminTop10 />} />
+                  <Route path="/admin/auth-backgrounds" element={<AdminAuthBackgrounds />} />
+                  <Route path="/admin/users" element={<AdminUsers />} />
+                  <Route path="/admin/content/:id" element={<EditContent />} />
+                  <Route path="/admin/content/new" element={<EditContent />} />
+                  <Route path="/admin/livetv" element={<AdminLiveTV />} />
+                  <Route path="/admin/livetv/channels" element={<AdminLiveTVChannels />} />
+                  <Route path="/admin/livetv/playlists/:channelId" element={<AdminLiveTVPlaylists />} />
+                  <Route path="/admin/livetv/ads" element={<AdminLiveTVAds />} />
+                  <Route path="/admin/ad-reports" element={<AdminAdReports />} />
+                  <Route path="/admin/indie-channels" element={<AdminIndieChannels />} />
+                  <Route path="/admin/channel-analytics" element={<AdminChannelAnalytics />} />
+                  <Route path="/admin/campaigns" element={<AdminCampaigns />} />
+                  <Route path="/admin/talents" element={<AdminTalents />} />
+                  <Route path="/admin/casting-calls" element={<AdminCastingCalls />} />
+                  <Route path="/admin/casting-banners" element={<AdminCastingBanners />} />
+                  <Route path="/admin/casting-shows" element={<AdminCastingShows />} />
+                  <Route path="/admin/casting-roles" element={<AdminCastingRoles />} />
+                  <Route path="/admin/casting-applications" element={<AdminCastingApplications />} />
+                  <Route path="/admin/casting-dashboard" element={<AdminCastingDashboard />} />
+                  <Route path="/admin/departments" element={<AdminDepartments />} />
+                  <Route path="/admin/crew-positions" element={<AdminCrewPositions />} />
+                  <Route path="/admin/crew-applications" element={<AdminCrewApplications />} />
+                </Route>
+                
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </SSOGate>
         </TooltipProvider>
       </ProfileProvider>
     </AuthProvider>
