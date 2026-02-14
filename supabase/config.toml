@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.send-casting-notification]
 verify_jwt = false
+
+[functions.verify-sso-token]
+verify_jwt = false
