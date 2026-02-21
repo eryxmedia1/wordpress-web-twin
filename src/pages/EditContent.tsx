@@ -154,30 +154,6 @@ const EditContent = () => {
   });
 
   useEffect(() => {
-    async function checkAdminStatus() {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("You must be logged in to access the admin area");
-        navigate("/login");
-        return;
-      }
-
-      // Use type assertion to work with the profiles table
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single() as { data: DbProfile | null };
-      
-      if (!profile?.is_admin) {
-        toast.error("You don't have permission to access the admin area");
-        navigate("/");
-      }
-    }
-
-    checkAdminStatus();
-    
     if (!isNew) {
       fetchContentDetails();
     }

@@ -30,8 +30,6 @@ const AdminCategories = () => {
   const { type } = useParams();
 
   useEffect(() => {
-    checkAdminStatus();
-    
     // Set content type based on URL parameter
     if (type === "movies") {
       setContentType("movie");
@@ -41,31 +39,6 @@ const AdminCategories = () => {
     
     fetchCategories();
   }, [type]);
-
-  useEffect(() => {
-    fetchCategories();
-  }, [contentType]);
-
-  async function checkAdminStatus() {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      toast.error("You must be logged in to access the admin area");
-      navigate("/login");
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null };
-    
-    if (!profile?.is_admin) {
-      toast.error("You don't have permission to access the admin area");
-      navigate("/");
-    }
-  }
 
   async function fetchCategories(contentType?: ContentType) {
     setLoading(true);
