@@ -28,6 +28,7 @@ const Footer = () => {
           <div>
             <ul className="space-y-3">
               <li><Link to="/account" className="hover:underline">Account</Link></li>
+              <li><a href="https://zoenationuniverse.com" target="_blank" rel="noopener noreferrer" className="hover:underline">Zoe Nation Universe</a></li>
               <li><a href="#" className="hover:underline">Ways to Watch</a></li>
               <li><a href="#" className="hover:underline">Corporate Information</a></li>
               <li><a href="#" className="hover:underline">Only on ZOE</a></li>

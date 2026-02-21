@@ -10,7 +10,8 @@ import {
   Search,
   Users,
   Menu,
-  User
+  User,
+  Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ const menuItems = [
   { icon: Users, label: "Casting Calls", path: "/casting" },
   { icon: Search, label: "Search", path: "/search" },
   { icon: Home, label: "Home", path: "/browse" },
+  { icon: Globe, label: "Zoe Nation Universe", path: "https://zoenationuniverse.com", external: true },
   { icon: Film, label: "Movies", path: "/category/movie" },
   { icon: Video, label: "Videos", path: "/category/video" },
   { icon: Radio, label: "Live Stream", path: "/live" },
@@ -57,7 +59,31 @@ const ExpandingSidebar = () => {
       <nav className="flex-1 py-4 overflow-y-auto">
         <ul className="space-y-1 px-2">
           {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = !('external' in item) && location.pathname === item.path;
+            const linkProps = 'external' in item
+              ? { as: 'a' as const, href: item.path, target: '_blank', rel: 'noopener noreferrer' }
+              : {};
+            
+            if ('external' in item) {
+              return (
+                <li key={item.label}>
+                  <a
+                    href={item.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 text-gray-400 hover:bg-white/10 hover:text-white"
+                  >
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    {isExpanded && (
+                      <span className="text-sm font-medium whitespace-nowrap animate-fade-in">
+                        {item.label}
+                      </span>
+                    )}
+                  </a>
+                </li>
+              );
+            }
+
             return (
               <li key={item.label}>
                 <Link
