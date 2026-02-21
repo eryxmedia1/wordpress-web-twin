@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/context/ProfileContext";
+import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
@@ -85,6 +87,8 @@ const CHANNELS = [
 
 const Browse = () => {
   const { currentProfile } = useProfile();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [featuredContents, setFeaturedContents] = useState<Content[]>([]);
   const [movies, setMovies] = useState<Content[]>([]);
@@ -162,7 +166,21 @@ const Browse = () => {
     fetchContent();
   }, []);
 
+  // Gate all interactions behind auth
+  const requireAuth = () => {
+    if (!user) {
+      navigate('/login');
+      return false;
+    }
+    if (!currentProfile) {
+      navigate('/profiles');
+      return false;
+    }
+    return true;
+  };
+
   const handleMoreInfo = (contentId: string) => {
+    if (!requireAuth()) return;
     setSelectedContentId(contentId);
   };
 

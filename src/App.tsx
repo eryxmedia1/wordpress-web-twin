@@ -142,7 +142,8 @@ const App = () => (
           <SSOGate>
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<Browse />} />
+                <Route path="/browse" element={<Browse />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -156,7 +157,6 @@ const App = () => (
                   
                   {/* Routes requiring profile selection */}
                   <Route element={<RequireProfile />}>
-                    <Route path="/browse" element={<Browse />} />
                     <Route path="/browse/:category" element={<Browse />} />
                     <Route path="/browse/genres" element={<GenreView />} />
                     <Route path="/browse/genres/:genreId" element={<GenreView />} />
