@@ -3670,6 +3670,33 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles_public: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          creator_tier: string | null
+          full_name: string | null
+          id: string | null
+          subscription_tier: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          creator_tier?: string | null
+          full_name?: string | null
+          id?: string | null
+          subscription_tier?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          creator_tier?: string | null
+          full_name?: string | null
+          id?: string | null
+          subscription_tier?: string | null
+        }
+        Relationships: []
+      }
       talents_public: {
         Row: {
           age_range: string | null
