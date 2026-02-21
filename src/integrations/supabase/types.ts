@@ -762,6 +762,13 @@ export type Database = {
             referencedRelation: "talents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "casting_applications_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       casting_calls: {
@@ -1467,6 +1474,13 @@ export type Database = {
             referencedRelation: "talents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "conversations_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       creator_plans: {
@@ -1592,6 +1606,13 @@ export type Database = {
             columns: ["talent_id"]
             isOneToOne: false
             referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_applications_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2805,6 +2826,13 @@ export type Database = {
             referencedRelation: "talents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "talent_photos_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       talent_work_history: {
@@ -2847,6 +2875,13 @@ export type Database = {
             columns: ["talent_id"]
             isOneToOne: false
             referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_work_history_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents_public"
             referencedColumns: ["id"]
           },
         ]
@@ -3139,6 +3174,13 @@ export type Database = {
             referencedRelation: "talents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_bookings_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_calendar_events: {
@@ -3209,6 +3251,13 @@ export type Database = {
             referencedRelation: "talents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_calendar_events_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_documents: {
@@ -3258,6 +3307,13 @@ export type Database = {
             columns: ["talent_id"]
             isOneToOne: false
             referencedRelation: "talents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_documents_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents_public"
             referencedColumns: ["id"]
           },
         ]
@@ -3506,6 +3562,13 @@ export type Database = {
             referencedRelation: "talents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_tasks_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "talents_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       watch_history: {
@@ -3604,6 +3667,144 @@ export type Database = {
           slug?: string | null
           timezone?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      talents_public: {
+        Row: {
+          age_range: string | null
+          applicant_type: string | null
+          availability_notes: string | null
+          bio: string | null
+          category: Database["public"]["Enums"]["talent_category"] | null
+          city: string | null
+          comfort_improv: boolean | null
+          comfort_speaking: boolean | null
+          comfort_stunts: boolean | null
+          comfort_swimwear: boolean | null
+          country: string | null
+          created_at: string | null
+          crew_primary_role: string | null
+          crew_secondary_roles: string[] | null
+          crew_years_experience: number | null
+          ethnicity: string | null
+          eye_color: string | null
+          facebook_url: string | null
+          hair_color: string | null
+          has_drivers_license: boolean | null
+          has_passport: boolean | null
+          height: string | null
+          id: string | null
+          imdb_url: string | null
+          instagram_url: string | null
+          is_active: boolean | null
+          is_approved: boolean | null
+          is_featured: boolean | null
+          languages: string[] | null
+          name: string | null
+          portfolio_url: string | null
+          primary_photo_url: string | null
+          skills_tags: string[] | null
+          state: string | null
+          tiktok_url: string | null
+          union_status: string | null
+          updated_at: string | null
+          user_id: string | null
+          video_reel_url: string | null
+          website_url: string | null
+          willing_to_travel: boolean | null
+          x_twitter_url: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          age_range?: string | null
+          applicant_type?: string | null
+          availability_notes?: string | null
+          bio?: string | null
+          category?: Database["public"]["Enums"]["talent_category"] | null
+          city?: string | null
+          comfort_improv?: boolean | null
+          comfort_speaking?: boolean | null
+          comfort_stunts?: boolean | null
+          comfort_swimwear?: boolean | null
+          country?: string | null
+          created_at?: string | null
+          crew_primary_role?: string | null
+          crew_secondary_roles?: string[] | null
+          crew_years_experience?: number | null
+          ethnicity?: string | null
+          eye_color?: string | null
+          facebook_url?: string | null
+          hair_color?: string | null
+          has_drivers_license?: boolean | null
+          has_passport?: boolean | null
+          height?: string | null
+          id?: string | null
+          imdb_url?: string | null
+          instagram_url?: string | null
+          is_active?: boolean | null
+          is_approved?: boolean | null
+          is_featured?: boolean | null
+          languages?: string[] | null
+          name?: string | null
+          portfolio_url?: string | null
+          primary_photo_url?: string | null
+          skills_tags?: string[] | null
+          state?: string | null
+          tiktok_url?: string | null
+          union_status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          video_reel_url?: string | null
+          website_url?: string | null
+          willing_to_travel?: boolean | null
+          x_twitter_url?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          age_range?: string | null
+          applicant_type?: string | null
+          availability_notes?: string | null
+          bio?: string | null
+          category?: Database["public"]["Enums"]["talent_category"] | null
+          city?: string | null
+          comfort_improv?: boolean | null
+          comfort_speaking?: boolean | null
+          comfort_stunts?: boolean | null
+          comfort_swimwear?: boolean | null
+          country?: string | null
+          created_at?: string | null
+          crew_primary_role?: string | null
+          crew_secondary_roles?: string[] | null
+          crew_years_experience?: number | null
+          ethnicity?: string | null
+          eye_color?: string | null
+          facebook_url?: string | null
+          hair_color?: string | null
+          has_drivers_license?: boolean | null
+          has_passport?: boolean | null
+          height?: string | null
+          id?: string | null
+          imdb_url?: string | null
+          instagram_url?: string | null
+          is_active?: boolean | null
+          is_approved?: boolean | null
+          is_featured?: boolean | null
+          languages?: string[] | null
+          name?: string | null
+          portfolio_url?: string | null
+          primary_photo_url?: string | null
+          skills_tags?: string[] | null
+          state?: string | null
+          tiktok_url?: string | null
+          union_status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          video_reel_url?: string | null
+          website_url?: string | null
+          willing_to_travel?: boolean | null
+          x_twitter_url?: string | null
+          youtube_url?: string | null
         }
         Relationships: []
       }

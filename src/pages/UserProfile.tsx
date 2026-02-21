@@ -10,6 +10,7 @@ import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProfile } from "@/context/ProfileContext";
+import { useAuth } from "@/context/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface WatchHistoryItem {
@@ -60,6 +61,7 @@ interface UserPlaylist {
 const UserProfile = () => {
   const navigate = useNavigate();
   const { currentProfile } = useProfile();
+  const { isAdmin: authIsAdmin } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userPlan, setUserPlan] = useState("free");
@@ -84,14 +86,14 @@ const UserProfile = () => {
         return;
       }
       
-      // Check admin status and get plan
+      // Get plan from profiles
       const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin, subscription_tier')
+        .select('subscription_tier')
         .eq('id', user.id)
         .single();
         
-      setIsAdmin(profile?.is_admin || false);
+      setIsAdmin(authIsAdmin);
       setUserPlan(profile?.subscription_tier || 'free');
 
       if (!currentProfile?.id) {

@@ -22,30 +22,8 @@ const AdminTags = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkAdminStatus();
     fetchTags();
   }, []);
-
-  async function checkAdminStatus() {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      toast.error("You must be logged in to access the admin area");
-      navigate("/login");
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null };
-    
-    if (!profile?.is_admin) {
-      toast.error("You don't have permission to access the admin area");
-      navigate("/");
-    }
-  }
 
   async function fetchTags() {
     setLoading(true);
