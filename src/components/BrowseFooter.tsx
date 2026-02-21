@@ -49,6 +49,7 @@ const BrowseFooter = () => {
             <h4 className="text-white font-semibold mb-4">Community</h4>
             <ul className="space-y-2">
               <li><Link to="/producers" className="text-gray-400 hover:text-white text-sm transition-colors">Producers</Link></li>
+              <li><a href="https://zoenationuniverse.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white text-sm transition-colors">Zoe Nation Universe</a></li>
               <li><Link to="/news" className="text-gray-400 hover:text-white text-sm transition-colors">News</Link></li>
               <li><Link to="/shop" className="text-gray-400 hover:text-white text-sm transition-colors">Shop</Link></li>
             </ul>
