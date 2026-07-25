@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         globIgnores: ['**/lovable-uploads/**'],
-        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6MB limit
+        maximumFileSizeToCacheInBytes: 12 * 1024 * 1024, // 12MB limit
         runtimeCaching: [
           {
             // Live TV and dynamic content - very short cache
