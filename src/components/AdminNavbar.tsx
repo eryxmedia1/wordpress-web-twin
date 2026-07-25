@@ -121,6 +121,10 @@ const AdminNavbar = () => {
             <ImageIcon className="h-4 w-4" />
             Backgrounds
           </Link>
+          <Link to="/admin/media-library" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-200">
+            <ImageIcon className="h-4 w-4" />
+            Media Library
+          </Link>
           <Link to="/admin/users" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 hover:text-green-300 transition-all duration-200">
             <Users className="h-4 w-4" />
             Users

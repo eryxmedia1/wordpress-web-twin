@@ -298,7 +298,7 @@ const AddEpisodicShowForm = ({ onClose }: AddEpisodicShowFormProps) => {
         if (Object.keys(updateData).length > 0) {
           await supabase
             .from('contents')
-            .update(updateData)
+            .update(updateData as any)
             .eq('id', showData.id);
         }
       }

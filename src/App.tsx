@@ -37,6 +37,7 @@ import Plans from "./pages/Plans";
 import AdminMembershipPlans from "./pages/AdminMembershipPlans";
 import AdminTop10 from "./pages/AdminTop10";
 import AdminAuthBackgrounds from "./pages/AdminAuthBackgrounds";
+import AdminMediaLibrary from "./pages/AdminMediaLibrary";
 import AdminUsers from "./pages/AdminUsers";
 import LiveTV from "./pages/LiveTV";
 import AdminLiveTV from "./pages/AdminLiveTV";
@@ -202,6 +203,7 @@ const App = () => (
                   <Route path="/admin/plans" element={<AdminMembershipPlans />} />
                   <Route path="/admin/top10" element={<AdminTop10 />} />
                   <Route path="/admin/auth-backgrounds" element={<AdminAuthBackgrounds />} />
+                  <Route path="/admin/media-library" element={<AdminMediaLibrary />} />
                   <Route path="/admin/users" element={<AdminUsers />} />
                   <Route path="/admin/content/:id" element={<EditContent />} />
                   <Route path="/admin/content/new" element={<EditContent />} />
