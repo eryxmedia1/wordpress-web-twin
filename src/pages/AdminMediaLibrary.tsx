@@ -14,7 +14,7 @@ type AssetPointer = {
   created_at: string;
 };
 
-const modules = import.meta.glob("@/assets/media-library/*.asset.json", {
+const modules = import.meta.glob("../assets/media-library/*.asset.json", {
   eager: true,
 }) as Record<string, { default: AssetPointer } | AssetPointer>;
 
