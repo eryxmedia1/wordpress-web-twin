@@ -298,6 +298,57 @@ const AdminMediaLibrary = () => {
           )}
         </div>
       </main>
+
+      <AlertDialog open={!!dupePrompt} onOpenChange={(o) => !o && setDupePrompt(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {dupePrompt?.duplicates.length} duplicate file
+              {dupePrompt?.duplicates.length === 1 ? "" : "s"} detected
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p className="mb-2">
+                  These files have the same name as images already in your library:
+                </p>
+                <ul className="max-h-40 overflow-y-auto text-xs list-disc pl-5 space-y-1">
+                  {dupePrompt?.duplicates.map((f) => (
+                    <li key={f.name}>{f.name}</li>
+                  ))}
+                </ul>
+                <p className="mt-3">
+                  {dupePrompt?.fresh.length
+                    ? `${dupePrompt.fresh.length} other file(s) are new and will be uploaded either way.`
+                    : "No other new files were selected."}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDupePrompt(null)}>Cancel</AlertDialogCancel>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                const fresh = dupePrompt?.fresh ?? [];
+                setDupePrompt(null);
+                if (fresh.length) doUpload(fresh);
+                else toast.info("Nothing to upload — all files were duplicates");
+              }}
+            >
+              Skip duplicates
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                const all = [...(dupePrompt?.fresh ?? []), ...(dupePrompt?.duplicates ?? [])];
+                setDupePrompt(null);
+                doUpload(all);
+              }}
+            >
+              Upload anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
