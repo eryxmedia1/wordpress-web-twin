@@ -103,7 +103,7 @@ export default function TalentProfile() {
       return;
     }
 
-    setTalent(talentData as Talent);
+    setTalent(talentData as unknown as Talent);
 
     // Fetch photos
     const { data: photosData } = await supabase
