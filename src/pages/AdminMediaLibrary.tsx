@@ -361,8 +361,20 @@ const AdminMediaLibrary = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showBackToTop && (
+        <Button
+          onClick={scrollToTop}
+          size="icon"
+          className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg"
+          aria-label="Back to top"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </Button>
+      )}
     </div>
   );
+
 };
 
 export default AdminMediaLibrary;
