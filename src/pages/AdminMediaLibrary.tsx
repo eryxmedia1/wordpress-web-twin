@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminNavbar from "@/components/AdminNavbar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Copy, Search, ExternalLink, Images } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Copy, Search, ExternalLink, Images, Upload, Trash2, Loader2 } from "lucide-react";
 
 type AssetPointer = {
   url: string;
@@ -12,7 +13,11 @@ type AssetPointer = {
   size: number;
   content_type: string;
   created_at: string;
+  storage_path?: string;
 };
+
+const BUCKET = "channel-logos";
+const FOLDER = "media-library";
 
 const modules = import.meta.glob("../assets/media-library/*.asset.json", {
   eager: true,
@@ -40,11 +45,80 @@ const normalize = (s: string) =>
 
 const AdminMediaLibrary = () => {
   const [query, setQuery] = useState("");
+  const [uploaded, setUploaded] = useState<AssetPointer[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadUploaded = useCallback(async () => {
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .list(FOLDER, { limit: 1000, sortBy: { column: "created_at", order: "desc" } });
+    if (error) return;
+    const items = (data || [])
+      .filter((f) => f.id)
+      .map((f) => {
+        const path = `${FOLDER}/${f.name}`;
+        return {
+          url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl,
+          original_filename: f.name,
+          size: (f.metadata as any)?.size ?? 0,
+          content_type: (f.metadata as any)?.mimetype ?? "",
+          created_at: f.created_at ?? "",
+          storage_path: path,
+        } as AssetPointer;
+      });
+    setUploaded(items);
+  }, []);
+
+  useEffect(() => {
+    loadUploaded();
+  }, [loadUploaded]);
+
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
+      const images = files.filter((f) => f.type.startsWith("image/"));
+      if (images.length === 0) {
+        toast.error("Please select image files");
+        return;
+      }
+      setUploading(true);
+      let ok = 0;
+      for (const file of images) {
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-");
+        const path = `${FOLDER}/${Date.now()}-${safe}`;
+        const { error } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, file, { cacheControl: "31536000", upsert: false });
+        if (error) {
+          toast.error(`${file.name}: ${error.message}`);
+        } else {
+          ok++;
+        }
+      }
+      setUploading(false);
+      if (ok > 0) toast.success(`Uploaded ${ok} image${ok === 1 ? "" : "s"}`);
+      loadUploaded();
+    },
+    [loadUploaded]
+  );
+
+  const removeUploaded = async (path: string) => {
+    const { error } = await supabase.storage.from(BUCKET).remove([path]);
+    if (error) {
+      toast.error("Could not delete image");
+      return;
+    }
+    toast.success("Image deleted");
+    loadUploaded();
+  };
+
+  const allAssets = useMemo(() => [...uploaded, ...ASSETS], [uploaded]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return ASSETS;
-    const direct = ASSETS.filter((a) => a.original_filename.toLowerCase().includes(q));
+    if (!q) return allAssets;
+    const direct = allAssets.filter((a) => a.original_filename.toLowerCase().includes(q));
     if (direct.length > 0) return direct;
 
     // Fallback: token-based match on normalized names, ignoring noise words
@@ -52,14 +126,14 @@ const AdminMediaLibrary = () => {
       .split(" ")
       .filter((t) => t.length > 1 && !["copy", "final", "new", "the", "and"].includes(t));
     if (tokens.length === 0) return [];
-    return ASSETS.filter((a) => {
+    return allAssets.filter((a) => {
       const name = normalize(a.original_filename);
       return tokens.some((t) => name.includes(t));
     });
-  }, [query]);
+  }, [query, allAssets]);
 
   const absoluteUrl = (url: string) =>
-    typeof window !== "undefined" ? `${window.location.origin}${url}` : url;
+    url.startsWith("http") || typeof window === "undefined" ? url : `${window.location.origin}${url}`;
 
   const copy = async (url: string) => {
     try {
@@ -96,8 +170,49 @@ const AdminMediaLibrary = () => {
             </div>
           </div>
 
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              uploadFiles(Array.from(e.dataTransfer.files));
+            }}
+            className={`mb-6 rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+              dragging ? "border-primary bg-primary/5" : "border-border bg-card/40"
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                uploadFiles(Array.from(e.target.files || []));
+                e.target.value = "";
+              }}
+            />
+            {uploading ? (
+              <Loader2 className="h-8 w-8 mx-auto mb-3 text-primary animate-spin" />
+            ) : (
+              <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+            )}
+            <p className="text-sm text-foreground font-medium">
+              {uploading ? "Uploading..." : "Drag & drop images here"}
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">You can upload multiple files at once</p>
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Images
+            </Button>
+          </div>
+
           <p className="text-sm text-muted-foreground mb-4">
-            Showing {filtered.length} of {ASSETS.length} images
+            Showing {filtered.length} of {allAssets.length} images
           </p>
 
           {filtered.length === 0 ? (
@@ -134,6 +249,17 @@ const AdminMediaLibrary = () => {
                           <ExternalLink className="h-3.5 w-3.5" />
                         </a>
                       </Button>
+                      {asset.storage_path && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-destructive"
+                          onClick={() => removeUploaded(asset.storage_path!)}
+                          aria-label="Delete image"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
