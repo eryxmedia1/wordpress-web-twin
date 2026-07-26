@@ -59,7 +59,9 @@ const AdminMediaLibrary = () => {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [dupePrompt, setDupePrompt] = useState<{ duplicates: File[]; fresh: File[] } | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const loadUploaded = useCallback(async () => {
     const { data, error } = await supabase.storage
