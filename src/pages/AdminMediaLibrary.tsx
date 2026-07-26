@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Search, ExternalLink, Images, Upload, Trash2, Loader2 } from "lucide-react";
+import { Copy, Search, ExternalLink, Images, Upload, Trash2, Loader2, ArrowUp } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
