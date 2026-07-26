@@ -92,7 +92,7 @@ export default function TalentProfile() {
     setLoading(true);
     
     const { data: talentData, error } = await supabase
-      .from('talents')
+      .from('talents_public')
       .select('*')
       .eq('id', id)
       .single();
@@ -103,7 +103,7 @@ export default function TalentProfile() {
       return;
     }
 
-    setTalent(talentData as Talent);
+    setTalent(talentData as unknown as Talent);
 
     // Fetch photos
     const { data: photosData } = await supabase

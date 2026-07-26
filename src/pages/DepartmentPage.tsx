@@ -8,13 +8,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, DollarSign, Clock, Briefcase, Mail, Users } from "lucide-react";
-import type { Department, CrewPosition, DepartmentStaff } from "@/types/casting";
+import type { Department, CrewPosition } from "@/types/casting";
+
+type PublicStaff = {
+  id: string;
+  department_id: string | null;
+  name: string;
+  title: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+};
 
 export default function DepartmentPage() {
   const { slug } = useParams<{ slug: string }>();
   const [department, setDepartment] = useState<Department | null>(null);
   const [positions, setPositions] = useState<CrewPosition[]>([]);
-  const [staff, setStaff] = useState<DepartmentStaff[]>([]);
+  const [staff, setStaff] = useState<PublicStaff[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +50,7 @@ export default function DepartmentPage() {
           .eq("status", "open")
           .order("sort_order"),
         supabase
-          .from("department_staff")
+          .from("department_staff_public")
           .select("*")
           .eq("department_id", dept.id)
           .eq("is_active", true)
@@ -199,9 +208,6 @@ export default function DepartmentPage() {
                       <p className="font-medium">{member.name}</p>
                       {member.title && (
                         <p className="text-sm text-muted-foreground">{member.title}</p>
-                      )}
-                      {member.email && (
-                        <p className="text-sm text-primary mt-1">{member.email}</p>
                       )}
                     </CardContent>
                   </Card>

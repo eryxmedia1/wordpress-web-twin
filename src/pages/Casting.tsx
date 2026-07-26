@@ -76,7 +76,7 @@ export default function Casting() {
 
     // Fetch talents
     const { data: talentsData } = await supabase
-      .from('talents')
+      .from('talents_public')
       .select('id, name, category, city, state, country, height, primary_photo_url, is_featured, age_range')
       .eq('is_active', true)
       .eq('is_approved', true)
