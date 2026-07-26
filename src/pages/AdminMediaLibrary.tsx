@@ -6,6 +6,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Copy, Search, ExternalLink, Images, Upload, Trash2, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type AssetPointer = {
   url: string;
@@ -48,6 +58,7 @@ const AdminMediaLibrary = () => {
   const [uploaded, setUploaded] = useState<AssetPointer[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [dupePrompt, setDupePrompt] = useState<{ duplicates: File[]; fresh: File[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadUploaded = useCallback(async () => {
@@ -61,7 +72,7 @@ const AdminMediaLibrary = () => {
         const path = `${FOLDER}/${f.name}`;
         return {
           url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl,
-          original_filename: f.name,
+          original_filename: f.name.replace(/^\d{13}-/, ""),
           size: (f.metadata as any)?.size ?? 0,
           content_type: (f.metadata as any)?.mimetype ?? "",
           created_at: f.created_at ?? "",
@@ -75,16 +86,14 @@ const AdminMediaLibrary = () => {
     loadUploaded();
   }, [loadUploaded]);
 
-  const uploadFiles = useCallback(
+  const allAssets = useMemo(() => [...uploaded, ...ASSETS], [uploaded]);
+
+  const doUpload = useCallback(
     async (files: File[]) => {
-      const images = files.filter((f) => f.type.startsWith("image/"));
-      if (images.length === 0) {
-        toast.error("Please select image files");
-        return;
-      }
+      if (files.length === 0) return;
       setUploading(true);
       let ok = 0;
-      for (const file of images) {
+      for (const file of files) {
         const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-");
         const path = `${FOLDER}/${Date.now()}-${safe}`;
         const { error } = await supabase.storage
@@ -103,6 +112,29 @@ const AdminMediaLibrary = () => {
     [loadUploaded]
   );
 
+  const uploadFiles = useCallback(
+    (files: File[]) => {
+      const images = files.filter((f) => f.type.startsWith("image/"));
+      if (images.length === 0) {
+        toast.error("Please select image files");
+        return;
+      }
+      const existing = new Set(
+        allAssets.map((a) => a.original_filename.replace(/[^a-zA-Z0-9._-]+/g, "-").toLowerCase())
+      );
+      const duplicates = images.filter((f) =>
+        existing.has(f.name.replace(/[^a-zA-Z0-9._-]+/g, "-").toLowerCase())
+      );
+      const fresh = images.filter((f) => !duplicates.includes(f));
+      if (duplicates.length > 0) {
+        setDupePrompt({ duplicates, fresh });
+        return;
+      }
+      doUpload(images);
+    },
+    [allAssets, doUpload]
+  );
+
   const removeUploaded = async (path: string) => {
     const { error } = await supabase.storage.from(BUCKET).remove([path]);
     if (error) {
@@ -112,8 +144,6 @@ const AdminMediaLibrary = () => {
     toast.success("Image deleted");
     loadUploaded();
   };
-
-  const allAssets = useMemo(() => [...uploaded, ...ASSETS], [uploaded]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
