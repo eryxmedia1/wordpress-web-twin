@@ -88,6 +88,13 @@ const AdminMediaLibrary = () => {
     loadUploaded();
   }, [loadUploaded]);
 
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 400);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+
   const allAssets = useMemo(() => [...uploaded, ...ASSETS], [uploaded]);
 
   const doUpload = useCallback(
