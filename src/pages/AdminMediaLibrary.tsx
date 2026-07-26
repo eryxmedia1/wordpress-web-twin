@@ -29,13 +29,33 @@ const formatSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+// Normalize filenames so punctuation/spacing differences don't break matching
+// (e.g. "Cocks-Robbers-copy-1.jpg" matches "Cocks--Robbers-2.jpg" tokens).
+const normalize = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
 const AdminMediaLibrary = () => {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return ASSETS;
-    return ASSETS.filter((a) => a.original_filename.toLowerCase().includes(q));
+    const direct = ASSETS.filter((a) => a.original_filename.toLowerCase().includes(q));
+    if (direct.length > 0) return direct;
+
+    // Fallback: token-based match on normalized names, ignoring noise words
+    const tokens = normalize(q)
+      .split(" ")
+      .filter((t) => t.length > 1 && !["copy", "final", "new", "the", "and"].includes(t));
+    if (tokens.length === 0) return [];
+    return ASSETS.filter((a) => {
+      const name = normalize(a.original_filename);
+      return tokens.some((t) => name.includes(t));
+    });
   }, [query]);
 
   const absoluteUrl = (url: string) =>
