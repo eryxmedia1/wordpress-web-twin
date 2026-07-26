@@ -92,7 +92,7 @@ export default function TalentProfile() {
     setLoading(true);
     
     const { data: talentData, error } = await supabase
-      .from('talents')
+      .from('talents_public')
       .select('*')
       .eq('id', id)
       .single();

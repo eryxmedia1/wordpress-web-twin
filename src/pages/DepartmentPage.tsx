@@ -41,7 +41,7 @@ export default function DepartmentPage() {
           .eq("status", "open")
           .order("sort_order"),
         supabase
-          .from("department_staff")
+          .from("department_staff_public")
           .select("*")
           .eq("department_id", dept.id)
           .eq("is_active", true)
