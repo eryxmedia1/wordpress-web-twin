@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Search, ExternalLink, Images, Upload, Trash2, Loader2 } from "lucide-react";
+import { Copy, Search, ExternalLink, Images, Upload, Trash2, Loader2, ArrowUp } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,7 +59,9 @@ const AdminMediaLibrary = () => {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [dupePrompt, setDupePrompt] = useState<{ duplicates: File[]; fresh: File[] } | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const loadUploaded = useCallback(async () => {
     const { data, error } = await supabase.storage
@@ -85,6 +87,13 @@ const AdminMediaLibrary = () => {
   useEffect(() => {
     loadUploaded();
   }, [loadUploaded]);
+
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 400);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
 
   const allAssets = useMemo(() => [...uploaded, ...ASSETS], [uploaded]);
 
@@ -173,6 +182,9 @@ const AdminMediaLibrary = () => {
       toast.error("Could not copy URL");
     }
   };
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -349,8 +361,20 @@ const AdminMediaLibrary = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showBackToTop && (
+        <Button
+          onClick={scrollToTop}
+          size="icon"
+          className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg"
+          aria-label="Back to top"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </Button>
+      )}
     </div>
   );
+
 };
 
 export default AdminMediaLibrary;
