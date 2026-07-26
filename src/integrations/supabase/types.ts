@@ -3622,6 +3622,41 @@ export type Database = {
       }
     }
     Views: {
+      department_staff_public: {
+        Row: {
+          created_at: string | null
+          department_id: string | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_id?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_staff_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_channels_public: {
         Row: {
           allowed_tiers: string[] | null
